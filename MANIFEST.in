@@ -1,0 +1,2 @@
+recursive-include Dlib/Dhelpers/KeyboardLayouts/layouts_imported_from_xkb *
+recursive-include Dlib/Dpowers/iconpower/icons *

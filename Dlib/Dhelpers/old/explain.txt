@@ -1,0 +1,2 @@
+Files in this "old" package, will not be distributed via setuptools as __init__
+.py is missing.

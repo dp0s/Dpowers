@@ -27,7 +27,8 @@ from time import sleep
 from Dhelpers.all import (always_print_traceback, container,
     launch, ThisScript, AdaptorBase, adaptionmethod, AdaptionError, ArgSaver)
 
-import Dpowers
+import Dpowers  # this is to allow from Dpowers import * to also import the
+                # Dpowers variable itself
 
 
 always_print_traceback()

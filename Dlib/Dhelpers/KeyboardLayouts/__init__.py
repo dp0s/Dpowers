@@ -21,7 +21,11 @@ path = os.path
 
 parentfolder = path.split(__file__)[0]
 saved_folder = path.join(parentfolder,"layouts_imported_from_xkb")
-os.makedirs(saved_folder, exist_ok=True)
+try:
+    os.makedirs(saved_folder, exist_ok=True)
+except PermissionError:
+    pass
+    
 
 
 def get_files(folder):
