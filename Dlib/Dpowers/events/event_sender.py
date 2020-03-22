@@ -105,7 +105,7 @@ class EventSender(AdditionContainer, EventSenderBase, basic_class
         
     @property
     def StringEventCreator(self):
-        return self.StringEventCreator
+        return self._StringEventCreator
     
     def _send_event(self, event, **kwargs):
         for member in self.members:
