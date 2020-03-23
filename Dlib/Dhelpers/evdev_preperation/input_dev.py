@@ -18,7 +18,6 @@ from evdev import ecodes, InputDevice, uinput
 from ..launcher import launch
 import selectors
 
-
 class EvdevDeviceGrabError(Exception):
     pass
 
@@ -130,8 +129,14 @@ class AdhancedInputDevice(InputDevice):
             self.write(ecodes.EV_KEY, keycode, 0)
         self.syn()
     
-    
-    
+    # def close(self):
+    #     try:
+    #         super().close()
+    #     except RuntimeError:
+    #         pass
+    #     #this is necessary because in the latest evdev version, close will
+    #     # automatically use some of the async stuff, which I don't want!
+
 
 class CollectableInputDevice(AdhancedInputDevice):
     
@@ -181,16 +186,21 @@ class CollectableInputDevice(AdhancedInputDevice):
 
 class EvdevInputLooper:
     
+    _running_number = 0
+    
     def __init__(self):
+        self.running_number = self._running_number
+        self.__class__._running_number += 1
         self.collected_devs = []
         self.selector = None
         self.loop_thread = None
         self.DeviceClass = type(f"CollectableInputDevice_for_looper_"
-            f"{self}", (CollectableInputDevice,),{})
+            f"{self.running_number}", (CollectableInputDevice,),{})
         # create a dedicated subclass
         self.DeviceClass._inputevent_looper = self
     
     def start(self, dev):
+        #print(dev, self.collected_devs)
         if not self.collected_devs:
             self.collected_devs.append(dev)
             self.selector = selectors.DefaultSelector()
@@ -228,6 +238,10 @@ class EvdevInputLooper:
     def selected_devices(self):
         return tuple(key.fileobj for key in self.selector.get_map().values())
     
+    def __repr__(self) -> str:
+        old = super().__repr__()[:-1]
+        return old + f" with running number {self.running_number}>"
+
     # def process_event(self, event, dev):  #     #
     # self.hook_class.queue_event(categorize(event), dev)  #     ty, co,
     # val = event.type, event.code, event.value  #     if ty == EV_KEY:  #

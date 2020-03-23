@@ -86,6 +86,7 @@ class EvdevHandler(InputEventHandler):
     
     def run(self):
         self.matched_devs = self.matching_devs()
+        #print(self.matched_devs)
         for dev in self.matched_devs: self.start_dev(dev)
             
     
@@ -100,8 +101,6 @@ class EvdevHandler(InputEventHandler):
     @abstractmethod
     def stop_dev(self, dev):
         pass
-    
-#just a git test
         
 class Capturer(EvdevHandler):
     
