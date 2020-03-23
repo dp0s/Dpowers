@@ -15,7 +15,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 import time
-from ..launcher import launch
+from Dpower_project.Dlib.Dhelpers.launcher import launch
 from evdev import list_devices
 from .input_dev import AdhancedInputDevice, EvdevInputLooper
 from evdev.ecodes import (EV_KEY, EV_ABS, EV_SYN, EV_MSC, KEY, BTN,

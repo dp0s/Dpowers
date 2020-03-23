@@ -3,7 +3,7 @@ import shutil
 from time import sleep
 import multiprocessing
 
-version_number = "0.0.3c1"
+from Dlib import Dpowers, Dhelpers, evdev_prepared
 
 
 with open("README.md", "r") as fh:
@@ -13,6 +13,7 @@ with open("README.md", "r") as fh:
 
 
 def my_setup(name, **kwargs):
+    if "version" not in kwargs: raise ValueError
     shutil.rmtree(f"Dlib/{name}.egg-info", ignore_errors=True)
     shutil.rmtree("build", ignore_errors=True)
     print()
@@ -32,7 +33,6 @@ def setup_process(name, **kwargs):
         name=name,
         packages=find_packages("Dlib", include=[f"{name}*"]),
         package_dir={"": "Dlib"},
-        version=version_number,
         include_package_data=False,
         ####must stay disabled to allow package_data option !!!
         python_requires=">=3.6", # metadata to display on PyPI
@@ -47,10 +47,12 @@ def setup_process(name, **kwargs):
 
 
 my_setup("Dpowers",
+    version = Dpowers.__version__,
     package_data = {"Dpowers.iconpower.icons" : ["*"]},
 
-    install_requires=["pynput>=1.6.8", "pystray>=0.15", f"Dhelpers=="
-                f"{version_number}"],
+    install_requires=["pynput>=1.6.8", "pystray>=0.15",
+        f"Dhelpers=={Dhelpers.__version__}",
+        f"evdev_prepared>={evdev_prepared.__version__}"],
 
     description="Unified Interface for automatic interaction",
     long_description=long_description,
@@ -60,8 +62,17 @@ my_setup("Dpowers",
 
 
 my_setup("Dhelpers",
-        package_data = {"Dhelpers.KeyboardLayouts.layouts_imported_from_xkb"
-        : ["*"]},
-        install_requires=["evdev==1.2.0", "psutil>=5.4.2"],
-        description="Dhelpers support modules"
-        )
+    version = Dhelpers.__version__,
+    package_data = {"Dhelpers.KeyboardLayouts.layouts_imported_from_xkb"
+    : ["*"]},
+    install_requires=["psutil>=5.4.2"],
+    description="Dhelpers support modules"
+    )
+
+exit()
+
+my_setup("evdev_prepared",
+    version = evdev_prepared.__version__,
+    install_requires=["evdev==1.2.0"],
+    description="Useful classes to make usage of python evdev easier"
+    )

@@ -15,7 +15,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 from evdev import ecodes, InputDevice, uinput
-from ..launcher import launch
+from Dpower_project.Dlib.Dhelpers.launcher import launch
 import selectors
 
 class EvdevDeviceGrabError(Exception):

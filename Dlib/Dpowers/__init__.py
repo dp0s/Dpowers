@@ -17,14 +17,14 @@
 
 __all__ = ["Dpowers","autoadapt","sleep","launch","ThisScript","Icon","Win",
     "keyb", "mouse","ntfy","dlg","hotkeys","hook","sendwait","nfsendwait",
-    "clip", "Dfuncs","container","events", "KeyWaiter"]
+    "clip", "Dfuncs","events", "KeyWaiter"]
 
 import os
 
 from time import sleep
 
-
-from Dhelpers.all import (always_print_traceback, container,
+from Dhelpers import __version__
+from Dhelpers.all import (always_print_traceback,
     launch, ThisScript, AdaptorBase, adaptionmethod, AdaptionError, ArgSaver)
 
 import Dpowers  # this is to allow from Dpowers import * to also import the

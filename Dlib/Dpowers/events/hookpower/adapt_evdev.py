@@ -14,9 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
+
 from evdev.ecodes import (EV_KEY, EV_ABS, EV_SYN, EV_MSC, KEY, BTN,
     EV_LED, EV_REL, ABS_MT_POSITION_X, ABS_MT_POSITION_Y, ABS_X, ABS_Y)
-from Dhelpers.evdev_preperation import uinput, dev_updater
+from evdev_prepared import uinput, dev_updater
 
 from .baseclasses import (InputEventHandler, KeyhookBase, ButtonhookBase,
     CursorhookBase, CustomhookBase)
