@@ -16,7 +16,8 @@
 #
 
 from evdev.ecodes import (EV_KEY, EV_ABS, EV_SYN, EV_MSC, KEY, BTN,
-    EV_LED, EV_REL, ABS_MT_POSITION_X, ABS_MT_POSITION_Y, ABS_X, ABS_Y)
+    EV_LED, EV_REL, ABS_MT_POSITION_X, ABS_MT_POSITION_Y, ABS_X, ABS_Y,
+    REL_X, REL_Y)
 from evdev_prepared import uinput, dev_updater
 
 from .baseclasses import (InputEventHandler, KeyhookBase, ButtonhookBase,
@@ -174,17 +175,6 @@ class CursorCollector(Collector):
                 selection_func=selection_func)
         self.saved_vals = {}
         
-    def _collect_coordinates(self, co_1, co_2, val):
-        try:
-            pos_old = self.saved_vals.pop(co_2)
-        except KeyError:
-            self.saved_vals[co_1] = val
-            return False
-        else:
-            
-            self.queue_event(val, pos_old, screen_coordinates=False)
-            return True
-        
     def _intelligent_collect(self, co ,co_x, co_y, val, **kwargs):
         if co == co_x:
             try:
@@ -208,9 +198,11 @@ class CursorCollector(Collector):
         if ty == EV_KEY:
             pass
         elif ty == EV_ABS:
-            self._intelligent_collect(co, ABS_X, ABS_Y, val, screen_coordinates=False)
+            self._intelligent_collect(co, ABS_X, ABS_Y, val,
+                    screen_coordinates=False)
         elif ty == EV_REL:
-            self._intelligent_collect(co,val, relative=True,screen_coordinates=False)
+            self._intelligent_collect(co,REL_X, REL_Y, val, relative=True,
+                    screen_coordinates=False)
         elif ty not in (EV_SYN, EV_MSC):
             _print("Wrong event type: ", ty, co, val)
         

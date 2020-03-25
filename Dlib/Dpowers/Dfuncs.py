@@ -244,7 +244,7 @@ def display_win_info():
 # =============================================================================
 def display_key_names():
     y = KeyWaiter.get1key()
-    x = tuple(y.names())
+    x = tuple(y.named_instance.names)
     time.sleep(0.1)
     if dlg.quest("Dpowers key name(s):\n{x}\n\nSave first(=standard) name to "
                  "clipboard?".format_map(locals()),title="Get key names"):
@@ -254,7 +254,7 @@ def monitor_input_events(timeout=10, implementation=None,**hookkwargs):
     if implementation:
         this_hook=HookAdaptor(implementation)
     else:
-        this_hook=HookAdaptor("keywait")
+        this_hook=HookAdaptor(group="keywait")
     ntfy("Showing all input events for %s seconds." % timeout)
     with this_hook.keyboard_mouse(functools.partial(ntfy,timeout=1), **hookkwargs):
         time.sleep(timeout)
