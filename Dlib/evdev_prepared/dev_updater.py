@@ -14,8 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-import time
-from Dpower_project.Dlib.Dhelpers.launcher import launch
+import time, threading
 from evdev import list_devices
 from .input_dev import AdhancedInputDevice, EvdevInputLooper
 from evdev.ecodes import (EV_KEY, EV_ABS, EV_SYN, EV_MSC, KEY, BTN,
@@ -101,7 +100,7 @@ class EvdevDeviceUpdater:
         self._autoupdating = state
         if not old and state:
             self.update_devs()
-            launch.thread(self.updater)
+            threading.Thread(target=self.updater).start()
     
     def updater(self):
         while self._autoupdating:
