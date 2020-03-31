@@ -15,7 +15,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 import functools
-from .. import Adaptor, AdaptionError
+from .. import Adaptor, AdaptionError, adaptionmethod
 from Dhelpers.arghandling import add_kw_only_arg
 
 class hotkeys:
