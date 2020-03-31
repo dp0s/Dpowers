@@ -70,8 +70,7 @@ class EventSenderBase(AdditionContainer.Addend,ABC):
         <key  press> and <key rls> will only send _press/release events.
         <key1+key2 _press/rls> is also possible.
         <key x> will send the key x times.
-        Example: keyb.send(<ctrl+v> or keyb.send(<ctrl  press>v<ctrl
-        rls>))
+        Example: keyb.send(<ctrl+v> or keyb.send(<ctrl  press>v<ctrl rls>))
         """
         while True:
             x0, x1, x2 = x.partition(self._starting_symbol)

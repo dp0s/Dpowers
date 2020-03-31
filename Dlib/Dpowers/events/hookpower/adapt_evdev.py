@@ -70,7 +70,7 @@ class EvdevHandler(InputEventHandler):
         return True
     
     def matching_devs(self):
-        return tuple(dev for dev in self.devupdater.all_devs
+        return list(dev for dev in self.devupdater.all_devs
             if self.dev_is_selected(dev))
 
     def dev_change_action(self, found_new, lost_devs):

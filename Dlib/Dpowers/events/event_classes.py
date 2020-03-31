@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-from Dhelpers.all import AdditionContainer, check_type, NamedObj
+from Dhelpers.all import AdditionContainer, NamedObj
 
 
 combination_symbol = "+"
