@@ -44,7 +44,7 @@ def _from_str(cls_or_self, string, hotkey=False):
         if combination_symbol in s:
             t = tuple(cls_or_self._create_from_str(name) for name in s.split(
                     combination_symbol))
-            events.append(KeybuttonCombination(*t))
+            events.append(EventCombination(*t))
         else:
             event = cls_or_self._create_from_str(s)
             events.append(event)
@@ -65,6 +65,7 @@ class Event(AdditionContainer.Addend):
     def __repr__(self):
         return f"<Event '{self}' of subclass " \
             f"{self.__class__.__module__}.{self.__class__.__name__}>"
+
 
 
 class EventSequence(AdditionContainer, Event, basic_class=Event):
@@ -109,9 +110,34 @@ class StringEvent(Event, str):
         return cls(string)
 
 
-class KeybuttonEvent(StringEvent):
+class PressReleaseEvent(StringEvent):
+    __slots__ = ["name", "press"]
     
-    __slots__ = ["name", "named_instance", "press"]
+    def __new__(cls, name="", press=True, write_rls=True):
+        string = name
+        if press is False and write_rls: string += "_rls"
+        self=super().__new__(cls,string)
+        self.name = name
+        self.press=press
+        return self
+
+    @classmethod
+    def _create_from_str(cls, string, raise_error=False):
+        rls = string.endswith("_rls")
+        if rls: string = string[:-4]
+        return cls(string, press=not rls)
+    
+    def strip_rls(self, raise_error=True):
+        if raise_error and self.press: raise ValueError
+        return self.__class__(name=self.name,press=False,write_rls=False)
+    
+    def reverse(self):
+        return self.__class__(name=self.name, press=not self.press)
+
+
+class NamedPressReleaseEvent(PressReleaseEvent):
+    
+    __slots__ = ["named_instance"]
     
     NamedClass=None #must be set by __init_subclass__ method of NamedKeyButton
     # subclass
@@ -138,12 +164,8 @@ class KeybuttonEvent(StringEvent):
                 name = named_instance.name
         else:
             press = None
-        string = name
-        if press is False and write_rls: string += "_rls"
-        self=super().__new__(cls,string)
-        self.name = name
+        self=super().__new__(cls,name, press=press, write_rls=write_rls)
         self.named_instance = named_instance
-        self.press=press
         return self
     
     @classmethod
@@ -172,20 +194,18 @@ class KeybuttonEvent(StringEvent):
     def strip_rls(self, raise_error=True):
         if raise_error and self.press: raise ValueError
         if self.named_instance:
-            ret = self.named_instance.release_event_without_rls
+            return self.named_instance.release_event_without_rls
         else:
-            ret = self.__class__(name=self.name,press=False,write_rls=False)
-        return ret
+            return super().strip_rls()
     
     def reverse(self):
         if self.named_instance:
             if self.press:
-                ret = self.named_instance.release_event
+                return self.named_instance.release_event
             else:
-                ret = self.named_instance.press_event
+                return self.named_instance.press_event
         else:
-            ret = self.__class__(name=self.name, press=not self.press)
-        return ret
+            return super().reverse()
 
     def eq(self,other):
         if isinstance(other,int): other=f"[{other}]"
@@ -223,11 +243,11 @@ class KeybuttonEvent(StringEvent):
         return return_if_not_found
     
     
-class Keyvent(KeybuttonEvent):
+class Keyvent(NamedPressReleaseEvent):
     pass
 
 
-class Buttonevent(KeybuttonEvent):
+class Buttonevent(NamedPressReleaseEvent):
     
     __slots__ = ["x", "y"]
     
@@ -242,13 +262,13 @@ class Buttonevent(KeybuttonEvent):
 
     
     
-class KeybuttonCombination(Event):
+class EventCombination(Event):
     
     def __init__(self, *args):
         if len(args) < 2: raise ValueError
         for a in args:
-            if not isinstance(a, KeybuttonEvent): raise TypeError
-            if not a.press: raise ValueError
+            if not isinstance(a, PressReleaseEvent): raise TypeError
+            if a.press is False: raise ValueError
         self.members = args
     
     def __str__(self):

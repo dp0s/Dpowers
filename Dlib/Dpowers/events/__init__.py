@@ -54,17 +54,17 @@ Adaptor.NamedKeyClass = NamedKey
 
 from .event_classes import *
 
-from .sending.keybpower import *
 
-keyb = KeyboardAdaptor(_primary=True)
+
 
 from .hookpower import *
 
 hook = HookAdaptor(_primary=True)
 
-from .sending.mousepower import *
+from .sending import *
 
 mouse = MouseAdaptor(_primary=True)
+keyb = KeyboardAdaptor(_primary=True)
 
 from .event_classes import *
 

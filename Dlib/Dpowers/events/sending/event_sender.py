@@ -16,7 +16,7 @@
 #
 from abc import ABC, abstractmethod
 from Dhelpers.all import AdditionContainer
-from ..event_classes import EventSequence, KeybuttonCombination, StringAnalyzer
+from ..event_classes import EventSequence, EventCombination, StringAnalyzer
 from .. import hotkeys
 
 
@@ -35,7 +35,7 @@ class EventSenderBase(AdditionContainer.Addend,ABC):
         for event in events:
             if isinstance(event, EventSequence):
                 self.send_event(*event.members, **kwargs)
-            elif isinstance(event, KeybuttonCombination):
+            elif isinstance(event, EventCombination):
                 self.send_event(event.convert(),**kwargs)
             else:
                 try:
