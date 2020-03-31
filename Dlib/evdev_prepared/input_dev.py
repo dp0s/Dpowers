@@ -15,8 +15,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 from evdev import ecodes, InputDevice, uinput
-from Dpower_project.Dlib.Dhelpers.launcher import launch
-import selectors
+import selectors, threading
 
 class EvdevDeviceGrabError(Exception):
     pass
@@ -204,7 +203,8 @@ class EvdevInputLooper:
         if not self.collected_devs:
             self.collected_devs.append(dev)
             self.selector = selectors.DefaultSelector()
-            self.loop_thread = launch.thread(self.run_loop)
+            self.loop_thread = threading.Thread(target=self.run_loop)
+            self.loop_thread.start()
         else:
             if dev in self.collected_devs: raise ValueError
             self.collected_devs.append(dev)
