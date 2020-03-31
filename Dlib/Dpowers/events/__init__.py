@@ -15,8 +15,8 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 import functools
-from .. import Adaptor, adaptionmethod, AdaptionError
-from Dhelpers.arghandling import add_kw_only_arg, check_type
+from .. import Adaptor, AdaptionError
+from Dhelpers.arghandling import add_kw_only_arg
 
 class hotkeys:
     @classmethod
@@ -54,7 +54,7 @@ Adaptor.NamedKeyClass = NamedKey
 
 from .event_classes import *
 
-from .keybpower import *
+from .sending.keybpower import *
 
 keyb = KeyboardAdaptor(_primary=True)
 
@@ -62,7 +62,7 @@ from .hookpower import *
 
 hook = HookAdaptor(_primary=True)
 
-from .mousepower import *
+from .sending.mousepower import *
 
 mouse = MouseAdaptor(_primary=True)
 
@@ -70,7 +70,7 @@ from .event_classes import *
 
 
 
-from .event_sender import *
+from .sending.event_sender import *
 
 from .waiter import *
 from .trigman import *

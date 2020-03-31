@@ -15,7 +15,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from .. import Adaptor, adaptionmethod, hotkeys, Keyvent
+from ... import Adaptor
 from ..event_sender import EventSenderBase
 
 class SendingAdaptor(Adaptor, EventSenderBase):

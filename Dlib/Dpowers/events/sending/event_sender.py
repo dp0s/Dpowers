@@ -16,8 +16,8 @@
 #
 from abc import ABC, abstractmethod
 from Dhelpers.all import AdditionContainer
-from .event_classes import EventSequence, KeybuttonCombination, StringAnalyzer
-from . import hotkeys
+from ..event_classes import EventSequence, KeybuttonCombination, StringAnalyzer
+from .. import hotkeys
 
 
 

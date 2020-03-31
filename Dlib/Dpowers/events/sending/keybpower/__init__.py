@@ -15,7 +15,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 import time
-from .. import Adaptor, adaptionmethod, hotkeys, Keyvent
+from ... import Adaptor, adaptionmethod, hotkeys, Keyvent
 from ..event_sender import EventSenderBase
 
 class KeyboardAdaptor(Adaptor, EventSenderBase):
