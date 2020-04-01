@@ -86,97 +86,62 @@ class MouseMoveEvent(Event):
     def __str__(self):
         return f"(mouse_move,{self.abbr},{self.x},{self.y})"
         
+        
+        
 
 
 
 class StringEvent(Event, str):
-    
-    # hooked_by = None  # set by collecting hook class
-    # inject_args = None  # set by collecting hook class
-    #
-    # def reinject(self, reverse=False):
-    #     try:
-    #         self.hooked_by.collector.inject(*self.inject_args,
-    #                 reverse=reverse)
-    #     except AttributeError:
-    #         return False
-    #     else:
-    #         return True
-    
-    from_str = classmethod(_from_str)
-    
-    @classmethod
-    def _create_from_str(cls, string, raise_error=False):
-        return cls(string)
 
+    __slots__ = ["name","given_name","named_instance"]
 
-class PressReleaseEvent(StringEvent):
-    __slots__ = ["name", "press"]
-    
-    def __new__(cls, name="", press=True, write_rls=True):
-        string = name
-        if press is False and write_rls: string += "_rls"
-        self=super().__new__(cls,string)
-        self.name = name
-        self.press=press
-        return self
-
-    @classmethod
-    def _create_from_str(cls, string, raise_error=False):
-        rls = string.endswith("_rls")
-        if rls: string = string[:-4]
-        return cls(string, press=not rls)
-    
-    def strip_rls(self, raise_error=True):
-        if raise_error and self.press: raise ValueError
-        return self.__class__(name=self.name,press=False,write_rls=False)
-    
-    def reverse(self):
-        return self.__class__(name=self.name, press=not self.press)
-
-
-class NamedPressReleaseEvent(PressReleaseEvent):
-    
-    __slots__ = ["named_instance"]
-    
-    NamedClass=None #must be set by __init_subclass__ method of NamedKeyButton
-    # subclass
-    
-    # def reinject(self, autorelease=False, reverse=False):
-    #     success = super().reinject(reverse=reverse)
-    #     if autorelease and success and (self.press and not reverse or not
-    #     self.press and reverse):
-    #         if autorelease is True: autorelease=5
-    #         time.sleep(autorelease/1000)
-    #         super().reinject(reverse=not reverse)
+    NamedClass = None  # must be set by __init_subclass__ method of
+                       # NamedKeyButton subclass
+    allowed_names = () # set allowed_names even without use of NamedClass
     
 
-    def __new__(cls, name="", press=True, write_rls=True, raise_error=False):
+    def __new__(cls, name="", raise_error=False):
+        given_name = name
         named_instance = None
         if name != "":
-            try:
-                #print(name, named_instance)
-                named_instance = cls.NamedClass.instance(name)
-            except KeyError as k:
-                if raise_error: raise ValueError from k
-                name = f"[{name}]"
-            else:
-                name = named_instance.name
-        else:
-            press = None
-        self=super().__new__(cls,name, press=press, write_rls=write_rls)
+            if cls.NamedClass:
+                try:
+                    # print(name, named_instance)
+                    named_instance = cls.NamedClass.instance(name)
+                except KeyError as k:
+                    if not cls.allowed_names and raise_error:
+                        raise ValueError(f"{name} not allowed") from k
+                else:
+                    name = named_instance.name
+            if not named_instance:
+                if name not in cls.allowed_names:
+                    if cls.allowed_names and raise_error:
+                        raise ValueError(f"{name} not allowed")
+                    name = f"[{name}]"
+        self = str.__new__(cls, name)
+        self.name = name
         self.named_instance = named_instance
+        self.given_name = given_name
+        assert str(self) == name
         return self
+
+    from_str = classmethod(_from_str)
+    
     
     @classmethod
     def _create_from_str(cls, string, raise_error=False):
-        rls = string.endswith("_rls")
-        if rls: string = string[:-4]
+        # DONT OVERRIDE THIS IN SUBCLASS!
+        return cls(*cls._args_from_string(string), raise_error=raise_error)
+    
+    @classmethod
+    def _args_from_string(cls, string):
+        # OVERRIDE THIS!
         if string.startswith("[") and string.endswith("]"):
             string = string[1:-1]
-        return cls(string,press=not rls, raise_error=raise_error)
+        return (string,)
 
-
+    
+    
 
     # problem with redefining __eq__ and dicts/set __hash__ comparison
     # __hash__ method is needed for checking "self in dict" or "self in set"
@@ -190,23 +155,8 @@ class NamedPressReleaseEvent(PressReleaseEvent):
     #    the search inside the dict is using hashes and thus is quick
     #    however, standardization needs to be done beforehand
     # 2. custom methods defined below.
-
-    def strip_rls(self, raise_error=True):
-        if raise_error and self.press: raise ValueError
-        if self.named_instance:
-            return self.named_instance.release_event_without_rls
-        else:
-            return super().strip_rls()
     
-    def reverse(self):
-        if self.named_instance:
-            if self.press:
-                return self.named_instance.release_event
-            else:
-                return self.named_instance.press_event
-        else:
-            return super().reverse()
-
+    
     def eq(self,other):
         if isinstance(other,int): other=f"[{other}]"
         if isinstance(other, str):
@@ -232,22 +182,62 @@ class NamedPressReleaseEvent(PressReleaseEvent):
         except AttributeError:
             pass
         else:
-            if c== self.NamedClass:
+            if c == self.NamedClass:
                 # in this case, the dic is already standardized,
                 # so we can use a normal hash comparison
                 return dic.get(self, return_if_not_found)
         # this is what usually happens
         for key in iter(dic):
-            if self.eq(key):
-                return dic[key]
+            if self.eq(key): return dic[key]
         return return_if_not_found
     
     
-class Keyvent(NamedPressReleaseEvent):
+    
+
+class PressReleaseEvent(StringEvent):
+    __slots__ = ["press"]
+    
+    def __new__(cls, name="", press=True, write_rls=True, raise_error=False):
+        assert press in (True, False, None)
+        self = StringEvent.__new__(cls, name, raise_error=raise_error)
+        if press is False and write_rls:
+            self2 = str.__new__(cls, self.name + "_rls")
+            for attr in StringEvent.__slots__:
+                setattr(self2,attr,getattr(self,attr))
+            self = self2
+        self.press=press
+        return self
+
+    @classmethod
+    def _args_from_str(cls, string):
+        rls = string.endswith("_rls")
+        if rls: string = string[:-4]
+        return StringEvent._args_from_string(string) + (not rls,)
+
+    def strip_rls(self, raise_error=True):
+        if raise_error and self.press: raise ValueError
+        if self.named_instance:
+            return self.named_instance.release_event_without_rls
+        else:
+            return self.__class__(name=self.name,press=False,write_rls=False)
+    
+    def reverse(self):
+        if self.named_instance:
+            if self.press:
+                return self.named_instance.release_event
+            else:
+                return self.named_instance.press_event
+        else:
+            return self.__class__(name=self.name, press=not self.press)
+
+    
+    
+    
+class Keyvent(PressReleaseEvent):
     pass
 
 
-class Buttonevent(NamedPressReleaseEvent):
+class Buttonevent(PressReleaseEvent):
     
     __slots__ = ["x", "y"]
     

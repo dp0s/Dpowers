@@ -15,18 +15,18 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 from Dhelpers.named import NamedObj
-from .event_classes import Buttonevent, Keyvent, NamedPressReleaseEvent
+from .event_classes import Buttonevent, Keyvent, PressReleaseEvent
 import re
 
 class NamedKeyButton(NamedObj):
     Event = None
     __slots__ = ["press_event", "release_event", "release_event_without_rls"]
     
-    def __init_subclass__(cls, event_baseclass=None):
+    def __init_subclass__(cls, event_baseclass="inherit"):
         super().__init_subclass__()
-        if event_baseclass is None: event_baseclass = cls.Event
+        if event_baseclass == "inherit": event_baseclass = cls.Event
             #inherit Event's baseclass from parent's event baseclass
-        if not issubclass(event_baseclass, NamedPressReleaseEvent): raise TypeError
+        if not issubclass(event_baseclass, PressReleaseEvent): raise TypeError
         ev = type(f"{cls.__name__}.Event", (event_baseclass,),{})
             # create a new event baseclass just for this NamedClass
         ev.__module__=cls.__module__
@@ -101,6 +101,7 @@ class NamedKeyButton(NamedObj):
 
 class NamedKey(NamedKeyButton, event_baseclass=Keyvent):
     pass
+
 
 class NamedButton(NamedKeyButton, event_baseclass=Buttonevent):
     
