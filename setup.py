@@ -9,7 +9,7 @@ from Dlib import Dpowers, Dhelpers, evdev_prepared
 with open("README.md", "r") as fh:
     long_description = fh.read()
     
-    
+
 
 
 def my_setup(name, **kwargs):
@@ -69,10 +69,8 @@ my_setup("Dhelpers",
     description="Dhelpers support modules"
     )
 
-exit()
-
 my_setup("evdev_prepared",
     version = evdev_prepared.__version__,
-    install_requires=["evdev==1.2.0"],
+    install_requires=["evdev>=1.2.0"],
     description="Useful classes to make usage of python evdev easier"
     )

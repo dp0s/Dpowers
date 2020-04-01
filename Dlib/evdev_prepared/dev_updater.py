@@ -52,6 +52,8 @@ class EvdevDeviceUpdater:
     # reconnected, a fresh instance of InputDevice is created (with possibly
     # new fd).
     
+    
+    
     def update_devs(self, run_change_action=True):
         remaining_devs = self.all_devs
         new_devs = []
@@ -106,5 +108,6 @@ class EvdevDeviceUpdater:
         while self._autoupdating:
             time.sleep(self.update_interval)
             self.update_devs()
+            #self.input_looper.print_devices()
 
 
