@@ -1,4 +1,5 @@
 #
+#
 # Copyright (c) 2020 DPS, dps@my.mail.de
 #
 # This program is free software: you can redistribute it and/or modify
@@ -14,6 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
+#
+
+
 
 __all__ = ["Dpowers","autoadapt","sleep","launch","ThisScript","Icon","Win",
     "keyb", "mouse","ntfy","dlg","hotkeys","hook","sendwait","nfsendwait",
@@ -35,13 +39,13 @@ always_print_traceback()
 
 dpowers_folder = os.path.dirname(os.path.realpath(__file__))
 dpowers_startup_working_dir = os.getcwd()
-dependency_folder = os.path.join(dpowers_folder, "dependencies")
-dependency_package = __name__ + ".dependencies"
+#dependency_folder = os.path.join(dpowers_folder, "dependencies")
+#dependency_package = __name__ + ".dependencies"
 
 from .default_implementations import default_implementations
 
 class Adaptor(AdaptorBase):
-    dependency_folder = dependency_folder
+    #dependency_folder = dependency_folder
     implementation_source = default_implementations
     NamedKeyClass = None  #set later
     NamedButtonClass = None  #set later
