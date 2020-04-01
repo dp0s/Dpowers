@@ -1,16 +1,38 @@
+#
+#
+# Copyright (c) 2020 DPS, dps@my.mail.de
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+#
 from setuptools import setup, find_packages
-import shutil
 from time import sleep
-import multiprocessing
+import multiprocessing, os, subprocess, warnings, shutil
 
-from Dlib import Dpowers, Dhelpers, evdev_prepared
+dirname = os.path.dirname(os.path.realpath(__file__))
+os.chdir(dirname)
 
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
-    
-    
 
+try:
+    subprocess.run(["licenseheaders", "-t", "licenseheader.txt", "-E", ".py"])
+except FileNotFoundError as e:
+    warnings.warn(str(e))
+
+from Dlib import Dpowers, Dhelpers, evdev_prepared
 
 def my_setup(name, **kwargs):
     if "version" not in kwargs: raise ValueError
@@ -51,8 +73,8 @@ my_setup("Dpowers",
     package_data = {"Dpowers.iconpower.icons" : ["*"]},
 
     install_requires=["pynput>=1.6.8", "pystray>=0.15",
-        f"Dhelpers=={Dhelpers.__version__}",
-        f"evdev_prepared>={evdev_prepared.__version__}"],
+        "Dhelpers==" + Dhelpers.__version__,
+        "evdev_prepared>="+evdev_prepared.__version__],
 
     description="Unified Interface for automatic interaction",
     long_description=long_description,
@@ -69,10 +91,12 @@ my_setup("Dhelpers",
     description="Dhelpers support modules"
     )
 
-exit()
-
 my_setup("evdev_prepared",
     version = evdev_prepared.__version__,
-    install_requires=["evdev==1.2.0"],
+    install_requires=["evdev>=1.2.0"],
     description="Useful classes to make usage of python evdev easier"
     )
+
+
+print()
+print("DONE")

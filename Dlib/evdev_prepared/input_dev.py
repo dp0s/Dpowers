@@ -1,4 +1,5 @@
 #
+#
 # Copyright (c) 2020 DPS, dps@my.mail.de
 #
 # This program is free software: you can redistribute it and/or modify
@@ -13,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
 #
 from evdev import ecodes, InputDevice, uinput
 import selectors, threading
@@ -128,13 +130,13 @@ class AdhancedInputDevice(InputDevice):
             self.write(ecodes.EV_KEY, keycode, 0)
         self.syn()
     
-    # def close(self):
-    #     try:
-    #         super().close()
-    #     except RuntimeError:
-    #         pass
-    #     #this is necessary because in the latest evdev version, close will
-    #     # automatically use some of the async stuff, which I don't want!
+    def close(self):
+        try:
+            super().close()
+        except RuntimeError:
+            pass
+        #this is necessary because in evdev_version 1.3.0, close will
+        # automatically use some of the async stuff, which we don't want!
 
 
 class CollectableInputDevice(AdhancedInputDevice):
@@ -181,7 +183,7 @@ class CollectableInputDevice(AdhancedInputDevice):
             handler.process_event(ty,co,val, self)
 
 
-
+import traceback
 
 class EvdevInputLooper:
     
@@ -214,8 +216,16 @@ class EvdevInputLooper:
     
     def stop(self, dev):
         #_print("Stopp collecting from", dev)
-        self.selector.unregister(dev)
-        self.collected_devs.remove(dev)
+        
+        try:
+            self.collected_devs.remove(dev)
+        except ValueError:
+            pass
+        try:
+            self.selector.unregister(dev)
+        except KeyError:
+            pass
+        
     
     def run_loop(self):
         # print("run")
@@ -237,6 +247,11 @@ class EvdevInputLooper:
     
     def selected_devices(self):
         return tuple(key.fileobj for key in self.selector.get_map().values())
+    
+    def print_devices(self):
+        _print("selected_devices:\n",self.selected_devices())
+        _print("collected devs:\n",self.collected_devs)
+        _print()
     
     def __repr__(self) -> str:
         old = super().__repr__()[:-1]
