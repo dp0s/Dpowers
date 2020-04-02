@@ -21,7 +21,7 @@ from Dhelpers.all import container, launch, execute_after_print, PositiveInt,\
     restore_print_func, always_print_traceback
     #the last two print functions can be imported via the Dfuncs module
     
-from .events import KeyboardAdaptor, MouseAdaptor, KeyWaiter, HookAdaptor, EventSender
+from .events import KeyboardAdaptor, MouseAdaptor, KeyWaiter, HookAdaptor, CleverEventSender
 from . import dlg, ntfy, clip, Win
 from .windowpower import WindowObject
 
@@ -31,7 +31,7 @@ from .windowpower import WindowObject
 
 keyb = KeyboardAdaptor(group="Dfuncs",_primary=True)
 mouse = MouseAdaptor(group="Dfuncs", _primary=True)
-event_sender = EventSender(keyb,mouse)
+event_sender = CleverEventSender(keyb,mouse)
 
 class SendwaitError(Exception):
     pass
@@ -66,7 +66,7 @@ def sendwait(mandatory, *optional, winwaittime=10, notifytime=5,
         
         elif isinstance(ai, str):
             report("Sending keys:", ai)
-            keyb.send(ai)
+            event_sender.send(ai)
         
         elif isinstance(ai, WindowObject):
             report("Waiting for Window to exist and activate:", ai)
@@ -77,7 +77,7 @@ def sendwait(mandatory, *optional, winwaittime=10, notifytime=5,
                 error = "Window did not exist after winwaittime"
         else:
             try:
-                event_sender(ai)
+                event_sender.send_event(ai)
             except TypeError:
                 pass
             else:

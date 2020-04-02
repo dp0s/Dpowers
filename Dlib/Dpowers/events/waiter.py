@@ -17,7 +17,7 @@
 #
 #
 from . import HookAdaptor, CallbackHook, hotkeys, KeyboardAdaptor, \
-    MouseAdaptor, EventSender
+    MouseAdaptor, CleverEventSender
 from Dhelpers.all import check_type, launch
 import time
 from .. import NotificationAdaptor
@@ -143,7 +143,7 @@ class KeyWaiter(Waiter):
     hook = HookAdaptor(group="keywait", _primary=True)
     keyb = KeyboardAdaptor(group="keywait",_primary=True)
     mouse = MouseAdaptor(group="keywait", _primary=True)
-    send = EventSender(keyb,mouse)
+    send = CleverEventSender(keyb,mouse)
     hotstring_keyb = KeyboardAdaptor(group="default")
     
     @classmethod

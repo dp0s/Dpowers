@@ -20,10 +20,14 @@ from abc import ABC, abstractmethod
 from Dhelpers.all import AdditionContainer
 from ..event_classes import EventSequence, EventCombination, StringAnalyzer
 from .. import hotkeys
+import time
 
 
-
-class EventSenderBase(AdditionContainer.Addend,ABC):
+class EventSender(AdditionContainer.Addend,ABC):
+    
+    only_defined_names = False  #the name definitions come from the
+                # underlying StringEventCreator
+    hotkey_enabled_default = False
     
     @abstractmethod
     def _send_event(self, event,**kwargs):
@@ -47,10 +51,11 @@ class EventSenderBase(AdditionContainer.Addend,ABC):
                     raise TypeError(f"event argument {event} not allowed for "
                     f"send_event method of object {self}.")
        
-    @hotkeys.add_pause_option(True)
-    def send_eventstring(self, string, hotkey=False, **kwargs):
-        self.send_event(self.StringEventCreator.from_str(string, hotkey=hotkey),
-                **kwargs)
+    
+    def send_eventstring(self, string, hotkey=None, **kwargs):
+        if hotkey is None: hotkey=self.hotkey_enabled_default
+        self.send_event(self.StringEventCreator.from_str(string, hotkey=hotkey,
+                only_defined_names=self.only_defined_names), **kwargs)
     
     @property
     def StringEventCreator(self):
@@ -63,7 +68,7 @@ class EventSenderBase(AdditionContainer.Addend,ABC):
     _combination = _ending_symbol + _starting_symbol
     
     @hotkeys.add_pause_option(True)
-    def send(self, x, hotkey=True, **kwargs):
+    def send(self, s, hotkey=None, **kwargs):
         """
         Send a chain of characters or keys.
         Use <key> to denote special keys or <key1+key2> for combinations.
@@ -75,28 +80,86 @@ class EventSenderBase(AdditionContainer.Addend,ABC):
         Example: keyb.send(<ctrl+v> or keyb.send(<ctrl  press>v<ctrl rls>))
         """
         while True:
-            x0, x1, x2 = x.partition(self._starting_symbol)
-            if x0 != "": self.text(x0, **kwargs)
-            if x2 == "": break
-            if x2.startswith(self._combination):
+            s0, s1, s2 = s.partition(self._starting_symbol)
+            if s0 != "": self.text(s0, **kwargs)
+            if s2 == "": break
+            if s2.startswith(self._combination):
                 # if <>< is typed, send a single < and search if any more <
                 # are present
                 self.text(self._starting_symbol,**kwargs)
-                x = x2[2:]
+                s = s2[2:]
             else:
-                y0, y1, y2 = x2.partition(self._ending_symbol)
-                if y1 == "":
+                t0, t1, t2 = s2.partition(self._ending_symbol)
+                if t1 == "":
                     # this happens if ">" was not found so that < is not closed.
-                    self.text(self._starting_symbol + y0,**kwargs)
+                    self.text(self._starting_symbol + t0,**kwargs)
                     break
-                elif y0 != "":
-                    self.send_eventstring(y0, hotkey=hotkey, **kwargs)
-                if y2 == "": break
-                x = y2
+                elif t0 != "":
+                    self.send_eventstring(t0, hotkey=hotkey, **kwargs)
+                if t2 == "": break
+                s = t2
+                
+
+class PressReleaseSender(EventSender):
+    
+    hotkey_enabled_default = True
+    default_delay = None
+    
+    @abstractmethod
+    def _press(self, name):
+        raise NotImplementedError
+
+    @abstractmethod
+    def _rls(self, name):
+        raise NotImplementedError
+
+    @hotkeys.add_pause_option(True)
+    def press(self, *names, delay=None):
+        delay = self.default_delay if delay is None else delay
+        for k in names:
+            self._press(k)
+            if delay: time.sleep(delay/1000)
+    
+    @hotkeys.add_pause_option(True)
+    def rls(self, *names, delay=None):
+        delay = self.default_delay if delay is None else delay
+        for k in reversed(names):
+            self._rls(k)
+            if delay: time.sleep(delay/1000)
+    
+    
+    def _send_event(self, event, delay=None, reverse_press=False,
+            autorelease=False):
+        if isinstance(event, self.NamedClass.Event):
+            if event.press and not reverse_press or not event.press and reverse_press:
+                self.press(event.name, delay=delay)
+                if autorelease: self.rls(event.name, delay=delay)
+            else:
+                self.rls(event.name, delay=delay)
+        else:
+            raise TypeError
+
+
+    @hotkeys.add_pause_option(True)
+    def tap(self, *keynames, duration=10, delay=None):
+        for k in keynames:
+            try:
+                self.press(k, delay=duration)
+            finally:
+                self.rls(k, delay=delay)
+            
+            
+    @hotkeys.add_pause_option(True)
+    def comb(self, *keynames, delay=None):
+        try:
+            self.press(*keynames, delay=delay)
+        finally:
+            self.rls(*keynames, delay=delay)
         
         
-class EventSender(AdditionContainer, EventSenderBase, basic_class
-            =EventSenderBase):
+        
+class CleverEventSender(AdditionContainer, EventSender, basic_class
+            =EventSender):
         
     
     def __init__(self, *args):
@@ -111,11 +174,11 @@ class EventSender(AdditionContainer, EventSenderBase, basic_class
     def _send_event(self, event, **kwargs):
         for member in self.members:
             try:
-                member._send_event(event, **kwargs)
-                return
+                return member._send_event(event, **kwargs)
             except TypeError:
                 continue
-        raise TypeError
+        raise TypeError(f"event {event} not allowed for any EventSender in "
+        f"{self.members} of {self}.")
             
     def __call__(self, *args, **kwargs):
         return self.send_event(*args,**kwargs)
@@ -129,7 +192,8 @@ class EventSender(AdditionContainer, EventSenderBase, basic_class
                 return
             except NotImplementedError:
                 continue
-        raise NotImplementedError
+        raise NotImplementedError(f"text method not defined for any "
+            f"EventSender in {self.members} of {self}.")
         
     
     

@@ -18,9 +18,9 @@
 #
 import time
 from ... import Adaptor, adaptionmethod, hotkeys, Keyvent
-from ..event_sender import EventSenderBase
+from ..event_sender import PressReleaseSender
 
-class KeyboardAdaptor(Adaptor, EventSenderBase):
+class KeyboardAdaptor(Adaptor, PressReleaseSender):
     
     default_delay = None
     
@@ -84,52 +84,4 @@ class KeyboardAdaptor(Adaptor, EventSenderBase):
     def add_key_translation(self, dic):
         self.keynames.target_space.translation_dic = dic
         self._update_keyname_dict()
-        
-        
-
-    @hotkeys.add_pause_option(True)
-    def press(self, *keynames, delay=None):
-        delay = self.default_delay if delay is None else delay
-        for k in keynames:
-            self._press(k)
-            if delay: time.sleep(delay/1000)
-   
-    @hotkeys.add_pause_option(True)
-    def rls(self, *keynames, delay=None):
-        delay = self.default_delay if delay is None else delay
-        for k in reversed(keynames):
-            self._rls(k)
-            if delay: time.sleep(delay/1000)
  
-    @hotkeys.add_pause_option(True)
-    def comb(self, *keynames, delay=None):
-        try:
-            self.press(*keynames, delay=delay)
-        finally:
-            self.rls(*keynames, delay=delay)
-    
-    @hotkeys.add_pause_option(True)
-    def tap(self, *keynames, duration=10, delay=None):
-        for k in keynames:
-            self.press(k,delay=duration)
-            self.rls(k,delay=delay)
-            
-    
-    
-    def _send_event(self, event, delay=None, reverse_press=False,
-            autorelease=False):
-        if isinstance(event, Keyvent):
-            if event.press and not reverse_press or not event.press and reverse_press:
-                self.press(event.name, delay=delay)
-                if autorelease: self.rls(event.name, delay=delay)
-            else:
-                self.rls(event.name, delay=delay)
-        else:
-            raise TypeError
-            
-    # @hotkeys.add_pause_option(True, 30)
-    # def send(self, string: str, delay=None):  # , windowID=None,
-    #     # clearmodifiers=False):
-    #
-    #
-    #     x = string.replace("\n", "<Return>").replace("\t", "<Tab>")

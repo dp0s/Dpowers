@@ -16,9 +16,9 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 from ... import Adaptor, adaptionmethod, hotkeys, Buttonevent, MouseMoveEvent
-from ..event_sender import EventSenderBase
+from ..event_sender import EventSender
 
-class MouseAdaptor(Adaptor, EventSenderBase):
+class MouseAdaptor(Adaptor, EventSender):
     
     # def set_options(self, *options):
     #     if not options: options = ("NamedButton",)

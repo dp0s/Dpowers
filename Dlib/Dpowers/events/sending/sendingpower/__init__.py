@@ -16,9 +16,9 @@
 #
 
 from ... import Adaptor
-from ..event_sender import EventSenderBase
+from ..event_sender import EventSender
 
-class SendingAdaptor(Adaptor, EventSenderBase):
+class SendingAdaptor(Adaptor, EventSender):
 
     def _send_event(self, event,**kwargs):
         pass

@@ -22,7 +22,7 @@ from Dhelpers.all import AdditionContainer, NamedObj
 combination_symbol = "+"
 sequence_symbol = " "
 
-def _from_str(cls_or_self, string, hotkey=False):
+def _from_str(cls_or_self, string, hotkey=False, **kwargs):
     splitted_string = string.split(sequence_symbol)  # split at space
     #print("splitted", splitted_string)
     corrected_split = []
@@ -44,14 +44,18 @@ def _from_str(cls_or_self, string, hotkey=False):
     events = []
     for s in corrected_split:
         if combination_symbol in s:
-            t = tuple(cls_or_self._create_from_str(name) for name in s.split(
-                    combination_symbol))
+            t = tuple(cls_or_self._create_from_str(name, **kwargs)  for name in
+                s.split(combination_symbol))
             events.append(EventCombination(*t))
         else:
-            event = cls_or_self._create_from_str(s)
+            event = cls_or_self._create_from_str(s,**kwargs)
             events.append(event)
             if hotkey:
-                if not event.press:raise ValueError("Hotkey mode enabled. "
+                try:
+                    p = event.press
+                except AttributeError: raise ValueError("Option hotkey=True "
+                                f"does not make sense for f{event}.")
+                if not p:raise ValueError("Hotkey mode enabled. "
              "Use option hotkey=False to only send press or release events.")
                 events.append(event.reverse())
     if len(events) == 0: return StringEvent()
@@ -102,7 +106,7 @@ class StringEvent(Event, str):
     allowed_names = () # set allowed_names even without use of NamedClass
     
 
-    def __new__(cls, name="", raise_error=False):
+    def __new__(cls, name="", only_defined_names=False):
         given_name = name
         named_instance = None
         if name != "":
@@ -110,15 +114,17 @@ class StringEvent(Event, str):
                 try:
                     # print(name, named_instance)
                     named_instance = cls.NamedClass.instance(name)
-                except KeyError as k:
-                    if not cls.allowed_names and raise_error:
-                        raise ValueError(f"{name} not allowed") from k
+                except KeyError:
+                    if not cls.allowed_names and only_defined_names:
+                        raise NameError(f"name '{name}' not allowed for "
+                        f"{cls}")
                 else:
                     name = named_instance.name
             if not named_instance:
                 if name not in cls.allowed_names:
-                    if cls.allowed_names and raise_error:
-                        raise ValueError(f"{name} not allowed")
+                    if cls.allowed_names and only_defined_names:
+                        raise NameError(f"name '{name}' not allowed for "
+                        f"{cls}")
                     name = f"[{name}]"
         self = str.__new__(cls, name)
         self.name = name
@@ -131,9 +137,9 @@ class StringEvent(Event, str):
     
     
     @classmethod
-    def _create_from_str(cls, string, raise_error=False):
+    def _create_from_str(cls, string, **kwargs):
         # DONT OVERRIDE THIS IN SUBCLASS!
-        return cls(*cls._args_from_string(string), raise_error=raise_error)
+        return cls(*cls._args_from_string(string),**kwargs)
     
     @classmethod
     def _args_from_string(cls, string):
@@ -199,9 +205,9 @@ class StringEvent(Event, str):
 class PressReleaseEvent(StringEvent):
     __slots__ = ["press"]
     
-    def __new__(cls, name="", press=True, write_rls=True, raise_error=False):
+    def __new__(cls, name="", press=True, write_rls=True, only_defined_names=False):
         assert press in (True, False, None)
-        self = StringEvent.__new__(cls, name, raise_error=raise_error)
+        self = StringEvent.__new__(cls, name, only_defined_names=only_defined_names)
         if press is False and write_rls:
             self2 = str.__new__(cls, self.name + "_rls")
             for attr in StringEvent.__slots__:
@@ -286,11 +292,15 @@ class StringAnalyzer:
             # _from_str function is not cls but actually self
     from_str = _from_str
     
-    def _create_from_str(self, s):
+    
+    def _create_from_str(self, s, only_defined_names=False):
         for cls in self.event_classes:
             try:
-                return cls._create_from_str(s, raise_error=True)
-            except ValueError:
+                return cls._create_from_str(s, only_defined_names=True)
+            except NameError:
                 continue
-        raise ValueError
+        if only_defined_names:
+            raise NameError(f"String '{s}' could not be matched to any "
+            f"event class in {self.event_classes} of {self}.")
+        return False
         
