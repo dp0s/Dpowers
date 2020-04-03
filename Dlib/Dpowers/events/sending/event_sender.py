@@ -18,7 +18,7 @@
 #
 from abc import ABC, abstractmethod
 from Dhelpers.all import AdditionContainer
-from ..event_classes import EventSequence, EventCombination, StringAnalyzer
+from ..event_classes import EventSequence, EventCombination, StringAnalyzer, split_str
 from .. import hotkeys
 import time
 
@@ -28,14 +28,41 @@ class EventSender(AdditionContainer.Addend,ABC):
     only_defined_names = False  #the name definitions come from the
                 # underlying StringEventCreator
     hotkey_enabled_default = False
-    
-    @abstractmethod
-    def _send_event(self, event,**kwargs):
-        raise NotImplementedError
+    default_delay = None
     
     def text(self, string, **kwargs):
         raise NotImplementedError
+
+    @hotkeys.add_pause_option(True)
+    def press(self, *names, delay=None):
+        delay = self.default_delay if delay is None else delay
+        for k in names:
+            self._press(k)
+            if delay: time.sleep(delay/1000)
+
+    @abstractmethod
+    def _press(self, name):
+        raise NotImplementedError
     
+
+       
+    
+    def send_eventstring(self, string, delay=None):
+        #self.send_event(self.StringEventCreator.from_str(string, hotkey=hotkey,
+        #        only_defined_names=self.only_defined_names), **kwargs)
+        for entry in split_str(string):
+            if isinstance(entry, str):
+                self.press(entry, delay=delay)
+            else:
+                raise TypeError
+            
+                
+            
+        
+    @property
+    def StringEventCreator(self):
+        return self.NamedClass.Event
+
     @hotkeys.add_pause_option(True)
     def send_event(self, *events, **kwargs):
         for event in events:
@@ -50,18 +77,10 @@ class EventSender(AdditionContainer.Addend,ABC):
                 except TypeError:
                     raise TypeError(f"event argument {event} not allowed for "
                     f"send_event method of object {self}.")
-       
-    
-    def send_eventstring(self, string, hotkey=None, **kwargs):
-        if hotkey is None: hotkey=self.hotkey_enabled_default
-        self.send_event(self.StringEventCreator.from_str(string, hotkey=hotkey,
-                only_defined_names=self.only_defined_names), **kwargs)
-    
-    @property
-    def StringEventCreator(self):
-        return self.NamedClass.Event
-
-
+                
+    @abstractmethod
+    def _send_event(self, event,**kwargs):
+        raise NotImplementedError
     
     _starting_symbol = "<"
     _ending_symbol = ">"
@@ -103,22 +122,23 @@ class EventSender(AdditionContainer.Addend,ABC):
 class PressReleaseSender(EventSender):
     
     hotkey_enabled_default = True
-    default_delay = None
     
-    @abstractmethod
-    def _press(self, name):
-        raise NotImplementedError
+    def send_eventstring(self, string, hotkey=True, delay=None):
+        if hotkey is None: hotkey=self.hotkey_enabled_default
+        for entry in split_str(string):
+            if isinstance(entry, str):
+                if hotkey:
+                    self.tap(entry,delay=delay)
+                else:
+                    self.press(entry,delay=delay)
+            elif isinstance(entry, tuple):
+                self.comb(*entry,delay=delay)
 
     @abstractmethod
     def _rls(self, name):
         raise NotImplementedError
 
-    @hotkeys.add_pause_option(True)
-    def press(self, *names, delay=None):
-        delay = self.default_delay if delay is None else delay
-        for k in names:
-            self._press(k)
-            if delay: time.sleep(delay/1000)
+    
     
     @hotkeys.add_pause_option(True)
     def rls(self, *names, delay=None):
