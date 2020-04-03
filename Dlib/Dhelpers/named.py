@@ -36,7 +36,7 @@ class NamedObj(KeepInstanceRefs):
     defined_groups = None
     NameContainer = None
     
-    __slots__ = ["names", "groups"]
+    __slots__ = ["names", "groups", "mapping_dict"]
     
     def __init_subclass__(cls, inherit_names=False):
         cls.names_with_important_capital_letters = set()
@@ -66,6 +66,7 @@ class NamedObj(KeepInstanceRefs):
         self.groups = []
         self.names = list()
         self.add_names(*names)
+        self.mappings = {}
 
 
     def add_to_group(self, group_name):
@@ -220,41 +221,75 @@ class NamedObj(KeepInstanceRefs):
     def __repr__(self):
         return super().__repr__()[:-1] + " with standard name '%s'>"%self.name
     
-    
-    @classmethod
-    def standardize_single(cls, string, applied_func):
-        if isinstance(string, int):
-            return applied_func(str(string))
-        if isinstance(string, cls):
-            return applied_func(string.name)
-        return cls.analyze_string(str(string), applied_func)
-    
-    
-    @classmethod
-    def analyze_string(cls, string, applied_func):
-        # override this in a subclass
-        return applied_func(string)
-    
-    @classmethod
-    @ignore_first_arg(extend_to_collections_dirs)
-    def standardize(cls, obj):
-        return cls.standardize_single(obj,
-                lambda name: cls.get_stnd_name(name, name))
+    def __str__(self):
+        return f"{self.__class__.__name__}({self.name})"
     
     
     
+class StandardizingDict:
     
-class StandardizingDict(dict):
-    
-    
+    _running_number = 0
     NamedClass = None  #set by NamedObj init_subclass method
         
     def __init__(self, *new_info, func=None):
-        self.standardize = self.NamedClass.standardize
-        super().__init__()
+        self.running_number = self._running_number
+        self.__class__._running_number += 1
+        self.other_dict = dict()
+        self.registered_instances = dict()
+        self.registered_names = dict()
         if len(new_info) > 0:
             # print(new_info)
             self.update(*new_info, func=func)
+            
+    def __repr__(self) -> str:
+        old = super().__repr__()[:-1]
+        return old + f" with running number {self.running_number}>"
+    
+    @property
+    def inst_dict(self):
+        return {str(inst): inst.mappings[self.running_number]
+            for inst in self.registered_instances}
+    
+    def normal_version(self):
+        d = self.other_dict.copy()
+        d.update(self.inst_dict)
+        return str(d).replace("'","").replace('"','')
+    
+    
+    def __str__(self):
+        return f"StandardizingDict({self.normal_version()})"
+    
+    
+    def __setitem__(self, k, v) -> None:
+        try:
+            inst = self.NamedClass.instance(k)
+        except KeyError:
+            self.other_dict[k] = v
+        else:
+            inst.mappings[self.running_number]=v
+            for name in inst.names: self.registered_names[name] = v
+            self.registered_instances[inst] = v
+    
+    def __getitem__(self, k):
+        # this method is optimized for speed
+        try:
+            if isinstance(k, self.NamedClass):
+                return k.mappings[self.running_number]
+            try:
+                return self.registered_names[self.NamedClass.make_comparable(k)]
+            except KeyError:
+                return self.other_dict[k]
+        except KeyError:
+            raise KeyError(f"'{k}'")
+
+        
+    def __delitem__(self, k):
+        try:
+            inst = self.NamedClass.instance(k)
+        except KeyError:
+            del self.other_dict[k]
+        else:
+            del inst.mappings[self._running_number]
     
     def update(self, *new_info, func=None):
         new_info = extract_if_single_collection(new_info)
@@ -262,27 +297,20 @@ class StandardizingDict(dict):
             new_info = dict(zip(new_info, new_info))
         check_type(dict, new_info)
         if not func: func = lambda x: x
-        dic = {self.standardize(k): func(v) for (k, v) in new_info.items()}
-        return super().update(dic)
-    
-    def __setitem__(self, k, v) -> None:
-        return super().__setitem__(self.standardize(k), v)
-    
-    def get(self, k, default):
-        return super().get(self.standardize(k), default)
-    
-    def __getitem__(self, k):
-        return super().__getitem__(self.standardize(k))
+        for k,v in new_info.items(): self[k] = v
+        
+    def get(self, k, default=None):
+        try:
+            return self[k]
+        except KeyError:
+            return default
     
     def __contains__(self, item):
-        #print(repr(item), self.standardize(item))
-        return super().__contains__(self.standardize(item))
-    
-    def apply(self, obj):
-        # print(obj, type(obj))
-        return self.NamedClass.standardize_single(obj,
-                lambda name: self.get(name, self.standardize(name)))
-    
+        try:
+            self[item]
+            return True
+        except KeyError:
+            return False
     
     
     

@@ -179,8 +179,8 @@ class StringEvent(Event, str):
     def eq(self,other):
         if isinstance(other,int): other=f"[{other}]"
         if isinstance(other, str):
-            if self.NamedClass:
-                return super().__eq__(self.NamedClass.standardize(other))
+            if self.named_instance:
+                return self.named_instance == other
             else:
                 return super().__eq__(other)
         raise NotImplementedError

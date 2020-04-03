@@ -359,9 +359,9 @@ class PressReleaseHook(CallbackHook):
         #this has to be called after cls.NamedClass has been set
         for i in range(len(cls.name_translation_dicts)):
             dic = cls.name_translation_dicts[i]
-            check_type(dict,dic)
             StandardizingDict = cls.NamedClass.StandardizingDict
             if not isinstance(dic, StandardizingDict):
+                check_type(dict,dic)
                 cls.name_translation_dicts[i] = StandardizingDict(dic)
         coll = cls.collector
         if coll is None: return

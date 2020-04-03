@@ -18,9 +18,12 @@
 #
 from abc import ABC, abstractmethod
 from Dhelpers.all import AdditionContainer
-from ..event_classes import EventSequence, EventCombination, StringAnalyzer, split_str
-from .. import hotkeys
+from ..event_classes import EventSequence, EventCombination, StringAnalyzer, \
+    split_str
+from .. import hotkeys, Adaptor, adaptionmethod
 import time
+
+
 
 
 class EventSender(AdditionContainer.Addend,ABC):
@@ -40,7 +43,6 @@ class EventSender(AdditionContainer.Addend,ABC):
             self._press(k)
             if delay: time.sleep(delay/1000)
 
-    @abstractmethod
     def _press(self, name):
         raise NotImplementedError
     
@@ -56,31 +58,8 @@ class EventSender(AdditionContainer.Addend,ABC):
             else:
                 raise TypeError
             
-                
-            
         
-    @property
-    def StringEventCreator(self):
-        return self.NamedClass.Event
-
-    @hotkeys.add_pause_option(True)
-    def send_event(self, *events, **kwargs):
-        for event in events:
-            if isinstance(event, EventSequence):
-                self.send_event(*event.members, **kwargs)
-            elif isinstance(event, EventCombination):
-                self.send_event(event.convert(),**kwargs)
-            else:
-                try:
-                    self._send_event(event,**kwargs)
-                    #print("event send", event)
-                except TypeError:
-                    raise TypeError(f"event argument {event} not allowed for "
-                    f"send_event method of object {self}.")
-                
-    @abstractmethod
-    def _send_event(self, event,**kwargs):
-        raise NotImplementedError
+    
     
     _starting_symbol = "<"
     _ending_symbol = ">"
@@ -118,6 +97,52 @@ class EventSender(AdditionContainer.Addend,ABC):
                 if t2 == "": break
                 s = t2
                 
+class EventSender_plus(EventSender):
+    @abstractmethod
+    def _send_event(self, event, **kwargs):
+        raise NotImplementedError
+    
+    @hotkeys.add_pause_option(True)
+    def send_event(self, *events, **kwargs):
+        for event in events:
+            if isinstance(event, EventSequence):
+                self.send_event(*event.members, **kwargs)
+            elif isinstance(event, EventCombination):
+                self.send_event(event.convert(), **kwargs)
+            else:
+                try:
+                    name = event.name
+                except AttributeError:
+                    pass
+                else:
+                    if name.startswith("[") and name.endswith("]"):
+                        name = name[1:-1]
+                        event.name = name
+                try:
+                    self._send_event(event,
+                            **kwargs)  # print("event send", event)
+                except TypeError:
+                    raise TypeError(f"event argument {event} not allowed for "
+                    f"send_event method of object {self}.")
+                
+                
+                
+                
+class AdaptableEventSender(EventSender, Adaptor):
+    
+    NamedClass = None
+    
+    @adaptionmethod("press", require=True)
+    def _press(self, name):
+        raise NotImplementedError
+    
+    @_press.target_modifier
+    def _create_Named_mapping(self, target, amethod):
+        target_space = amethod.target_space
+        try:
+            keynames = target_space.keynames
+        except AttributeError:
+            return
 
 class PressReleaseSender(EventSender):
     
@@ -127,12 +152,17 @@ class PressReleaseSender(EventSender):
         if hotkey is None: hotkey=self.hotkey_enabled_default
         for entry in split_str(string):
             if isinstance(entry, str):
-                if hotkey:
+                if entry.endswith("_rls"):
+                    if hotkey: raise ValueError
+                    self.rls(entry[:-4],delay=delay)
+                elif hotkey:
                     self.tap(entry,delay=delay)
                 else:
                     self.press(entry,delay=delay)
             elif isinstance(entry, tuple):
                 self.comb(*entry,delay=delay)
+            else:
+                raise TypeError
 
     @abstractmethod
     def _rls(self, name):
@@ -177,19 +207,8 @@ class PressReleaseSender(EventSender):
             self.rls(*keynames, delay=delay)
         
         
-        
 class CleverEventSender(AdditionContainer, EventSender, basic_class
             =EventSender):
-        
-    
-    def __init__(self, *args):
-        super().__init__(*args)
-        EventCreators = tuple(m.StringEventCreator for m in self.members)
-        self._StringEventCreator = StringAnalyzer(*EventCreators)
-        
-    @property
-    def StringEventCreator(self):
-        return self._StringEventCreator
     
     def _send_event(self, event, **kwargs):
         for member in self.members:
@@ -199,7 +218,7 @@ class CleverEventSender(AdditionContainer, EventSender, basic_class
                 continue
         raise TypeError(f"event {event} not allowed for any EventSender in "
         f"{self.members} of {self}.")
-            
+        
     def __call__(self, *args, **kwargs):
         return self.send_event(*args,**kwargs)
     
