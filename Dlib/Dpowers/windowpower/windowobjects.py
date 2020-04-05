@@ -19,14 +19,13 @@
 from Dhelpers.all import (check_type, PositiveInt, CollectionWithProps,
     NonNegativeInt, AdditionContainer)
 
-import inspect, time
+import inspect, time, functools
 from abc import ABC, abstractmethod
 
 
 class WindowNotFoundError(Exception):
     pass
-
-
+    
 class WindowObject(ABC):
     
     adaptor = NotImplemented
@@ -137,44 +136,62 @@ class WindowObject(ABC):
         print(*self.all_infos(), sep="\n")
     
     
-    
-    def activate(self):
-        return self.adaptor._activate(self.ID())
-    def activate_all(self):
-        for ID in self.IDs(): self.adaptor._activate(ID)
-    
-    def set_prop(self, action: str, prop: str, prop2: str = False):
-        return self.adaptor._set_prop(self.ID(), action, prop, prop2)
-    def set_prop_all(self, action: str, prop: str, prop2: str = False):
-        for ID in self.IDs(): self.adaptor._set_prop(ID, action, prop, prop2)
-    
-    def move(self, x=-1, y=-1, width=-1, height=-1):
-        return self.adaptor._move(self.ID(), x, y, width, height)
-    def move_all(self, x=-1, y=-1, width=-1, height=-1):
-        for ID in self.IDs(): self.adaptor._move(ID, x, y, width, height)
-    
-    def close(self):
-        return self.adaptor._close(self.ID())
-    def close_all(self):
-        for ID in self.IDs(): self.adaptor._close(ID)
-    
-    def kill(self):
-        return self.adaptor._kill(self.ID())
-    def kill_all(self):
-        for ID in self.IDs(): self.adaptor._kill(ID)
-    
-    def minimize(self):
-        return self.adaptor._minimize(self.ID())
-    def minimize_all(self):
-        for ID in self.IDs(): self.adaptor._minimize(ID)
-    
-    def maximize(self):
-        sr = self.adaptor.screen_res()
-        self.move(1,1,*sr)
 
-    def maximize_all(self):
+    def activate(self, all=False):
+        if all:
+            for ID in self.IDs(): self.adaptor._activate(ID)
+        else:
+            return self.adaptor._activate(self.ID())
+        
+    
+    def set_prop(self, action: str, prop: str, prop2: str = False, all=False):
+        if all:
+            for ID in self.IDs():
+                self.adaptor._set_prop(ID, action, prop, prop2)
+        else:
+            return self.adaptor._set_prop(self.ID(), action, prop, prop2)
+        
+    
+
+    
+    def move(self, x=-1, y=-1, width=-1, height=-1, all=False):
+        if all:
+            for ID in self.IDs(): self.adaptor._move(ID, x, y, width, height)
+        else:
+            return self.adaptor._move(self.ID(), x, y, width, height)
+        
+    
+    def close(self, all=False):
+        if all:
+            for ID in self.IDs(): self.adaptor._close(ID)
+        else:
+            return self.adaptor._close(self.ID())
+        
+    
+    def kill(self, all=False):
+        if all:
+            for ID in self.IDs(): self.adaptor._kill(ID)
+        else:
+            return self.adaptor._kill(self.ID())
+        
+    
+    def minimize(self, all=False):
+        if all:
+            for ID in self.IDs(): self.adaptor._minimize(ID)
+        else:
+            return self.adaptor._minimize(self.ID())
+        
+    def maximize(self, all=False):
         sr = self.adaptor.screen_res()
-        self.move_all(1,1,*sr)
+        self.move(0,0,*sr, all=all)
+        
+    def max_left(self, all=False):
+        a,b = self.adaptor.screen_res()
+        self.move(0,0,a/2,b, all=all)
+    
+    def max_right(self, all=False):
+        a,b = self.adaptor.screen_res()
+        self.move(a/2,0,a/2,b, all=all)
     
     def wait_active(self, timeout=5, pause_when_found=0.05, timestep=0.2,
             reverse=False):
