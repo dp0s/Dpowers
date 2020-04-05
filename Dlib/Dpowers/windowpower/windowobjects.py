@@ -168,6 +168,13 @@ class WindowObject(ABC):
     def minimize_all(self):
         for ID in self.IDs(): self.adaptor._minimize(ID)
     
+    def maximize(self):
+        sr = self.adaptor.screen_res()
+        self.move(1,1,*sr)
+
+    def maximize_all(self):
+        sr = self.adaptor.screen_res()
+        self.move_all(1,1,*sr)
     
     def wait_active(self, timeout=5, pause_when_found=0.05, timestep=0.2,
             reverse=False):
