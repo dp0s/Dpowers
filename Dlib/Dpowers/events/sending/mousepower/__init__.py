@@ -28,6 +28,7 @@ class MouseAdaptor(AdaptivePressReleaseSender):
     def NamedClass(self, val):
         if not issubclass(val, NamedButton): raise TypeError
         self.NamedButtonClass = val
+        self._update_stand_dicts()
     
     @property
     def button(self):

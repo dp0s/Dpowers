@@ -16,16 +16,10 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from typing import Any
 
 from .baseclasses import KeepInstanceRefs
-from .arghandling import extract_if_single_collection, check_type
-from .decorators import (extend_to_collections, extend_to_collections_dirs,
-    ignore_first_arg)
-import collections
-
-
-#TODO: Standardizing classmethods should be made more clear.
+from .arghandling import check_type
+from .decorators import (extend_to_collections)
 
 
 class NamedObj(KeepInstanceRefs):
@@ -231,34 +225,55 @@ class StandardizingDict:
     _running_number = 0
     NamedClass = None  #set by NamedObj init_subclass method
         
-    def __init__(self, *new_info, func=None, others_comparable=True):
+    def __init__(self, new_info=None, func=None, others_comparable=True):
         self.running_number = self._running_number
         self.__class__._running_number += 1
         self.other_dict = dict()
         self.registered_instances = dict()
         self.registered_names = dict()
         self.others_comparable= others_comparable
-        if len(new_info) > 0:
-            # print(new_info)
-            self.update(*new_info, func=func)
+        if new_info: self.update(new_info, func=func)
+            
+    def copy(self):
+        return self.__class__(self,others_comparable=self.others_comparable)
+    
+    def update(self, new_info, func=None):
+        if isinstance(new_info, (set, list, tuple)):
+            new_info = dict(zip(new_info, new_info))
+        elif isinstance(new_info, StandardizingDict):
+            new_info = new_info.normal_version()
+        check_type(dict, new_info)
+        if not func: func = lambda x: x
+        for k,v in new_info.items():
+            self[k] = func(v)
             
     def __repr__(self) -> str:
         old = super().__repr__()[:-1]
         return old + f" with running number {self.running_number}>"
     
-    @property
-    def inst_dict(self):
-        return {str(inst): inst.mappings[self.running_number]
-            for inst in self.registered_instances}
-    
-    def normal_version(self):
+    def normal_version(self, str_of_inst=False):
+        if str_of_inst:
+            f = lambda inst: str(inst)
+        else:
+            f = lambda inst: inst.name
         d = self.other_dict.copy()
-        d.update(self.inst_dict)
-        return str(d).replace("'","").replace('"','')
+        d.update({f(inst): inst.mappings[self.running_number]
+            for inst in self.registered_instances})
+        return d
+    
+    def __eq__(self, other):
+        if isinstance(other,self.__class__):
+            if self.NamedClass == other.NamedClass and \
+                self.other_dict == other.other_dict and \
+                self.registered_instances == other.registered_instances:
+                    return True
+            return False
+        return NotImplemented
     
     
     def __str__(self):
-        return f"StandardizingDict({self.normal_version()})"
+        return "StandardizingDict" + str(self.normal_version(
+                str_of_inst=True)).replace("'","").replace('"','')
     
     
     def __setitem__(self, k, v) -> None:
@@ -295,20 +310,23 @@ class StandardizingDict:
             del self.other_dict[k]
         else:
             del inst.mappings[self._running_number]
-    
-    def update(self, *new_info, func=None):
-        new_info = extract_if_single_collection(new_info)
-        if isinstance(new_info, (set, list, tuple)):
-            new_info = dict(zip(new_info, new_info))
-        check_type(dict, new_info)
-        if not func: func = lambda x: x
-        for k,v in new_info.items(): self[k] = func(v)
+            for name in inst.names: del self.registered_names[name]
+            del self.registered_instances[inst]
         
     def get(self, k, default=None):
         try:
             return self[k]
         except KeyError:
             return default
+        
+    def pop(self, k, default=None):
+        try:
+            val = self[k]
+        except KeyError:
+            if default is not None: return default
+            raise
+        del self[k]
+        return val
         
     def apply(self, k):
         try:
@@ -331,7 +349,6 @@ class StandardizingDict:
             return True
         except KeyError:
             return False
-    
     
     
 

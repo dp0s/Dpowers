@@ -102,7 +102,7 @@ class TriggerManager(TimedObject):
         def add_to_funcdict(hk_func):
             # add the function to be triggered by the appropriate hotkeys
             for hk in hks:
-                hk=self.NamedType.standardize(hk)
+                hk=self.NamedType.get_stnd_name(hk)
                 if hk in self.funcdict:
                     raise ValueError("Hotkey %s defined more than one time."
                                      % hk)

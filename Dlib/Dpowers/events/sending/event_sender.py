@@ -17,10 +17,11 @@
 #
 #
 from abc import ABC, abstractmethod
-from Dhelpers.all import AdditionContainer, AdaptionError
+from Dhelpers.all import AdditionContainer, AdaptionError, check_type
 from ..event_classes import split_str, EventSenderMixin
 from .. import hotkeys, Adaptor, adaptionmethod
 import time, functools
+from collections import defaultdict
 
 
 class Sender(AdditionContainer.Addend,ABC):
@@ -146,7 +147,7 @@ class PressReleaseMixin:
 
 class AdaptiveMixin(Adaptor):
     NamedClass = None
-    stand_dicts = {}
+    #stand_dicts = defaultdict(lambda : defaultdict(lambda : list()))
     
     def press(self, *names, delay=None, map_names=True):
         if map_names:  names = tuple(self._press.standardizing_dict.apply(
@@ -158,28 +159,56 @@ class AdaptiveMixin(Adaptor):
         return self._press.target(name)
     
     @_press.target_modifier
-    def _create_standardizing_dict(self, target, amethod):
-        target_space = amethod.target_space
-        standardizing_dict = None
-        try:
-            named_dicts_for_target_space = self.stand_dicts[target_space]
-        except KeyError:
-            self.stand_dicts[target_space] = {}
-        else:
-            try:
-                standardizing_dict = named_dicts_for_target_space[
-                    self.NamedClass]
-            except KeyError:
-                pass
-        if standardizing_dict is None:
-            try:
-                names = target_space.names
-            except AttributeError:
-                names = {}
-            standardizing_dict = self.NamedClass.StandardizingDict(names)
-            self.stand_dicts[target_space][self.NamedClass] = standardizing_dict
-        amethod.standardizing_dict = standardizing_dict
+    def _press_tm(self, target, amethod):
+        self._create_standardizing_dict(amethod)
         return target
+    
+    def _create_standardizing_dict(self,  amethod):
+        #this should be executed when amethod is adapted, when NamedClass
+        # changes or when add_key_dict_changes
+        target_space = amethod.target_space
+        try:
+            names = target_space.names
+        except AttributeError:
+            names = {}
+        stand_dict = self.NamedClass.StandardizingDict(names)
+        if self.name_translation:
+            old_dict = stand_dict.copy()
+            for key,val in self.name_translation.items():
+                try:
+                    val2 = old_dict[val]
+                except KeyError:
+                    pass
+                else:
+                    stand_dict[key] = val2
+        check_type(self.NamedClass.StandardizingDict, stand_dict)
+        amethod.standardizing_dict = stand_dict
+
+    
+    def _update_stand_dicts(self):
+        for n in ("_press", "_rls"):
+            try:
+                amethod = getattr(self, n)
+            except AttributeError:
+                continue
+            if amethod.target in (None,NotImplemented): continue
+            self._create_standardizing_dict(amethod)
+
+    _name_translation = None
+    
+    @property
+    def name_translation(self):
+        return self._name_translation
+        
+    @name_translation.setter
+    def name_translation(self, val):
+        check_type(dict,val)
+        self._name_translation = val
+        self._update_stand_dicts()
+        
+        
+
+
 
 class PressReleaseSender(PressReleaseMixin, Sender):
     pass
@@ -203,7 +232,28 @@ class AdaptivePressReleaseSender(AdaptiveMixin, PressReleaseMixin,
     def _rls(self, name):
         return self._rls.target(name)
     
-    _rls.target_modifier(AdaptiveMixin._create_standardizing_dict)
+    @_rls.target_modifier
+    def _rls_tm(self, target, amethod):
+        self._create_standardizing_dict(amethod)
+        return target
+
+    _press_rls_standdict = None # default_value
+    
+    def _create_standardizing_dict(self, amethod):
+        super()._create_standardizing_dict(amethod)
+        # now detect if standardizing_dicts are the same
+        # this will be important for Pressed ContextManager
+        try:
+            d1 = self._press.standardizing_dict
+            d2 = self._rls.standardizing_dict
+        except AttributeError:
+            pass
+        else:
+            if d1==d2:
+                self._press_rls_standdict = d1
+                return
+        self._press_rls_standdict = False
+        
 
 
     def _send_event(self, event, delay=None, reverse_press=False,
@@ -219,6 +269,9 @@ class AdaptivePressReleaseSender(AdaptiveMixin, PressReleaseMixin,
         
     def pressed(self, *names, delay=None, map_names=True):
         return PressedContex_mapped(self, *names, delay=delay, map_names=map_names)
+
+
+
 
 
 
@@ -249,18 +302,16 @@ class PressedContex_mapped(PressedContext):
     
     def __init__(self, sender_instance, *names, delay=None, map_names=True):
         if map_names:
-            try:
-                d1 = sender_instance._press.standardizing_dict
-                d2 = sender_instance._rls.standardizing_dict
-            except AttributeError:
-                pass
-            else:
-                if d1 is d2:
-                    names = tuple(d1.apply(name) for name in names)
-                    map_names = False
-                    # this way, we only have to perform it ones
+            d= sender_instance._press_rls_standdict
+            if d:
+                names = tuple(d.apply(name) for name in names)
+                map_names = False
+                # this way, we only  perform it ones for press and release
         super().__init__(sender_instance, *names, delay=delay)
         self.map_names = map_names
+        
+        
+        
         
         
 class CombinedSender(AdditionContainer, Sender, basic_class=Sender):

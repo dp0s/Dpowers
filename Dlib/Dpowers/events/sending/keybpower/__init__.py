@@ -31,6 +31,7 @@ class KeyboardAdaptor(AdaptivePressReleaseSender):
     def NamedClass(self, val):
         if not issubclass(val, NamedKey): raise TypeError
         self.NamedKeyClass = val
+        self._update_stand_dicts()
     
     @property
     def key(self):
