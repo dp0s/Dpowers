@@ -16,7 +16,9 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from Dhelpers.all import AdditionContainer, NamedObj, ArgSaver
+from Dhelpers.all import AdditionContainer, NamedObj
+from . import hotkeys
+from abc import ABC, abstractmethod
 
 
 combination_symbol = "+"
@@ -313,4 +315,31 @@ class StringAnalyzer:
             f"event class in {self.event_classes} of {self}.")
         return False
 
+
+class EventSenderMixin(ABC):
     
+    @abstractmethod
+    def _send_event(self, event, **kwargs):
+        raise NotImplementedError
+    
+    @hotkeys.add_pause_option(True)
+    def send_event(self, *events, **kwargs):
+        for event in events:
+            if isinstance(event, EventSequence):
+                self.send_event(*event.members, **kwargs)
+            elif isinstance(event, EventCombination):
+                self.send_event(event.convert(), **kwargs)
+            else:
+                try:
+                    name = event.name
+                except AttributeError:
+                    pass
+                else:
+                    if name.startswith("[") and name.endswith("]"):
+                        name = name[1:-1]
+                        event.name = name
+                try:
+                    self._send_event(event, **kwargs)
+                except TypeError:
+                    raise TypeError(f"event argument {event} not allowed for "
+                    f"send_event method of object {self}.")

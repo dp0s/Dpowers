@@ -231,12 +231,13 @@ class StandardizingDict:
     _running_number = 0
     NamedClass = None  #set by NamedObj init_subclass method
         
-    def __init__(self, *new_info, func=None):
+    def __init__(self, *new_info, func=None, others_comparable=True):
         self.running_number = self._running_number
         self.__class__._running_number += 1
         self.other_dict = dict()
         self.registered_instances = dict()
         self.registered_names = dict()
+        self.others_comparable= others_comparable
         if len(new_info) > 0:
             # print(new_info)
             self.update(*new_info, func=func)
@@ -262,8 +263,10 @@ class StandardizingDict:
     
     def __setitem__(self, k, v) -> None:
         try:
+            
             inst = self.NamedClass.instance(k)
         except KeyError:
+            if self.others_comparable: k = self.NamedClass.make_comparable(k)
             self.other_dict[k] = v
         else:
             inst.mappings[self.running_number]=v
@@ -275,10 +278,11 @@ class StandardizingDict:
         try:
             if isinstance(k, self.NamedClass):
                 return k.mappings[self.running_number]
+            k2 = self.NamedClass.make_comparable(k)
             try:
-                return self.registered_names[self.NamedClass.make_comparable(k)]
+                return self.registered_names[k2] #this is fasted way to look up
             except KeyError:
-                return self.other_dict[k]
+                return self.other_dict[k2 if self.others_comparable else k]
         except KeyError:
             raise KeyError(f"'{k}'")
 
@@ -287,6 +291,7 @@ class StandardizingDict:
         try:
             inst = self.NamedClass.instance(k)
         except KeyError:
+            if self.others_comparable: k = self.NamedClass.make_comparable(k)
             del self.other_dict[k]
         else:
             del inst.mappings[self._running_number]
@@ -297,13 +302,28 @@ class StandardizingDict:
             new_info = dict(zip(new_info, new_info))
         check_type(dict, new_info)
         if not func: func = lambda x: x
-        for k,v in new_info.items(): self[k] = v
+        for k,v in new_info.items(): self[k] = func(v)
         
     def get(self, k, default=None):
         try:
             return self[k]
         except KeyError:
             return default
+        
+    def apply(self, k):
+        try:
+            inst = self.NamedClass.instance(k)
+        except KeyError:
+            try:
+                return self.other_dict[k]
+            except KeyError:
+                return k  #if k is not a defined name of any kind, return itself
+        else:
+            try:
+                return inst.mappings[self.running_number]
+            except KeyError:
+                return inst.name
+                #if k is not in dict, at least it can be standardized
     
     def __contains__(self, item):
         try:

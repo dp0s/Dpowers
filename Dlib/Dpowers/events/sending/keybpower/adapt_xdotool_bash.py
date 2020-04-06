@@ -20,7 +20,7 @@ from Dhelpers.all import launch, check_bash_cmd
 
 check_bash_cmd("xdotool")
 
-keynames = (
+names = (
     'BackSpace', 'Tab', 'Linefeed', 'Escape', 'space', 'exclam', 'quotedbl',
     'numbersign', 'dollar', 'percent', 'ampersand', 'apostrophe', 'parenleft',
     'parenright', 'asterisk', 'plus', 'comma', 'minus', 'period', 'slash',

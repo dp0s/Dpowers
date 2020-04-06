@@ -17,37 +17,33 @@
 #
 #
 from abc import ABC, abstractmethod
-from Dhelpers.all import AdditionContainer
-from ..event_classes import EventSequence, EventCombination, StringAnalyzer, \
-    split_str
+from Dhelpers.all import AdditionContainer, AdaptionError
+from ..event_classes import split_str, EventSenderMixin
 from .. import hotkeys, Adaptor, adaptionmethod
-import time
+import time, functools
 
 
-
-
-class EventSender(AdditionContainer.Addend,ABC):
+class Sender(AdditionContainer.Addend,ABC):
     
-    only_defined_names = False  #the name definitions come from the
-                # underlying StringEventCreator
-    hotkey_enabled_default = False
+    #only_defined_names = False
     default_delay = None
     
-    def text(self, string, **kwargs):
+    @abstractmethod
+    def _press(self, name):
         raise NotImplementedError
 
     @hotkeys.add_pause_option(True)
-    def press(self, *names, delay=None):
-        delay = self.default_delay if delay is None else delay
+    def press(self, *names, delay=None, map_names=False):
+        if map_names: raise NotImplementedError
+        delay = self.default_delay if delay is None \
+            else delay
         for k in names:
             self._press(k)
             if delay: time.sleep(delay/1000)
 
-    def _press(self, name):
+    def text(self, string, **kwargs):
         raise NotImplementedError
-    
 
-       
     
     def send_eventstring(self, string, delay=None):
         #self.send_event(self.StringEventCreator.from_str(string, hotkey=hotkey,
@@ -57,7 +53,6 @@ class EventSender(AdditionContainer.Addend,ABC):
                 self.press(entry, delay=delay)
             else:
                 raise TypeError
-            
         
     
     
@@ -96,57 +91,24 @@ class EventSender(AdditionContainer.Addend,ABC):
                     self.send_eventstring(t0, hotkey=hotkey, **kwargs)
                 if t2 == "": break
                 s = t2
-                
-class EventSender_plus(EventSender):
-    @abstractmethod
-    def _send_event(self, event, **kwargs):
-        raise NotImplementedError
-    
-    @hotkeys.add_pause_option(True)
-    def send_event(self, *events, **kwargs):
-        for event in events:
-            if isinstance(event, EventSequence):
-                self.send_event(*event.members, **kwargs)
-            elif isinstance(event, EventCombination):
-                self.send_event(event.convert(), **kwargs)
-            else:
-                try:
-                    name = event.name
-                except AttributeError:
-                    pass
-                else:
-                    if name.startswith("[") and name.endswith("]"):
-                        name = name[1:-1]
-                        event.name = name
-                try:
-                    self._send_event(event,
-                            **kwargs)  # print("event send", event)
-                except TypeError:
-                    raise TypeError(f"event argument {event} not allowed for "
-                    f"send_event method of object {self}.")
-                
-                
-                
-                
-class AdaptableEventSender(EventSender, Adaptor):
-    
-    NamedClass = None
-    
-    @adaptionmethod("press", require=True)
-    def _press(self, name):
-        raise NotImplementedError
-    
-    @_press.target_modifier
-    def _create_Named_mapping(self, target, amethod):
-        target_space = amethod.target_space
-        try:
-            keynames = target_space.keynames
-        except AttributeError:
-            return
 
-class PressReleaseSender(EventSender):
+
+
+class PressReleaseMixin:
     
     hotkey_enabled_default = True
+
+    @abstractmethod
+    def _rls(self, name):
+        raise NotImplementedError
+
+    @hotkeys.add_pause_option(True)
+    def rls(self, *names, delay=None, map_names=False):
+        if map_names: raise NotImplementedError
+        delay = self.default_delay if delay is None else delay
+        for k in reversed(names):
+            self._rls(k)
+            if delay: time.sleep(delay/1000)
     
     def send_eventstring(self, string, hotkey=True, delay=None):
         if hotkey is None: hotkey=self.hotkey_enabled_default
@@ -159,25 +121,91 @@ class PressReleaseSender(EventSender):
                     self.tap(entry,delay=delay)
                 else:
                     self.press(entry,delay=delay)
-            elif isinstance(entry, tuple):
+            elif isinstance(entry, (list,tuple)):
                 self.comb(*entry,delay=delay)
             else:
-                raise TypeError
+                raise TypeError(entry)
+            
+    @functools.wraps(Sender.press)
+    def pressed(self, *names, delay=None):
+        return PressedContext(self, *names, delay=delay)
 
-    @abstractmethod
-    def _rls(self, name):
-        raise NotImplementedError
-
-    
-    
     @hotkeys.add_pause_option(True)
-    def rls(self, *names, delay=None):
-        delay = self.default_delay if delay is None else delay
-        for k in reversed(names):
-            self._rls(k)
-            if delay: time.sleep(delay/1000)
+    def tap(self, *keynames, delay=None, duration=0.01):
+        for k in keynames:
+            with self.pressed(k, delay=delay):
+                time.sleep(duration)
+            
+            
+    @hotkeys.add_pause_option(True)
+    def comb(self, *keynames, delay=None, duration=0.01):
+        with self.pressed(*keynames, delay=delay):
+            time.sleep(duration)
+
+
+
+class AdaptiveMixin(Adaptor):
+    NamedClass = None
+    stand_dicts = {}
     
+    def press(self, *names, delay=None, map_names=True):
+        if map_names:  names = tuple(self._press.standardizing_dict.apply(
+                                    name) for name in names)
+        return super().press(*names, delay=delay)
     
+    @adaptionmethod("press", require=True)
+    def _press(self, name):
+        return self._press.target(name)
+    
+    @_press.target_modifier
+    def _create_standardizing_dict(self, target, amethod):
+        target_space = amethod.target_space
+        standardizing_dict = None
+        try:
+            named_dicts_for_target_space = self.stand_dicts[target_space]
+        except KeyError:
+            self.stand_dicts[target_space] = {}
+        else:
+            try:
+                standardizing_dict = named_dicts_for_target_space[
+                    self.NamedClass]
+            except KeyError:
+                pass
+        if standardizing_dict is None:
+            try:
+                names = target_space.names
+            except AttributeError:
+                names = {}
+            standardizing_dict = self.NamedClass.StandardizingDict(names)
+            self.stand_dicts[target_space][self.NamedClass] = standardizing_dict
+        amethod.standardizing_dict = standardizing_dict
+        return target
+
+class PressReleaseSender(PressReleaseMixin, Sender):
+    pass
+
+class AdaptiveSender(AdaptiveMixin, Sender):
+    pass
+
+
+
+@PressReleaseSender.register
+@AdaptiveSender.register
+class AdaptivePressReleaseSender(AdaptiveMixin, PressReleaseMixin,
+        EventSenderMixin, Sender):
+    
+    def rls(self, *names, delay=None, map_names = True):
+        if map_names:  names = tuple(
+                self._rls.standardizing_dict.apply(name) for name in names)
+        return super().rls(*names, delay=delay)
+    
+    @adaptionmethod("rls", require=True)
+    def _rls(self, name):
+        return self._rls.target(name)
+    
+    _rls.target_modifier(AdaptiveMixin._create_standardizing_dict)
+
+
     def _send_event(self, event, delay=None, reverse_press=False,
             autorelease=False):
         if isinstance(event, self.NamedClass.Event):
@@ -188,27 +216,63 @@ class PressReleaseSender(EventSender):
                 self.rls(event.name, delay=delay)
         else:
             raise TypeError
+        
+    def pressed(self, *names, delay=None, map_names=True):
+        return PressedContex_mapped(self, *names, delay=delay, map_names=map_names)
 
 
-    @hotkeys.add_pause_option(True)
-    def tap(self, *keynames, duration=10, delay=None):
-        for k in keynames:
-            try:
-                self.press(k, delay=duration)
-            finally:
-                self.rls(k, delay=delay)
-            
-            
-    @hotkeys.add_pause_option(True)
-    def comb(self, *keynames, delay=None):
+
+class PressedContext:
+    
+    def __init__(self, sender_instance, *names, delay=None):
+        self.sender_instance = sender_instance
+        self.names = names
+        self.delay=delay
+        self.map_names=False
+    
+    def __enter__(self):
+        self.sender_instance.press(*self.names, delay=self.delay,
+                map_names=self.map_names)
+        return self.sender_instance
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type == AdaptionError: return  # just raise this error directly
         try:
-            self.press(*keynames, delay=delay)
-        finally:
-            self.rls(*keynames, delay=delay)
+            self.sender_instance.rls(*self.names, delay=self.delay,
+                    map_names=self.map_names)
+            # try to rls the keys
+        except Exception as e:
+            if exc_type == type(e): return  # only reraise press error
+            raise
+
+class PressedContex_mapped(PressedContext):
+    
+    def __init__(self, sender_instance, *names, delay=None, map_names=True):
+        if map_names:
+            try:
+                d1 = sender_instance._press.standardizing_dict
+                d2 = sender_instance._rls.standardizing_dict
+            except AttributeError:
+                pass
+            else:
+                if d1 is d2:
+                    names = tuple(d1.apply(name) for name in names)
+                    map_names = False
+                    # this way, we only have to perform it ones
+        super().__init__(sender_instance, *names, delay=delay)
+        self.map_names = map_names
         
         
-class CleverEventSender(AdditionContainer, EventSender, basic_class
-            =EventSender):
+class CombinedSender(AdditionContainer, Sender, basic_class=Sender):
+    
+    def _press(self, name):
+        for member in self.members:
+            pass
+        
+    def _rls(self, name):
+        for member in self.members:
+            pass
+    
     
     def _send_event(self, event, **kwargs):
         for member in self.members:
@@ -216,11 +280,12 @@ class CleverEventSender(AdditionContainer, EventSender, basic_class
                 return member._send_event(event, **kwargs)
             except TypeError:
                 continue
-        raise TypeError(f"event {event} not allowed for any EventSender in "
+        raise TypeError(f"event {event} not allowed for any Sender in "
         f"{self.members} of {self}.")
         
+        
     def __call__(self, *args, **kwargs):
-        return self.send_event(*args,**kwargs)
+        return self.send(*args,**kwargs)
     
     
     @hotkeys.add_pause_option(True)
@@ -232,7 +297,7 @@ class CleverEventSender(AdditionContainer, EventSender, basic_class
             except NotImplementedError:
                 continue
         raise NotImplementedError(f"text method not defined for any "
-            f"EventSender in {self.members} of {self}.")
+            f"Sender in {self.members} of {self}.")
         
     
     

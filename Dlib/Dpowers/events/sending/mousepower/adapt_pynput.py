@@ -30,10 +30,10 @@ def moveto(x,y):
     mouse.position = (x,y)
 
 
-keynames = {i : pynput.mouse.Button(i) for i in range(1,31)}
+names = {i : pynput.mouse.Button(i) for i in range(1,31)}
 #this is necessary because somehow pynput send button.value instead of button
 
-click=mouse.click
+#click=mouse.click
 press=mouse.press
 rls=mouse.release
 

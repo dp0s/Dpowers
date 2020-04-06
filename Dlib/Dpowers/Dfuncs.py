@@ -21,7 +21,7 @@ from Dhelpers.all import container, launch, execute_after_print, PositiveInt,\
     restore_print_func, always_print_traceback
     #the last two print functions can be imported via the Dfuncs module
     
-from .events import KeyboardAdaptor, MouseAdaptor, KeyWaiter, HookAdaptor, CleverEventSender
+from .events import KeyboardAdaptor, MouseAdaptor, KeyWaiter, HookAdaptor, CombinedSender
 from . import dlg, ntfy, clip, Win
 from .windowpower import WindowObject
 
@@ -31,7 +31,7 @@ from .windowpower import WindowObject
 
 keyb = KeyboardAdaptor(group="Dfuncs",_primary=True)
 mouse = MouseAdaptor(group="Dfuncs", _primary=True)
-event_sender = CleverEventSender(keyb,mouse)
+event_sender = CombinedSender(keyb,mouse)
 
 class SendwaitError(Exception):
     pass

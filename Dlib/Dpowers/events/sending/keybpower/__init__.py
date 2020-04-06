@@ -18,19 +18,23 @@
 #
 
 import time
-from ... import Adaptor, adaptionmethod, hotkeys, Keyvent
-from ..event_sender import PressReleaseSender
+from ... import adaptionmethod, hotkeys, NamedKey
+from ..event_sender import AdaptivePressReleaseSender
 
-class KeyboardAdaptor(Adaptor, PressReleaseSender):
+class KeyboardAdaptor(AdaptivePressReleaseSender):
     
-    default_delay = None
     
-    def __getattr__(self, item):
-        # this allows keyb.key to dynamically reference the current
-        # NamedKeyClass even if it is changed
-        if item == "key": return self.NamedKeyClass.NameContainer
-        if item == "NamedClass": return self.NamedKeyClass
-        raise AttributeError
+    @property
+    def NamedClass(self):
+        return self.NamedKeyClass
+    @NamedClass.setter
+    def NamedClass(self, val):
+        if not issubclass(val, NamedKey): raise TypeError
+        self.NamedKeyClass = val
+    
+    @property
+    def key(self):
+        return self.NamedKeyClass.NameContainer
 
     @adaptionmethod
     @hotkeys.add_pause_option(True)
@@ -41,48 +45,4 @@ class KeyboardAdaptor(Adaptor, PressReleaseSender):
         for character in string:
             func(character)
             if delay: time.sleep(delay/1000)
-
-    @adaptionmethod("rls", require=True)
-    def _rls(self, keyname):
-        #print("_rls", keyname)
-        return self._rls.target(self._keyname_dict.apply(keyname))
-
-    @adaptionmethod("press", require=True)
-    def _press(self, keyname):
-        #print("_press", keyname)
-        return self._press.target(self._keyname_dict.apply(keyname))
-
-    @adaptionmethod(require=True)
-    def keynames(self):
-        return self.keynames.target
-    @keynames.target_modifier
-    def _apply_update(self, target):
-        self._update_keyname_dict(target)
-        return target
-    
-    def _translation_dict(self):
-        try:
-            return self.keynames.target_space.translation_dic
-        except AttributeError:
-            return
-    
-    @property
-    def _keyname_dict(self):
-        return self.keynames.target_space.keyname_dict
-    
-    def _update_keyname_dict(self, keynames_target=None):
-        if keynames_target is None: keynames_target = self.keynames.target
-        keyname_dic = self.NamedKeyClass.StandardizingDict(keynames_target)
-        trans_dic = self._translation_dict()
-        if trans_dic:
-            dic2 = self.NamedKeyClass.StandardizingDict()
-            for key,val in trans_dic.items():
-                if key != val: dic2[key] = keyname_dic.apply(val)
-            keyname_dic.update(dic2)
-        self.keynames.target_space.keyname_dict = keyname_dic
-    
-    
-    def add_key_translation(self, dic):
-        self.keynames.target_space.translation_dic = dic
-        self._update_keyname_dict()
  

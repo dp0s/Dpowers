@@ -18,25 +18,25 @@
 #
 from evdev_prepared.uinput import global_uinput
 
-from evdev.ecodes import KEY, EV_KEY
+from evdev.ecodes import BTN, EV_KEY
 
 names = {}
 
 def iterator(dic):
     for a, b in dic.items():
-        if isinstance(b, (tuple, list)):
+        if isinstance(b, (tuple,list)):
             for c in b: yield a,c
         else:
-            yield a, b
-
-for integer, name in iterator(KEY):
+            yield a,b
+    
+for integer, name in iterator(BTN):
     n = name[4:]
     names[n] = integer
     
 global_uinput.start()
 
-def press(keynumber):
-    global_uinput.write(EV_KEY, keynumber, 1)
+def press(number):
+    global_uinput.write(EV_KEY, number, 1)
 
-def rls(keynumber):
-    global_uinput.write(EV_KEY, keynumber, 0)
+def rls(number):
+    global_uinput.write(EV_KEY, number, 0)

@@ -15,23 +15,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-from ... import Adaptor, adaptionmethod, hotkeys, Buttonevent, MouseMoveEvent
-from ..event_sender import EventSender
+from ... import adaptionmethod, hotkeys, MouseMoveEvent, NamedButton
+from ..event_sender import AdaptivePressReleaseSender
+from time import sleep
 
-class MouseAdaptor(Adaptor, EventSender):
+class MouseAdaptor(AdaptivePressReleaseSender):
     
-    # def set_options(self, *options):
-    #     if not options: options = ("NamedButton",)
-    #     if len(options) != 1: raise SyntaxError
-    #     self.NamedButtonClass = NamedKeyButton.subclass_from_name(options[0])
-    #     self.button = self.NamedButtonClass.NameContainer()
+    @property
+    def NamedClass(self):
+        return self.NamedButtonClass
+    @NamedClass.setter
+    def NamedClass(self, val):
+        if not issubclass(val, NamedButton): raise TypeError
+        self.NamedButtonClass = val
     
-    def __getattr__(self, item):
-        # this allows mouse.button to dynamically reference the current
-        # NamedButtonClass even if it is changed
-        if item == "button": return self.NamedButtonClass.NameContainer
-        if item == "NamedClass": return self.NamedButtonClass
-        raise AttributeError
+    @property
+    def button(self):
+        return self.NamedButtonClass.NameContainer
     
     @adaptionmethod
     def pos(self):
@@ -47,31 +47,15 @@ class MouseAdaptor(Adaptor, EventSender):
         if y is None: y = self.pos()[1]
         return self.moveto.target(x, y)
     
-    @adaptionmethod
-    @hotkeys.add_pause_option(True)
-    def click(self, button=1, count=1, x=None, y=None):
-        if x or y: self.moveto(x, y)
-        return self.click.target(self._keyname_dict.apply(button), count)
 
-    @adaptionmethod
-    @hotkeys.add_pause_option(True)
-    def press(self, button=1, x=None, y=None):
+    def press(self, *buttons, x=None, y=None, delay=None, pause_hotkeys=True):
         if x or y: self.moveto(x, y)
-        return self.press.target(self._keyname_dict.apply(button))
+        return super().press(*buttons,delay=delay, pause_hotkeys=pause_hotkeys)
 
-    @adaptionmethod
-    @hotkeys.add_pause_option(True)
-    def rls(self, button=1, x=None, y=None):
+    
+    def rls(self, *buttons, x=None, y=None, delay=None, pause_hotkeys=True):
         if x or y: self.moveto(x, y)
-        return self.rls.target(self._keyname_dict.apply(button))
-
-    @adaptionmethod("keynames")
-    def _keynames(self):
-        return self._keynames.target
-    @_keynames.target_modifier
-    def _standardize(self, target):
-        self._keyname_dict = self.NamedButtonClass.StandardizingDict(target)
-        return target
+        return super().press(*buttons, delay=delay, pause_hotkeys=pause_hotkeys)
 
 
     @adaptionmethod
@@ -81,47 +65,55 @@ class MouseAdaptor(Adaptor, EventSender):
         # hotkeys.add_pause_option is adding a parameter which confuses
         # call_target
         return self.scroll.target(vertical, horizontal)
-    
-    def rclick(self, x=None, y=None, pause_hotkeys=True):
-        return self.click("right", 1, x, y, pause_hotkeys=pause_hotkeys)
-    
-    def mclick(self, x=None, y=None, pause_hotkeys=True):
-        return self.click("middle", 1, x, y, pause_hotkeys=pause_hotkeys)
-    
-    def click2(self, button="left", x=None, y=None, pause_hotkeys=True):
-        return self.click(button, 2, x, y, pause_hotkeys=pause_hotkeys)
-    
-    def click3(self, button="left", x=None, y=None, pause_hotkeys=True):
-        return self.click(button, 3, x, y, pause_hotkeys=pause_hotkeys)
-    
+
     @hotkeys.add_pause_option(True)
-    def clickrel(self, button=1, count=1, dx=0, dy=0):
+    def click(self, button=1, count=1, x=None, y=None, duration=0.05):
+        if x or y: self.moveto(x, y)
+        stan_name = self._press.standardizing_dict.get(button, button)
+        for _ in range(count):
+            self._press.target(stan_name)
+            sleep(duration)
+            self._rls.target(stan_name)
+    
+    def rclick(self, *args, **kwargs):
+        return self.click("right", *args, **kwargs)
+    
+    def mclick(self, *args, **kwargs):
+        return self.click("middle", *args, **kwargs)
+    
+    def click2(self, button=1, *args, **kwargs):
+        return self.click(button, 2, *args, **kwargs)
+    
+    def click3(self, button=1, *args, **kwargs):
+        return self.click(button, 3, *args, **kwargs)
+    
+    def clickrel(self, button=1, count=1, dx=0, dy=0, **kwargs):
         self.move(dx, dy)
-        self.click(button, count)
+        self.click(button, count, **kwargs)
     
     @hotkeys.add_pause_option(True)
-    def drag(self, x=0, y=0, button=1):
-        self.press(button)
-        self.move(x, y)
+    def drag(self, dx, dy, button=1, x=None, y=None):
+        self.press(button, x=x, y=y)
+        self.move(dx, dy)
         self.rls(button)
     
     @hotkeys.add_pause_option(True)
-    def dragto(self, x=None, y=None, button=1):
-        self.press(button)
+    def dragto(self, x, y, button=1, x0=None, y0=None):
+        self.press(button, x=x0, y=y0)
         self.moveto(x, y)
         self.rls(button)
-
-    def _send_event(self, event, reverse=False, autorelease=False):
-        if isinstance(event, Buttonevent):
-            if event.press and not reverse or not event.press and reverse:
-                self.press(event.name, x=event.x, y=event.y)
-                if autorelease: self.rls(event.name)
+    
+    
+    def _send_event(self, event, delay=None, reverse_press=False,
+            autorelease=False):
+        try:
+            return super()._send_event(event, delay, reverse_press,
+                autorelease)
+        except TypeError:
+            if isinstance(event, MouseMoveEvent):
+                if event.relative:
+                    self.move(event.x, event.y)
+                else:
+                    self.moveto(event.x, event.y)
             else:
-                self.rls(event.name, x=event.x, y=event.y)
-        elif isinstance(event, MouseMoveEvent):
-            if event.relative:
-                self.move(event.x, event.y)
-            else:
-                self.moveto(event.x, event.y)
-        else:
-            raise TypeError
+                raise TypeError

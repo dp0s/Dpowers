@@ -225,6 +225,7 @@ class AdaptorBase(KeepInstanceRefs):
     autoadapt_active = False
     dependency_folder = None  # set in first level subclass
     _subclass_level = 0
+    adaptionmethod_names = set()
     
     def __init_subclass__(cls):
         cls._subclass_level += 1
@@ -237,9 +238,11 @@ class AdaptorBase(KeepInstanceRefs):
             if cls._subclass_level < 2:
                 raise SyntaxError("First-level Subclass of AdaptorBase is  "
                                   "not allowed to have adaptionmethods.")
-            cls.adaptionmethod_names = tuple(l)
+            cls.adaptionmethod_names = set(l) | cls.adaptionmethod_names
+                #this will inherit names already defined
             cls.implementation_classes = None
             cls.added_impl_names = {}
+            
     
     def __init__(self, main_info=None, *, group=None, _primary=False,
             **method_infos):
@@ -625,10 +628,9 @@ class Implementation:
             module_location = self.adaptorcls.__module__
             module_full_name = module_location + module_name
             if self.dependency_folder:
-                sys.path.insert(0,
-                        self.dependency_folder)  # this makes sure that
-                # packages inside the dependency folder  # are found first.
-                # Unless the module has already been imported
+                sys.path.insert(0, self.dependency_folder)
+                # this makes sure that packages inside the dependency folder
+                # are found first. Unless the module has already been imported.
             try:
                 ret = importlib.import_module(module_full_name)
             except Exception as e:
