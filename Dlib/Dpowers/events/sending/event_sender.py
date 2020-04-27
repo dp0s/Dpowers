@@ -21,7 +21,6 @@ from Dhelpers.all import AdditionContainer, AdaptionError, check_type
 from ..event_classes import split_str, EventSenderMixin
 from .. import hotkeys, Adaptor, adaptionmethod
 import time, functools
-from collections import defaultdict
 
 
 class Sender(AdditionContainer.Addend,ABC):
@@ -141,23 +140,9 @@ class PressReleaseMixin:
             time.sleep(duration)
 
 
-# class PressedKey:
-#
-#     def __init__(self, sender_instance, name, map_names=False):
-#         self.sender_instance = sender_instance
-#         self.name = name
-#         self.map_names = False
-#
-#     def __enter__(self):
-#         self.sender_instance._press(self.name)
-#         return self.sender_instance
-#
-#     def __exit__(self, exc_type, exc_val, exc_tb):
-#         if exc_type == AdaptionError: return  # just raise this error directly
-#         self.sender_instance._rls(self.name)  # try to rls the key
-#         # except Exception as e:
-#         #     if exc_type == type(e): return  # only reraise the
-#         #     raise
+
+class PressReleaseSender(PressReleaseMixin, Sender):
+    pass
 
 
 
@@ -167,34 +152,31 @@ class PressedContext:
         self.sender_instance = sender_instance
         self.names = names
         self.delay = delay
-        self.map_names = False
     
     def __enter__(self):
-        self.sender_instance.press(*self.names, delay=self.delay,
-                map_names=self.map_names)
+        self.sender_instance.press(*self.names, delay=self.delay)
         return self.sender_instance
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type == AdaptionError: return  # just raise this error directly
         try:
-            self.sender_instance.rls(*self.names, delay=self.delay,
-                    map_names=self.map_names)  # try to rls the keys
+            self.sender_instance.rls(*self.names, delay=self.delay)  # try to rls the keys
         except Exception as e:
             if exc_type == type(e): return  # only reraise press error
             raise
         
 
-class PressedContex_mapped(PressedContext):
-    
-    def __init__(self, sender_instance, *names, delay=None, map_names=True):
-        if map_names:
-            d = sender_instance._press_rls_standdict
-            if d:
-                names = tuple(d.apply(name) for name in names)
-                map_names = False  # this way, we only  perform it ones for
-                # press and release
-        super().__init__(sender_instance, *names, delay=delay)
-        self.map_names = map_names
+# class PressedContex_mapped(PressedContext):
+#
+#     def __init__(self, sender_instance, *names, delay=None, map_names=True):
+#         if map_names:
+#             d = sender_instance._press_rls_standdict
+#             if d:
+#                 names = tuple(d.apply(name) for name in names)
+#                 map_names = False  # this way, we only  perform it ones for
+#                 # press and release
+#         super().__init__(sender_instance, *names, delay=delay)
+#         self.map_names = map_names
 
 
 
@@ -217,11 +199,11 @@ class AdaptiveMixin(Adaptor):
     
     @_press.target_modifier
     def _press_tm(self, target, amethod):
-        self._press_errortype = self._check_name_error(target)
+        self._press_errortype = self._get_errortype(target)
         self._create_standardizing_dict(amethod)
         return target
     
-    def _check_name_error(self,target):
+    def _get_errortype(self,target):
         try:
             target("ASFASDFASDFASxcvjxcjsjsj23")
         except Exception as e:
@@ -275,9 +257,6 @@ class AdaptiveMixin(Adaptor):
 
 
 
-class PressReleaseSender(PressReleaseMixin, Sender):
-    pass
-
 class AdaptiveSender(AdaptiveMixin, Sender):
     pass
 
@@ -301,26 +280,26 @@ class AdaptivePressReleaseSender(AdaptiveMixin, PressReleaseMixin,
     
     @_rls.target_modifier
     def _rls_tm(self, target, amethod):
-        self._rls_errortype = self._check_name_error(target)
+        self._rls_errortype = self._get_errortype(target)
         self._create_standardizing_dict(amethod)
         return target
 
     _press_rls_standdict = None # default_value
     
-    def _create_standardizing_dict(self, amethod):
-        super()._create_standardizing_dict(amethod)
-        # now detect if standardizing_dicts are the same
-        # this will be important for Pressed ContextManager
-        try:
-            d1 = self._press.standardizing_dict
-            d2 = self._rls.standardizing_dict
-        except AttributeError:
-            pass
-        else:
-            if d1==d2:
-                self._press_rls_standdict = d1
-                return
-        self._press_rls_standdict = False
+    # def _create_standardizing_dict(self, amethod):
+    #     super()._create_standardizing_dict(amethod)
+    #     # now detect if standardizing_dicts are the same
+    #     # this will be important for Pressed ContextManager
+    #     try:
+    #         d1 = self._press.standardizing_dict
+    #         d2 = self._rls.standardizing_dict
+    #     except AttributeError:
+    #         pass
+    #     else:
+    #         if d1==d2:
+    #             self._press_rls_standdict = d1
+    #             return
+    #     self._press_rls_standdict = False
         
 
 
@@ -335,8 +314,8 @@ class AdaptivePressReleaseSender(AdaptiveMixin, PressReleaseMixin,
         else:
             raise TypeError
         
-    def pressed(self, *names, delay=None, map_names=True):
-        return PressedContex_mapped(self, *names, delay=delay, map_names=map_names)
+    # def pressed(self, *names, delay=None, map_names=True):
+    #     return PressedContex_mapped(self, *names, delay=delay, map_names=map_names)
 
         
         

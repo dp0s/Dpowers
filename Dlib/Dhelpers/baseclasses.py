@@ -331,8 +331,8 @@ class AdditionContainer:
                     return method(*args, **kwargs)
                 except error_type:
                     continue
-            raise error_type(f"Argument {name} not allowed for method "
-            f"{method_name} of AdditionObject {self}")
+            raise error_type(f"Arguments {args, kwargs} not allowed for "
+                    f"method {method_name} of AdditionObject {self}")
         return combined_method
         
 
