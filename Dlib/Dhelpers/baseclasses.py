@@ -258,6 +258,7 @@ class AdditionContainer:
     
     # must be set in the subclass:
     basic_class = None
+    _methods_to_include = {}
     
     
     def __init_subclass__(cls, basic_class=None, ordered=True):
@@ -267,6 +268,11 @@ class AdditionContainer:
         cls.basic_class = basic_class
         cls.ordered=ordered
         basic_class.ContainerClass = cls
+        for method_name, error_type in cls._methods_to_include.items():
+            if not issubclass(error_type,Exception): raise TypeError
+            setattr(cls, method_name, cls._create_combined_method(
+                    method_name, error_type))
+    
     
     def __init__(self, *args):
         self.members = []
@@ -306,7 +312,31 @@ class AdditionContainer:
     def __bool__(self):
         x = sum(bool(m) for m in self.members)
         return x > 0
-    
+
+    def __getattr__(self, item):
+        try:
+            error_type = self._methods_to_include[item]
+        except KeyError:
+            raise AttributeError
+        
+    @staticmethod
+    def _create_combined_method(method_name, error_type):
+        def combined_method(self, *args, **kwargs):
+            for member in self.members:
+                try:
+                    method = getattr(member,method_name)
+                except AttributeError:
+                    continue
+                try:
+                    return method(*args, **kwargs)
+                except error_type:
+                    continue
+            raise error_type(f"Argument {name} not allowed for method "
+            f"{method_name} of AdditionObject {self}")
+        return combined_method
+        
+
+
 
     class Addend:
     

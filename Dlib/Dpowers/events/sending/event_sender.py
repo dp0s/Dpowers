@@ -34,10 +34,8 @@ class Sender(AdditionContainer.Addend,ABC):
         raise NotImplementedError
 
     @hotkeys.add_pause_option(True)
-    def press(self, *names, delay=None, map_names=False):
-        if map_names: raise NotImplementedError
-        delay = self.default_delay if delay is None \
-            else delay
+    def press(self, *names, delay=None):
+        delay = self.default_delay if delay is None else delay
         for k in names:
             self._press(k)
             if delay: time.sleep(delay/1000)
@@ -104,8 +102,7 @@ class PressReleaseMixin:
         raise NotImplementedError
 
     @hotkeys.add_pause_option(True)
-    def rls(self, *names, delay=None, map_names=False):
-        if map_names: raise NotImplementedError
+    def rls(self, *names, delay=None):
         delay = self.default_delay if delay is None else delay
         for k in reversed(names):
             self._rls(k)
@@ -144,24 +141,92 @@ class PressReleaseMixin:
             time.sleep(duration)
 
 
+# class PressedKey:
+#
+#     def __init__(self, sender_instance, name, map_names=False):
+#         self.sender_instance = sender_instance
+#         self.name = name
+#         self.map_names = False
+#
+#     def __enter__(self):
+#         self.sender_instance._press(self.name)
+#         return self.sender_instance
+#
+#     def __exit__(self, exc_type, exc_val, exc_tb):
+#         if exc_type == AdaptionError: return  # just raise this error directly
+#         self.sender_instance._rls(self.name)  # try to rls the key
+#         # except Exception as e:
+#         #     if exc_type == type(e): return  # only reraise the
+#         #     raise
+
+
+
+class PressedContext:
+    
+    def __init__(self, sender_instance, *names, delay=None):
+        self.sender_instance = sender_instance
+        self.names = names
+        self.delay = delay
+        self.map_names = False
+    
+    def __enter__(self):
+        self.sender_instance.press(*self.names, delay=self.delay,
+                map_names=self.map_names)
+        return self.sender_instance
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type == AdaptionError: return  # just raise this error directly
+        try:
+            self.sender_instance.rls(*self.names, delay=self.delay,
+                    map_names=self.map_names)  # try to rls the keys
+        except Exception as e:
+            if exc_type == type(e): return  # only reraise press error
+            raise
+        
+
+class PressedContex_mapped(PressedContext):
+    
+    def __init__(self, sender_instance, *names, delay=None, map_names=True):
+        if map_names:
+            d = sender_instance._press_rls_standdict
+            if d:
+                names = tuple(d.apply(name) for name in names)
+                map_names = False  # this way, we only  perform it ones for
+                # press and release
+        super().__init__(sender_instance, *names, delay=delay)
+        self.map_names = map_names
+
+
+
+
 
 class AdaptiveMixin(Adaptor):
     NamedClass = None
     #stand_dicts = defaultdict(lambda : defaultdict(lambda : list()))
     
-    def press(self, *names, delay=None, map_names=True):
-        if map_names:  names = tuple(self._press.standardizing_dict.apply(
-                                    name) for name in names)
-        return super().press(*names, delay=delay)
-    
     @adaptionmethod("press", require=True)
-    def _press(self, name):
-        return self._press.target(name)
+    def _press(self, name, apply_map = True):
+        if apply_map:
+            name = self._press.standardizing_dict.apply(name)
+        try:
+            return self._press.target(name)
+        except Exception as e:
+            if isinstance(e,self._press_errortype):
+                raise NameError(name) from e
+            raise
     
     @_press.target_modifier
     def _press_tm(self, target, amethod):
+        self._press_errortype = self._check_name_error(target)
         self._create_standardizing_dict(amethod)
         return target
+    
+    def _check_name_error(self,target):
+        try:
+            target("ASFASDFASDFASxcvjxcjsjsj23")
+        except Exception as e:
+            return type(e)
+        raise RuntimeError("Name 'ASFASDFASDFASxcvjxcjsjsj23' is allowed!?")
     
     def _create_standardizing_dict(self,  amethod):
         #this should be executed when amethod is adapted, when NamedClass
@@ -223,17 +288,20 @@ class AdaptiveSender(AdaptiveMixin, Sender):
 class AdaptivePressReleaseSender(AdaptiveMixin, PressReleaseMixin,
         EventSenderMixin, Sender):
     
-    def rls(self, *names, delay=None, map_names = True):
-        if map_names:  names = tuple(
-                self._rls.standardizing_dict.apply(name) for name in names)
-        return super().rls(*names, delay=delay)
-    
     @adaptionmethod("rls", require=True)
-    def _rls(self, name):
-        return self._rls.target(name)
+    def _rls(self, name, apply_map=True):
+        if apply_map:
+            name = self._rls.standardizing_dict.apply(name)
+        try:
+            return self._rls.target(name)
+        except Exception as e:
+            if isinstance(e, self._rls_errortype):
+                raise NameError(name) from e
+            raise
     
     @_rls.target_modifier
     def _rls_tm(self, target, amethod):
+        self._rls_errortype = self._check_name_error(target)
         self._create_standardizing_dict(amethod)
         return target
 
@@ -270,85 +338,16 @@ class AdaptivePressReleaseSender(AdaptiveMixin, PressReleaseMixin,
     def pressed(self, *names, delay=None, map_names=True):
         return PressedContex_mapped(self, *names, delay=delay, map_names=map_names)
 
-
-
-
-
-
-class PressedContext:
-    
-    def __init__(self, sender_instance, *names, delay=None):
-        self.sender_instance = sender_instance
-        self.names = names
-        self.delay=delay
-        self.map_names=False
-    
-    def __enter__(self):
-        self.sender_instance.press(*self.names, delay=self.delay,
-                map_names=self.map_names)
-        return self.sender_instance
-    
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type == AdaptionError: return  # just raise this error directly
-        try:
-            self.sender_instance.rls(*self.names, delay=self.delay,
-                    map_names=self.map_names)
-            # try to rls the keys
-        except Exception as e:
-            if exc_type == type(e): return  # only reraise press error
-            raise
-
-class PressedContex_mapped(PressedContext):
-    
-    def __init__(self, sender_instance, *names, delay=None, map_names=True):
-        if map_names:
-            d= sender_instance._press_rls_standdict
-            if d:
-                names = tuple(d.apply(name) for name in names)
-                map_names = False
-                # this way, we only  perform it ones for press and release
-        super().__init__(sender_instance, *names, delay=delay)
-        self.map_names = map_names
         
         
-        
-        
-        
-class CombinedSender(AdditionContainer, Sender, basic_class=Sender):
+class CombinedSender(AdditionContainer, PressReleaseSender, basic_class=Sender):
     
-    def _press(self, name):
-        for member in self.members:
-            pass
-        
-    def _rls(self, name):
-        for member in self.members:
-            pass
-    
-    
-    def _send_event(self, event, **kwargs):
-        for member in self.members:
-            try:
-                return member._send_event(event, **kwargs)
-            except TypeError:
-                continue
-        raise TypeError(f"event {event} not allowed for any Sender in "
-        f"{self.members} of {self}.")
+    _methods_to_include = {"_press": NameError, "_rls":NameError,
+        "_send_event": TypeError, "text":NotImplementedError}
         
         
     def __call__(self, *args, **kwargs):
         return self.send(*args,**kwargs)
-    
-    
-    @hotkeys.add_pause_option(True)
-    def text(self, string, **kwargs):
-        for member in self.members:
-            try:
-                member.text(string, **kwargs)
-                return
-            except NotImplementedError:
-                continue
-        raise NotImplementedError(f"text method not defined for any "
-            f"Sender in {self.members} of {self}.")
         
     
     

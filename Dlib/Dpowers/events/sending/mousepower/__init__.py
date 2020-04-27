@@ -51,12 +51,12 @@ class MouseAdaptor(AdaptivePressReleaseSender):
 
     def press(self, *buttons, x=None, y=None, delay=None, pause_hotkeys=True):
         if x or y: self.moveto(x, y)
-        return super().press(*buttons,delay=delay, pause_hotkeys=pause_hotkeys)
+        return super().press(*buttons,delay=delay)
 
     
     def rls(self, *buttons, x=None, y=None, delay=None, pause_hotkeys=True):
         if x or y: self.moveto(x, y)
-        return super().press(*buttons, delay=delay, pause_hotkeys=pause_hotkeys)
+        return super().press(*buttons, delay=delay)
 
 
     @adaptionmethod

@@ -29,7 +29,8 @@ from time import sleep
 
 from Dhelpers import __version__
 from Dhelpers.all import (always_print_traceback,
-    launch, ThisScript, AdaptorBase, adaptionmethod, AdaptionError, ArgSaver)
+    launch, ThisScript, AdaptorBase, adaptionmethod, AdaptionError, ArgSaver,
+    Layout)
 
 import Dpowers  # this is to allow from Dpowers import * to also import the
                 # Dpowers variable itself
