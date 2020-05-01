@@ -17,29 +17,30 @@
 #
 #
 from warnings import warn
-from . import NamedKey, keyb
+from . import NamedKey, keyb, NamedButton
 from .hookpower import HookAdaptor
 from Dhelpers.all import launch, TimedObject, dpress
-
+from .event_classes import StringAnalyzer
 
 
 class TriggerManager(TimedObject):
     
     triggermanhook = HookAdaptor(group="triggerman", _primary=True)
     
-    def __init__(self, hook_adaptor=None, NamedType=NamedKey,
-            timeout=60, hook_mouse=False):
+    def __init__(self, hook_adaptor=None, timeout=60, hook_mouse=False):
         super().__init__(timeout=timeout)
-        self.funcdict = NamedType.StandardizingDict()
+        self.eventdict = dict()
         self.blocked_hks = []
         if hook_adaptor is None: hook_adaptor = self.triggermanhook
         if not isinstance(hook_adaptor, HookAdaptor): raise TypeError
         self.hook_adaptor = hook_adaptor
         self.k_old = ""
         self.hm= None
-        self.NamedType = NamedType
         self.hook_mouse = hook_mouse
-        
+        if hook_mouse:
+            self.stringevent_analyzer = StringAnalyzer(NamedKey, NamedButton)
+        else:
+            self.stringevent_analyzer = NamedKey.Event
        
     def _start_action(self):
         timeout = self.timeout + 5 if self.timeout else None
@@ -68,7 +69,7 @@ class TriggerManager(TimedObject):
         #_print(k)
         for hk in (k, self.k_old + k):
             # checking whether a single or 2 button hotkey is triggered.
-            if hk in self.funcdict:
+            if hk in self.eventdict:
                 launch.thread(self.runscript, hk)
                 self.k_old = ""  # resetting the key history if a hotkey was
                 # triggered
@@ -78,7 +79,7 @@ class TriggerManager(TimedObject):
   
     def runscript(self, hk):
         if self.active_blocks: return
-        hk_func = self.funcdict[hk]
+        hk_func = self.eventdict[hk]
         # print(hk_func)
         # print(hk,hk_func,type(hk_func))
         if type(hk_func) is str:
@@ -102,11 +103,11 @@ class TriggerManager(TimedObject):
         def add_to_funcdict(hk_func):
             # add the function to be triggered by the appropriate hotkeys
             for hk in hks:
-                hk=self.NamedType.get_stnd_name(hk)
-                if hk in self.funcdict:
+                event = str(self.stringevent_analyzer(hk))
+                if event in self.eventdict:
                     raise ValueError("Hotkey %s defined more than one time."
                                      % hk)
-                self.funcdict[hk] = hk_func
+                self.eventdict[hk] = event
                 if block is True:
                     if " " in hk:
                         self.blocked_hks += hk.split(" ")

@@ -155,14 +155,10 @@ class NamedObj(KeepInstanceRefs):
         
     
     @classmethod
-    def get_stnd_name(cls, name, return_if_not_found=None):
-        if isinstance(name, cls):
-            return name.name
-        try:
-            return cls.name_to_stnd_name[cls.make_comparable(name)]
-        except KeyError:
-            return return_if_not_found
-    
+    def get_stnd_name(cls, name):
+        if isinstance(name, cls): return name.name
+        return cls.name_to_stnd_name[cls.make_comparable(name)]
+        
     # def set_stnd_name(self, stnd_name):
     #     self.stnd_name=stnd_name
     #     if self.stnd_name_comparable in self.stnd_names():
@@ -351,6 +347,10 @@ class StandardizingDict:
             return False
     
     
+    
+    
+    
+    
 
 def get_attributes(cls):
     for a, b in cls.__dict__.items():
@@ -420,3 +420,17 @@ class NameContainer:
         
     def __call__(self, name):
         return self.NamedClass.instance(name)
+    
+    
+    
+    
+# class NameCombination:
+#
+#     def __init__(self, *named_subclasses):
+#         for NamedClass in named_subclasses:
+#             if not issubclass(NamedClass, NamedObj): raise TypeError
+#         self.NamedClasses = named_subclasses
+#         self.StandardizingDict = type(f"NameCombination.StandardizingDict",
+#                 (StandardizingDict,),{})
+#         self.StandardizingDict.NamedClass = self
+#
