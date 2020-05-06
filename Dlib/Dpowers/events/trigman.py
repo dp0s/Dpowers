@@ -99,23 +99,21 @@ class TriggerManager(TimedObject):
             raise TypeError
 
     # A decorator for adding a function hotkey
-    def trigger_on(self, *hks, block=False):
-        def add_to_funcdict(hk_func):
-            # add the function to be triggered by the appropriate hotkeys
-            for hk in hks:
-                event = str(self.stringevent_analyzer(hk))
+    def trigger_on(self, *strings, block=False):
+        def func(decorated_func):
+            for string in strings:
+                # add the function to be triggered by the appropriate hotkeys
+                event = self.stringevent_analyzer.from_str(string).sending_version()
                 if event in self.eventdict:
-                    raise ValueError("Hotkey %s defined more than one time."
-                                     % hk)
-                self.eventdict[hk] = event
-                if block is True:
-                    if " " in hk:
-                        self.blocked_hks += hk.split(" ")
-                    else:
-                        self.blocked_hks.append(hk)
-            return hk_func
-        return add_to_funcdict
-
+                    raise ValueError(
+                            f"Tiggerevent {event} defined more than one time.")
+                self.eventdict[event] = func
+                if " " in string:
+                    self.blocked_hks += string.split(" ")
+                else:
+                    self.blocked_hks.append(string)
+            return decorated_func
+        return func
 
     active_blocks = 0
 

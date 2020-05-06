@@ -58,14 +58,22 @@ class Event(AdditionContainer.Addend):
         return f"<Event '{self}' of subclass " \
             f"{self.__class__.__module__}.{self.__class__.__name__}>"
 
-
+    def sending_version(self):
+        return self
+    
+    def hotkey_version(self, up=False):
+        return self
 
 class EventSequence(AdditionContainer, Event, basic_class=Event):
     def __str__(self):
         return sequence_symbol.join(str(m) for m in self.members)
     
+    def sending_version(self):
+        return self.__class__(*tuple(m.sending_version() for m in self.members))
 
-
+    def hotkey_version(self, up=False):
+        return self.__class__(*tuple(m.hotkey_version(up=up) for m in
+            self.members))
 
 class MouseMoveEvent(Event):
     
@@ -87,6 +95,7 @@ def _from_str(cls_or_self, string, hotkey=False,**kwargs):
     # DONT OVERRIDE THIS IN SUBCLASS!
     events = []
     for entry in split_str(string):
+        print(entry)
         if isinstance(entry, str):
             event = cls_or_self._create_from_str(entry, **kwargs)
             events.append(event)
@@ -98,7 +107,7 @@ def _from_str(cls_or_self, string, hotkey=False,**kwargs):
                 if not p: raise ValueError("Hotkey mode enabled. Use option  "
                       "hotkey=False to only send press or release events.")
                 events.append(event.reverse())
-        elif isinstance(entry, tuple):
+        elif isinstance(entry, (tuple,list)):
             t = tuple(cls_or_self._create_from_str(item,**kwargs)
                         for item in entry)
             events.append(EventCombination(*t))
@@ -106,6 +115,7 @@ def _from_str(cls_or_self, string, hotkey=False,**kwargs):
             raise TypeError
     if len(events) == 0: return cls_or_self()
     if len(events) == 1: return events[0]
+    print(events)
     return EventSequence(*events)
 
 
@@ -284,9 +294,14 @@ class EventCombination(Event):
     def __str__(self):
         return combination_symbol.join(str(m) for m in self.members)
     
-    def convert(self):
-       return sum(m for m in self.members) + sum(m.reverse() for m in
+    def sending_version(self):
+        return sum(m for m in self.members) + sum(m.reverse() for m in
            reversed(self.members))
+    
+    def hotkey_version(self, up=False):
+        ret = sum(m for m in self.members)
+        if up: ret += self.members[-1].reverse()
+        return ret
 
 
 
@@ -301,7 +316,7 @@ class StringAnalyzer:
             self.event_classes.append(cls)
     
     from_str = _from_str
-    __call__ = from_str
+    
 
     def _create_from_str(self, s, only_defined_names=False):
         for cls in self.event_classes:
@@ -327,7 +342,7 @@ class EventSenderMixin(ABC):
             if isinstance(event, EventSequence):
                 self.send_event(*event.members, **kwargs)
             elif isinstance(event, EventCombination):
-                self.send_event(event.convert(), **kwargs)
+                self.send_event(event.sending_version(), **kwargs)
             else:
                 try:
                     name = event.name
