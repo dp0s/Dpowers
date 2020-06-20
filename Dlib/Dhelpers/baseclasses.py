@@ -249,7 +249,25 @@ class TimedObject(ABC):
 
 
 
+class AdditionContainerAddend:
 
+    ContainerClass = None
+
+    def __add__(self, other):
+        if isinstance(other,
+                (self.ContainerClass.basic_class, self.ContainerClass)):
+            return self.ContainerClass(self, other)
+        try:
+            return super().__add__(other)
+        except AttributeError:
+            return NotImplemented
+
+    def __radd__(self, other):
+        if other is 0: return self  # necessary for using sum()
+        try:
+            return super().__radd__(other)
+        except AttributeError:
+            return NotImplemented
 
        
     
@@ -259,7 +277,7 @@ class AdditionContainer:
     # must be set in the subclass:
     basic_class = None
     _methods_to_include = {}
-    
+    Addend = AdditionContainerAddend
     
     def __init_subclass__(cls, basic_class=None, ordered=True):
         if basic_class is None:
@@ -313,11 +331,6 @@ class AdditionContainer:
         x = sum(bool(m) for m in self.members)
         return x > 0
 
-    def __getattr__(self, item):
-        try:
-            error_type = self._methods_to_include[item]
-        except KeyError:
-            raise AttributeError
         
     @staticmethod
     def _create_combined_method(method_name, error_type):
@@ -334,26 +347,3 @@ class AdditionContainer:
             raise error_type(f"Arguments {args, kwargs} not allowed for "
                     f"method {method_name} of AdditionObject {self}")
         return combined_method
-        
-
-
-
-    class Addend:
-    
-        ContainerClass = None
-    
-        def __add__(self, other):
-            if isinstance(other,
-                    (self.ContainerClass.basic_class, self.ContainerClass)):
-                return self.ContainerClass(self, other)
-            try:
-                return super().__add__(other)
-            except AttributeError:
-                return NotImplemented
-    
-        def __radd__(self, other):
-            if other is 0: return self  # necessary for using sum()
-            try:
-                return super().__radd__(other)
-            except AttributeError:
-                return NotImplemented
