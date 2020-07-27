@@ -240,8 +240,7 @@ class StandardizingDict:
             new_info = new_info.normal_version()
         check_type(dict, new_info)
         if not func: func = lambda x: x
-        for k,v in new_info.items():
-            self[k] = func(v)
+        for k,v in new_info.items(): self[k] = func(v)
             
     def __repr__(self) -> str:
         old = super().__repr__()[:-1]
@@ -274,7 +273,6 @@ class StandardizingDict:
     
     def __setitem__(self, k, v) -> None:
         try:
-            
             inst = self.NamedClass.instance(k)
         except KeyError:
             if self.others_comparable: k = self.NamedClass.make_comparable(k)

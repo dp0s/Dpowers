@@ -268,7 +268,11 @@ class AdditionContainerAddend:
             return super().__radd__(other)
         except AttributeError:
             return NotImplemented
-
+        
+    
+    @property
+    def members(self):
+        return (self,)
        
     
 
@@ -278,6 +282,10 @@ class AdditionContainer:
     basic_class = None
     _methods_to_include = {}
     Addend = AdditionContainerAddend
+    
+    @property
+    def members(self):
+        return self._members
     
     def __init_subclass__(cls, basic_class=None, ordered=True):
         if basic_class is None:
@@ -293,12 +301,12 @@ class AdditionContainer:
     
     
     def __init__(self, *args):
-        self.members = []
+        self._members = []
         for arg in args:
             if isinstance(arg, self.__class__):
-                self.members += arg.members
+                self._members += arg._members
             elif isinstance(arg, self.basic_class):
-                self.members += [arg]
+                self._members += [arg]
             else:
                 raise TypeError(arg)
     
@@ -319,23 +327,23 @@ class AdditionContainer:
 
     def __exit__(self, *error_info):
         booleans = tuple(bool(member.__exit__(*error_info)) for member in
-                self.members)
+                self._members)
         return True in booleans
 
     def __enter__(self):
-        for m in self.members:
+        for m in self._members:
             m.__enter__()
         return self
     
     def __bool__(self):
-        x = sum(bool(m) for m in self.members)
+        x = sum(bool(m) for m in self._members)
         return x > 0
 
         
     @staticmethod
     def _create_combined_method(method_name, error_type):
         def combined_method(self, *args, **kwargs):
-            for member in self.members:
+            for member in self._members:
                 try:
                     method = getattr(member,method_name)
                 except AttributeError:

@@ -49,53 +49,10 @@ def split_str(string):
         else:
             yield s
             
-
-
-
-class Event(AdditionContainer.Addend):
-    
-    def __repr__(self):
-        return f"<Event '{self}' of subclass " \
-            f"{self.__class__.__module__}.{self.__class__.__name__}>"
-
-    def sending_version(self):
-        return self
-    
-    def hotkey_version(self, up=False):
-        return self
-
-class EventSequence(AdditionContainer, Event, basic_class=Event):
-    def __str__(self):
-        return sequence_symbol.join(str(m) for m in self.members)
-    
-    def sending_version(self):
-        return self.__class__(*tuple(m.sending_version() for m in self.members))
-
-    def hotkey_version(self, up=False):
-        return self.__class__(*tuple(m.hotkey_version(up=up) for m in
-            self.members))
-
-class MouseMoveEvent(Event):
-    
-    def __init__(self, x, y, relative = False, screen_coordinates=True):
-        self.x = x
-        self.y = y
-        self.relative = relative
-        self.abbr = "r" if relative else "a"
-    
-    def __str__(self):
-        return f"(mouse_move,{self.abbr},{self.x},{self.y})"
-        
-        
-        
-        
-        
-        
 def _from_str(cls_or_self, string, hotkey=False,**kwargs):
     # DONT OVERRIDE THIS IN SUBCLASS!
     events = []
     for entry in split_str(string):
-        print(entry)
         if isinstance(entry, str):
             event = cls_or_self._create_from_str(entry, **kwargs)
             events.append(event)
@@ -115,8 +72,40 @@ def _from_str(cls_or_self, string, hotkey=False,**kwargs):
             raise TypeError
     if len(events) == 0: return cls_or_self()
     if len(events) == 1: return events[0]
-    print(events)
     return EventSequence(*events)
+
+
+
+
+
+class Event(AdditionContainer.Addend):
+    
+    def __repr__(self):
+        return f"<Event '{self}' of subclass " \
+            f"{self.__class__.__module__}.{self.__class__.__name__}>"
+
+    def sending_version(self):
+        return self
+    
+    def hotkey_version(self, rls=False):
+        return self
+
+
+
+class MouseMoveEvent(Event):
+    
+    def __init__(self, x, y, relative = False, screen_coordinates=True):
+        self.x = x
+        self.y = y
+        self.relative = relative
+        self.abbr = "r" if relative else "a"
+    
+    def __str__(self):
+        return f"(mouse_move,{self.abbr},{self.x},{self.y})"
+        
+        
+        
+
 
 
 class StringEvent(Event, str):
@@ -246,6 +235,7 @@ class PressReleaseEvent(StringEvent):
         return super()._args_from_str(s) + (not rls,)
 
     def strip_rls(self, raise_error=True):
+        if not self: return self
         if raise_error and self.press: raise ValueError
         if self.named_instance:
             return self.named_instance.release_event_without_rls
@@ -280,16 +270,31 @@ class Buttonevent(PressReleaseEvent):
 
 
 
+
+class EventSequence(AdditionContainer, Event, basic_class=Event):
+    def __str__(self):
+        return sequence_symbol.join(str(m) for m in self.members)
     
+    def sending_version(self):
+        return self.__class__(*tuple(m.sending_version() for m in self.members))
+    
+    def hotkey_version(self, rls=False):
+        return self.__class__(
+                *tuple(m.hotkey_version(rls=rls) for m in self.members))
+        
     
 class EventCombination(Event):
+    
+    @property
+    def members(self):
+        return self._members
     
     def __init__(self, *args):
         if len(args) < 2: raise ValueError
         for a in args:
             if not isinstance(a, PressReleaseEvent): raise TypeError
             if a.press is False: raise ValueError
-        self.members = args
+        self._members = args
     
     def __str__(self):
         return combination_symbol.join(str(m) for m in self.members)
@@ -298,9 +303,9 @@ class EventCombination(Event):
         return sum(m for m in self.members) + sum(m.reverse() for m in
            reversed(self.members))
     
-    def hotkey_version(self, up=False):
+    def hotkey_version(self, rls=False):
         ret = sum(m for m in self.members)
-        if up: ret += self.members[-1].reverse()
+        if rls: ret += self.members[-1].reverse()
         return ret
 
 
@@ -327,7 +332,9 @@ class StringAnalyzer:
         if only_defined_names:
             raise NameError(f"String '{s}' could not be matched to any "
             f"event class in {self.event_classes} of {self}.")
-        return False
+        else:
+            return self.event_classes[0]._create_from_str(s,
+                    only_defined_names=False)
 
 
 class EventSenderMixin(ABC):

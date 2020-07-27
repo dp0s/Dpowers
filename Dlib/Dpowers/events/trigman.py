@@ -20,22 +20,24 @@ from warnings import warn
 from . import NamedKey, keyb, NamedButton
 from .hookpower import HookAdaptor
 from Dhelpers.all import launch, TimedObject, dpress
-from .event_classes import StringAnalyzer
-
+from .event_classes import StringAnalyzer, EventSequence, StringEvent, EventCombination
+import collections
 
 class TriggerManager(TimedObject):
     
     triggermanhook = HookAdaptor(group="triggerman", _primary=True)
     
-    def __init__(self, hook_adaptor=None, timeout=60, hook_mouse=False):
+    def __init__(self, hook_adaptor=None, timeout=60, hook_mouse=False,
+            buffer=2):
         super().__init__(timeout=timeout)
         self.eventdict = dict()
         self.blocked_hks = []
         if hook_adaptor is None: hook_adaptor = self.triggermanhook
         if not isinstance(hook_adaptor, HookAdaptor): raise TypeError
         self.hook_adaptor = hook_adaptor
-        self.k_old = ""
         self.hm= None
+        self.recent_events = collections.deque()
+        self.buffer = buffer
         self.hook_mouse = hook_mouse
         if hook_mouse:
             self.stringevent_analyzer = StringAnalyzer(NamedKey, NamedButton)
@@ -66,54 +68,84 @@ class TriggerManager(TimedObject):
             self.timeout,self))
     
     def event(self, k):
-        #_print(k)
-        for hk in (k, self.k_old + k):
-            # checking whether a single or 2 button hotkey is triggered.
-            if hk in self.eventdict:
-                launch.thread(self.runscript, hk)
-                self.k_old = ""  # resetting the key history if a hotkey was
-                # triggered
-                break
-        else:
-            self.k_old = k
+        self.recent_events.append(k)
+        if len(self.recent_events) > self.buffer: self.recent_events.popleft()
+        recent_events = self.recent_events.copy()
+        for event,action in self.eventdict.items():
+            members = event.members
+            for i in range(len(members)):
+                if members[-i] != recent_events[-i]: break
+            else:
+                launch.thread(self.runscript, action, event)
+                # this means that for each member event, the suiting recent
+                # event has been found
+                self.recent_events.clear()
   
-    def runscript(self, hk):
+    def runscript(self, action, hk):
         if self.active_blocks: return
-        hk_func = self.eventdict[hk]
         # print(hk_func)
         # print(hk,hk_func,type(hk_func))
-        if type(hk_func) is str:
-            if hk_func.startswith("[dkeys]"):
+        if type(action) is str:
+            if action.startswith("[dkeys]"):
                 if dpress(hk, 0.15):
-                    keyb.send("<BackSpace>"*2 + hk_func[7:], delay=1)
+                    keyb.send("<BackSpace>"*2 + action[7:], delay=1)
             else:
-                keyb.send(hk_func)
-        elif callable(hk_func):
+                keyb.send(action)
+        elif callable(action):
             # the following makes sure that the hk_func is accepting 1
             # argument even if the underlying func does not
-            if hk_func.__code__.co_argcount == 1:
-                return hk_func(hk)
+            if action.__code__.co_argcount == 1:
+                return action(hk)
             else:
-                return hk_func()
+                return action()
         else:
             raise TypeError
+        
+    def add_event(self, event, action):
+        if event in self.eventdict:
+            raise ValueError(f"Tiggerevent {event} defined more than one time.")
+        self.eventdict[event] = action
+    
+    def add_sequence(self, string, action):
+        event = self.stringevent_analyzer.from_str(string).hotkey_version()
+        self.add_event(event, action)
+    
+    def add_hotkey(self, string, action, rls=False, block=True):
+        event = self.stringevent_analyzer.from_str(string)
+        if isinstance(event,EventSequence): raise ValueError
+        if isinstance(event,StringEvent):
+            if not event.press: raise ValueError
+            if block: self.blocked_hks.append(event)
+            if rls: event += event.reverse()
+        elif isinstance(event,EventCombination):
+            event = event.hotkey_version(rls=rls)
+        else:
+            raise TypeError
+        self.add_event(event, action)
 
-    # A decorator for adding a function hotkey
-    def trigger_on(self, *strings, block=False):
+    # A decorator
+    def triggersequence(self, *strings):
         def func(decorated_func):
-            for string in strings:
-                # add the function to be triggered by the appropriate hotkeys
-                event = self.stringevent_analyzer.from_str(string).sending_version()
-                if event in self.eventdict:
-                    raise ValueError(
-                            f"Tiggerevent {event} defined more than one time.")
-                self.eventdict[event] = func
-                if " " in string:
-                    self.blocked_hks += string.split(" ")
-                else:
-                    self.blocked_hks.append(string)
+            for string in strings: self.add_sequence(string, decorated_func)
             return decorated_func
         return func
+
+    # A decorator
+    def hotkey(self, *strings, rls=False, block=True):
+        def func(decorated_func):
+            for string in strings:
+                self.add_hotkey(string, decorated_func, rls=rls, block=block)
+            return decorated_func
+        return func
+    
+    def hotkey_rls(self,*strings, block=True):
+        return self.hotkey(*strings,rls=True,block=block)
+    
+    def add_triggerdict(self, triggerdict):
+        for eventstring, action in triggerdict.items():
+            self.add_sequence(eventstring,action)
+
+
 
     active_blocks = 0
 
