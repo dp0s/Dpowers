@@ -21,6 +21,8 @@ from time import sleep
 
 class MouseAdaptor(AdaptivePressReleaseSender):
     
+    # inherits adaptionmethods _press and _rls
+    
     @property
     def NamedClass(self):
         return self.NamedButtonClass

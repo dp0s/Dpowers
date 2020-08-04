@@ -19,18 +19,18 @@
 
 from evdev.ecodes import (EV_KEY, EV_ABS, EV_SYN, EV_MSC, KEY, BTN,
     EV_LED, EV_REL, ABS_MT_POSITION_X, ABS_MT_POSITION_Y, ABS_X, ABS_Y,
-    REL_X, REL_Y)
+    REL_X, REL_Y, bytype)
 from evdev_prepared import uinput, dev_updater
 
 from .baseclasses import (InputEventHandler, KeyhookBase, ButtonhookBase,
-    CursorhookBase, CustomhookBase)
+    CursorhookBase, CustomhookBase, PressReleaseHook)
 from abc import abstractmethod
 
 
 
 
 
-class EvdevHandler(InputEventHandler):
+class EvdevHandler(dev_updater.EvdevDeviceSelector, InputEventHandler):
     
     devupdater = dev_updater.EvdevDeviceUpdater(activate_looper=True)
     # this class will also use the CollactableInputDevice class and the
@@ -40,40 +40,9 @@ class EvdevHandler(InputEventHandler):
     
     def __init__(self, hook_cls=None, *, category=None, name=None, path=None,
             selection_func=None):
-        super().__init__(hook_cls)
-        self.category = category
-        self.name = name
-        self.path = path
-        self.selection_func = selection_func
-        self.matched_devs = []
-        self.devupdater.change_actions.append(self.dev_change_action)
-        
-    def properties(self):
-        return self.category, self.name, self.path, self.selection_func
-    
-    def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return self.properties() == other.properties()
-        elif isinstance(other, (tuple,list)) and len(other)==4:
-            return self.properties() == other
-        return NotImplemented
-    
-    def dev_is_selected(self, dev):
-        if self.selection_func is not None:
-            return self.selection_func(dev.category, dev.name, dev.path)
-        if dev.category == "uinput" and self.category != "uinput":
-            return False
-        if self.category is not None and dev.category != self.category:
-            return False
-        if self.name is not None and self.name not in dev.name:
-            return False
-        if self.path is not None and self.path not in dev.path:
-            return False
-        return True
-    
-    def matching_devs(self):
-        return list(dev for dev in self.devupdater.all_devs
-            if self.dev_is_selected(dev))
+        InputEventHandler.__init__(self,hook_cls)
+        dev_updater.EvdevDeviceSelector.__init__(self,category, name, path,
+                selection_func, dev_updater=self.devupdater)
 
     def dev_change_action(self, found_new, lost_devs):
         # this way, the EvdevHandler will automatically register newly
@@ -105,6 +74,7 @@ class EvdevHandler(InputEventHandler):
     @abstractmethod
     def stop_dev(self, dev):
         pass
+    
         
 class Capturer(EvdevHandler):
     
@@ -123,12 +93,15 @@ class Collector(EvdevHandler):
 
     def stop_dev(self, dev):
         dev.uncollect(collector=self)
-        
+    
     def process_event(self, ty, co ,val, dev):
-        self.queue_event((ty,co,val), dev)
-        
-        
-        
+        if ty == EV_SYN: return
+        name = bytype[ty][co]
+        if isinstance(name, (list,tuple)): name = name[0]
+        self.queue_event(name.lower(), val, dev)
+
+
+
 class KeyCollector(Collector):
     
     reinject_implemented = True

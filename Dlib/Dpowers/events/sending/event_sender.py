@@ -189,7 +189,10 @@ class AdaptiveMixin(Adaptor):
     @adaptionmethod("press", require=True)
     def _press(self, name, apply_map = True):
         if apply_map:
-            name = self._press.standardizing_dict.apply(name)
+            try:
+                name = self._press.standardizing_dict.apply(name)
+            except AttributeError:
+                name = self._press.standardizing_dict.get(name,name)
         try:
             return self._press.target(name)
         except Exception as e:
@@ -218,7 +221,10 @@ class AdaptiveMixin(Adaptor):
             names = target_space.names
         except AttributeError:
             names = {}
-        stand_dict = self.NamedClass.StandardizingDict(names)
+        if self.NamedClass:
+            stand_dict = self.NamedClass.StandardizingDict(names)
+        else:
+            stand_dict = names
         if self.name_translation:
             old_dict = stand_dict.copy()
             for key,val in self.name_translation.items():
@@ -228,7 +234,7 @@ class AdaptiveMixin(Adaptor):
                     pass
                 else:
                     stand_dict[key] = val2
-        check_type(self.NamedClass.StandardizingDict, stand_dict)
+        #check_type(self.NamedClass.StandardizingDict, stand_dict)
         amethod.standardizing_dict = stand_dict
 
     
@@ -270,7 +276,10 @@ class AdaptivePressReleaseSender(AdaptiveMixin, PressReleaseMixin,
     @adaptionmethod("rls", require=True)
     def _rls(self, name, apply_map=True):
         if apply_map:
-            name = self._rls.standardizing_dict.apply(name)
+            try:
+                name = self._rls.standardizing_dict.apply(name)
+            except AttributeError:
+                name = self._rls.standardizing_dict.get(name, name)
         try:
             return self._rls.target(name)
         except Exception as e:

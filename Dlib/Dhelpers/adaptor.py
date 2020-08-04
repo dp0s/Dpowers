@@ -219,6 +219,20 @@ class AdaptionMethod:
 #             in self.members))
 
 
+def _get_AdaptionFuncPlaceholders(cls):
+    for name, obj in vars(cls).items():
+        if isinstance(obj, AdaptionFuncPlaceholder):
+            yield name
+    for basecls in cls.__bases__:
+        for name in _get_AdaptionFuncPlaceholders(basecls):
+            try:
+                obj = getattr(cls, name)
+            except AttributeError:
+                continue
+            if isinstance(obj, AdaptionFuncPlaceholder):
+                yield name
+                
+
 class AdaptorBase(KeepInstanceRefs):
     implementation_source = None  # set in first level subclass
     # adapt_on_first_use = False
@@ -227,18 +241,16 @@ class AdaptorBase(KeepInstanceRefs):
     _subclass_level = 0
     adaptionmethod_names = set()
     
+    
     def __init_subclass__(cls):
         cls._subclass_level += 1
-        l = []
-        for name, obj in vars(cls).items():
-            if isinstance(obj, AdaptionFuncPlaceholder):
-                l.append(name)
+        l = tuple(_get_AdaptionFuncPlaceholders(cls))
         if l:
             # this means that this subclass can actually create instances
             if cls._subclass_level < 2:
                 raise SyntaxError("First-level Subclass of AdaptorBase is  "
                                   "not allowed to have adaptionmethods.")
-            cls.adaptionmethod_names = set(l) | cls.adaptionmethod_names
+            cls.adaptionmethod_names = set(l)
                 #this will inherit names already defined
             cls.implementation_classes = None
             cls.added_impl_names = {}

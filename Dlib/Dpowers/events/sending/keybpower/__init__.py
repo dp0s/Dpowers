@@ -23,6 +23,7 @@ from ..event_sender import AdaptivePressReleaseSender
 
 class KeyboardAdaptor(AdaptivePressReleaseSender):
     
+    #inherits adaptionmethods _press and _rls
     
     @property
     def NamedClass(self):
