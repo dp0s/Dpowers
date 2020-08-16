@@ -68,12 +68,14 @@ class TriggerManager(TimedObject):
             self.timeout,self))
     
     def event(self, k):
+        #print(k)
         self.recent_events.append(k)
         if len(self.recent_events) > self.buffer: self.recent_events.popleft()
         recent_events = self.recent_events.copy()
         for event,action in self.eventdict.items():
             members = event.members
-            for i in range(len(members)):
+            for i in range(1,min(len(members),len(recent_events))+1):
+                #_print(i, recent_events)
                 if members[-i] != recent_events[-i]: break
             else:
                 launch.thread(self.runscript, action, event)

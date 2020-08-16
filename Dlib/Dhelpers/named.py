@@ -228,6 +228,7 @@ class StandardizingDict:
         self.registered_instances = dict()
         self.registered_names = dict()
         self.others_comparable= others_comparable
+        self.make_comparable = self.NamedClass.make_comparable
         if new_info: self.update(new_info, func=func)
             
     def copy(self):
@@ -275,11 +276,12 @@ class StandardizingDict:
         try:
             inst = self.NamedClass.instance(k)
         except KeyError:
-            if self.others_comparable: k = self.NamedClass.make_comparable(k)
+            if self.others_comparable: k = self.make_comparable(k)
             self.other_dict[k] = v
         else:
             inst.mappings[self.running_number]=v
-            for name in inst.names: self.registered_names[name] = v
+            for name in inst.names:
+                self.registered_names[self.make_comparable(name)] = v
             self.registered_instances[inst] = v
     
     def __getitem__(self, k):
@@ -287,20 +289,20 @@ class StandardizingDict:
         try:
             if isinstance(k, self.NamedClass):
                 return k.mappings[self.running_number]
-            k2 = self.NamedClass.make_comparable(k)
+            k2 = self.make_comparable(k)
             try:
                 return self.registered_names[k2] #this is fasted way to look up
             except KeyError:
                 return self.other_dict[k2 if self.others_comparable else k]
         except KeyError:
-            raise KeyError(f"'{k}'")
+            raise KeyError(k)
 
         
     def __delitem__(self, k):
         try:
             inst = self.NamedClass.instance(k)
         except KeyError:
-            if self.others_comparable: k = self.NamedClass.make_comparable(k)
+            if self.others_comparable: k = self.make_comparable(k)
             del self.other_dict[k]
         else:
             del inst.mappings[self._running_number]
@@ -344,8 +346,16 @@ class StandardizingDict:
         except KeyError:
             return False
     
+    def keys(self):
+        for inst in self.registered_instances: yield inst.name
+        for key in self.other_dict.keys(): yield key
     
-    
+    def values(self):
+        for value in self.registered_instances.values(): yield value
+        for value in self.other_dict.values(): yield value
+        
+    def items(self):
+        return zip(self.keys(), self.values())
     
     
     
