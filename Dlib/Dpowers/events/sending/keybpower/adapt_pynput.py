@@ -26,8 +26,8 @@ text = keyboard.type
 press = keyboard.press
 rls = keyboard.release
 
-keynames = {key.name: key for key in DefinedKeys}  # these names are defined
-keynames["minus"]="-"
+names = {key.name: key for key in DefinedKeys}  # these names are defined
+names["minus"]="-"
 # in pynput
 # alphanumeric keys are automatically supported via they standard names
 

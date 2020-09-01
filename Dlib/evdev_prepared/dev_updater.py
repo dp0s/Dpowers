@@ -113,3 +113,56 @@ class EvdevDeviceUpdater:
             #self.input_looper.print_devices()
 
 
+
+
+class EvdevDeviceSelector:
+    
+    _used_updaters = []
+    
+    def __init__(self, category=None, name=None, path=None,
+            selection_func=None, dev_updater=None):
+        self.category = category
+        self.name = name
+        self.path = path
+        self.selection_func = selection_func
+        self.matched_devs = []
+        if dev_updater is None:
+            if self._used_updaters:
+                for old_updater in self._used_updaters:
+                    if old_updater.autoupdating: dev_updater = old_updater
+            else:
+                dev_updater = EvdevDeviceUpdater()
+        self.devupdater = dev_updater
+        if dev_updater not in self._used_updaters:
+            self._used_updaters.append(dev_updater)
+        dev_updater.change_actions.append(self.dev_change_action)
+    
+    def properties(self):
+        return self.category, self.name, self.path, self.selection_func
+    
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.properties() == other.properties()
+        elif isinstance(other, (tuple, list)) and len(other) == 4:
+            return self.properties() == other
+        return NotImplemented
+    
+    def dev_is_selected(self, dev):
+        if self.selection_func is not None:
+            return self.selection_func(dev.category, dev.name, dev.path)
+        if dev.category == "uinput" and self.category != "uinput":
+            return False
+        if self.category is not None and dev.category != self.category:
+            return False
+        if self.name is not None and self.name not in dev.name:
+            return False
+        if self.path is not None and self.path not in dev.path:
+            return False
+        return True
+    
+    def matching_devs(self):
+        return list(dev for dev in self.devupdater.all_devs if
+        self.dev_is_selected(dev))
+    
+    def dev_change_action(self, found_new, lost_devs):
+        pass

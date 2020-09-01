@@ -219,27 +219,42 @@ class AdaptionMethod:
 #             in self.members))
 
 
+def _get_AdaptionFuncPlaceholders(cls):
+    for name, obj in vars(cls).items():
+        if isinstance(obj, AdaptionFuncPlaceholder):
+            yield name
+    for basecls in cls.__bases__:
+        for name in _get_AdaptionFuncPlaceholders(basecls):
+            try:
+                obj = getattr(cls, name)
+            except AttributeError:
+                continue
+            if isinstance(obj, AdaptionFuncPlaceholder):
+                yield name
+                
+
 class AdaptorBase(KeepInstanceRefs):
     implementation_source = None  # set in first level subclass
     # adapt_on_first_use = False
     autoadapt_active = False
     dependency_folder = None  # set in first level subclass
     _subclass_level = 0
+    adaptionmethod_names = set()
+    
     
     def __init_subclass__(cls):
         cls._subclass_level += 1
-        l = []
-        for name, obj in vars(cls).items():
-            if isinstance(obj, AdaptionFuncPlaceholder):
-                l.append(name)
+        l = tuple(_get_AdaptionFuncPlaceholders(cls))
         if l:
             # this means that this subclass can actually create instances
             if cls._subclass_level < 2:
                 raise SyntaxError("First-level Subclass of AdaptorBase is  "
                                   "not allowed to have adaptionmethods.")
-            cls.adaptionmethod_names = tuple(l)
+            cls.adaptionmethod_names = set(l)
+                #this will inherit names already defined
             cls.implementation_classes = None
             cls.added_impl_names = {}
+            
     
     def __init__(self, main_info=None, *, group=None, _primary=False,
             **method_infos):
@@ -625,10 +640,9 @@ class Implementation:
             module_location = self.adaptorcls.__module__
             module_full_name = module_location + module_name
             if self.dependency_folder:
-                sys.path.insert(0,
-                        self.dependency_folder)  # this makes sure that
-                # packages inside the dependency folder  # are found first.
-                # Unless the module has already been imported
+                sys.path.insert(0, self.dependency_folder)
+                # this makes sure that packages inside the dependency folder
+                # are found first. Unless the module has already been imported.
             try:
                 ret = importlib.import_module(module_full_name)
             except Exception as e:

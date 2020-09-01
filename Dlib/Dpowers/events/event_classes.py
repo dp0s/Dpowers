@@ -17,12 +17,14 @@
 #
 #
 from Dhelpers.all import AdditionContainer, NamedObj
+from . import hotkeys
+from abc import ABC, abstractmethod
 
 
 combination_symbol = "+"
 sequence_symbol = " "
 
-def _from_str(cls_or_self, string, hotkey=False):
+def split_str(string):
     splitted_string = string.split(sequence_symbol)  # split at space
     #print("splitted", splitted_string)
     corrected_split = []
@@ -41,23 +43,37 @@ def _from_str(cls_or_self, string, hotkey=False):
             skip_next=True
         #print("corrected",corrected_split)
     # now the corrected split has taken the combinations into account
-    events = []
     for s in corrected_split:
         if combination_symbol in s:
-            t = tuple(cls_or_self._create_from_str(name) for name in s.split(
-                    combination_symbol))
-            events.append(KeybuttonCombination(*t))
+            yield s.split(combination_symbol)
         else:
-            event = cls_or_self._create_from_str(s)
+            yield s
+            
+def _from_str(cls_or_self, string, hotkey=False,**kwargs):
+    # DONT OVERRIDE THIS IN SUBCLASS!
+    events = []
+    for entry in split_str(string):
+        if isinstance(entry, str):
+            event = cls_or_self._create_from_str(entry, **kwargs)
             events.append(event)
             if hotkey:
-                if not event.press:raise ValueError("Hotkey mode enabled. "
-             "Use option hotkey=False to only send press or release events.")
+                try:
+                    p = event.press
+                except AttributeError: raise ValueError("Option hotkey=True "
+                        f"does not make sense for f{event}.")
+                if not p: raise ValueError("Hotkey mode enabled. Use option  "
+                      "hotkey=False to only send press or release events.")
                 events.append(event.reverse())
-    if len(events) == 0: return StringEvent()
+        elif isinstance(entry, (tuple,list)):
+            t = tuple(cls_or_self._create_from_str(item,**kwargs)
+                        for item in entry)
+            events.append(EventCombination(*t))
+        else:
+            raise TypeError
+    if len(events) == 0: return cls_or_self()
     if len(events) == 1: return events[0]
-    #print(splitted_string, corrected_split)
     return EventSequence(*events)
+
 
 
 
@@ -68,11 +84,11 @@ class Event(AdditionContainer.Addend):
         return f"<Event '{self}' of subclass " \
             f"{self.__class__.__module__}.{self.__class__.__name__}>"
 
-
-class EventSequence(AdditionContainer, Event, basic_class=Event):
-    def __str__(self):
-        return sequence_symbol.join(str(m) for m in self.members)
+    def sending_version(self):
+        return self
     
+    def hotkey_version(self, rls=False):
+        return self
 
 
 
@@ -87,76 +103,65 @@ class MouseMoveEvent(Event):
     def __str__(self):
         return f"(mouse_move,{self.abbr},{self.x},{self.y})"
         
+        
+        
 
 
 
 class StringEvent(Event, str):
-    
-    # hooked_by = None  # set by collecting hook class
-    # inject_args = None  # set by collecting hook class
-    #
-    # def reinject(self, reverse=False):
-    #     try:
-    #         self.hooked_by.collector.inject(*self.inject_args,
-    #                 reverse=reverse)
-    #     except AttributeError:
-    #         return False
-    #     else:
-    #         return True
-    
-    from_str = classmethod(_from_str)
-    
-    @classmethod
-    def _create_from_str(cls, string, raise_error=False):
-        return cls(string)
 
+    __slots__ = ["name","given_name","named_instance"]
 
-class KeybuttonEvent(StringEvent):
-    
-    __slots__ = ["name", "named_instance", "press"]
-    
-    NamedClass=None #must be set by __init_subclass__ method of NamedKeyButton
-    # subclass
-    
-    # def reinject(self, autorelease=False, reverse=False):
-    #     success = super().reinject(reverse=reverse)
-    #     if autorelease and success and (self.press and not reverse or not
-    #     self.press and reverse):
-    #         if autorelease is True: autorelease=5
-    #         time.sleep(autorelease/1000)
-    #         super().reinject(reverse=not reverse)
+    NamedClass = None  # must be set by __init_subclass__ method of
+                       # NamedKeyButton subclass
+    allowed_names = () # set allowed_names even without use of NamedClass
     
 
-    def __new__(cls, name="", press=True, write_rls=True, raise_error=False):
+    def __new__(cls, name="", *, only_defined_names=False):
+        given_name = name
         named_instance = None
         if name != "":
-            try:
-                #print(name, named_instance)
-                named_instance = cls.NamedClass.instance(name)
-            except KeyError as k:
-                if raise_error: raise ValueError from k
-                name = f"[{name}]"
-            else:
-                name = named_instance.name
-        else:
-            press = None
-        string = name
-        if press is False and write_rls: string += "_rls"
-        self=super().__new__(cls,string)
+            if cls.NamedClass:
+                try:
+                    # print(name, named_instance)
+                    named_instance = cls.NamedClass.instance(name)
+                except KeyError:
+                    if not cls.allowed_names and only_defined_names:
+                        raise NameError(f"name '{name}' not allowed for "
+                        f"{cls}")
+                else:
+                    name = named_instance.name
+            if not named_instance:
+                if name not in cls.allowed_names:
+                    if cls.allowed_names and only_defined_names:
+                        raise NameError(f"name '{name}' not allowed for "
+                        f"{cls}")
+                    name = f"[{name}]"
+        self = str.__new__(cls, name)
         self.name = name
         self.named_instance = named_instance
-        self.press=press
+        self.given_name = given_name
+        assert str(self) == name
         return self
     
     @classmethod
-    def _create_from_str(cls, string, raise_error=False):
-        rls = string.endswith("_rls")
-        if rls: string = string[:-4]
-        if string.startswith("[") and string.endswith("]"):
-            string = string[1:-1]
-        return cls(string,press=not rls, raise_error=raise_error)
-
-
+    def _args_from_str(cls, s):
+        # OVERRIDE THIS!
+        if s.startswith("[") and s.endswith("]"):
+            s = s[1:-1]
+        return (s,)
+    
+    
+    @classmethod
+    def _create_from_str(cls, s, **kwargs):
+        return cls(*cls._args_from_str(s),**kwargs)
+    
+    
+    from_str = classmethod(_from_str)
+                
+        
+        
+    
 
     # problem with redefining __eq__ and dicts/set __hash__ comparison
     # __hash__ method is needed for checking "self in dict" or "self in set"
@@ -170,30 +175,13 @@ class KeybuttonEvent(StringEvent):
     #    the search inside the dict is using hashes and thus is quick
     #    however, standardization needs to be done beforehand
     # 2. custom methods defined below.
-
-    def strip_rls(self, raise_error=True):
-        if raise_error and self.press: raise ValueError
-        if self.named_instance:
-            ret = self.named_instance.release_event_without_rls
-        else:
-            ret = self.__class__(name=self.name,press=False,write_rls=False)
-        return ret
     
-    def reverse(self):
-        if self.named_instance:
-            if self.press:
-                ret = self.named_instance.release_event
-            else:
-                ret = self.named_instance.press_event
-        else:
-            ret = self.__class__(name=self.name, press=not self.press)
-        return ret
-
+    
     def eq(self,other):
         if isinstance(other,int): other=f"[{other}]"
         if isinstance(other, str):
-            if self.NamedClass:
-                return super().__eq__(self.NamedClass.standardize(other))
+            if self.named_instance:
+                return self.named_instance == other
             else:
                 return super().__eq__(other)
         raise NotImplementedError
@@ -214,22 +202,63 @@ class KeybuttonEvent(StringEvent):
         except AttributeError:
             pass
         else:
-            if c== self.NamedClass:
+            if c == self.NamedClass:
                 # in this case, the dic is already standardized,
                 # so we can use a normal hash comparison
                 return dic.get(self, return_if_not_found)
         # this is what usually happens
         for key in iter(dic):
-            if self.eq(key):
-                return dic[key]
+            if self.eq(key): return dic[key]
         return return_if_not_found
     
     
-class Keyvent(KeybuttonEvent):
+    
+
+class PressReleaseEvent(StringEvent):
+    __slots__ = ["press"]
+    
+    def __new__(cls, name="", press=True, write_rls=True, only_defined_names=False):
+        assert press in (True, False, None)
+        self = StringEvent.__new__(cls, name, only_defined_names=only_defined_names)
+        if press is False and write_rls:
+            self2 = str.__new__(cls, self.name + "_rls")
+            for attr in StringEvent.__slots__:
+                setattr(self2,attr,getattr(self,attr))
+            self = self2
+        self.press=press
+        return self
+
+    @classmethod
+    def _args_from_str(cls, s):
+        rls = s.endswith("_rls")
+        if rls: s = s[:-4]
+        return super()._args_from_str(s) + (not rls,)
+
+    def strip_rls(self, raise_error=True):
+        if not self: return self
+        if raise_error and self.press: raise ValueError
+        if self.named_instance:
+            return self.named_instance.release_event_without_rls
+        else:
+            return self.__class__(name=self.name,press=False,write_rls=False)
+    
+    def reverse(self):
+        if self.named_instance:
+            if self.press:
+                return self.named_instance.release_event
+            else:
+                return self.named_instance.press_event
+        else:
+            return self.__class__(name=self.name, press=not self.press)
+
+    
+    
+    
+class Keyvent(PressReleaseEvent):
     pass
 
 
-class Buttonevent(KeybuttonEvent):
+class Buttonevent(PressReleaseEvent):
     
     __slots__ = ["x", "y"]
     
@@ -242,23 +271,42 @@ class Buttonevent(KeybuttonEvent):
 
 
 
+class EventSequence(AdditionContainer, Event, basic_class=Event):
+    def __str__(self):
+        return sequence_symbol.join(str(m) for m in self.members)
     
+    def sending_version(self):
+        return self.__class__(*tuple(m.sending_version() for m in self.members))
     
-class KeybuttonCombination(Event):
+    def hotkey_version(self, rls=False):
+        return self.__class__(
+                *tuple(m.hotkey_version(rls=rls) for m in self.members))
+        
+    
+class EventCombination(Event):
+    
+    @property
+    def members(self):
+        return self._members
     
     def __init__(self, *args):
         if len(args) < 2: raise ValueError
         for a in args:
-            if not isinstance(a, KeybuttonEvent): raise TypeError
-            if not a.press: raise ValueError
-        self.members = args
+            if not isinstance(a, PressReleaseEvent): raise TypeError
+            if a.press is False: raise ValueError
+        self._members = args
     
     def __str__(self):
         return combination_symbol.join(str(m) for m in self.members)
     
-    def convert(self):
-       return sum(m for m in self.members) + sum(m.reverse() for m in
+    def sending_version(self):
+        return sum(m for m in self.members) + sum(m.reverse() for m in
            reversed(self.members))
+    
+    def hotkey_version(self, rls=False):
+        ret = sum(m for m in self.members)
+        if rls: ret += self.members[-1].reverse()
+        return ret
 
 
 
@@ -272,15 +320,47 @@ class StringAnalyzer:
             if cls is EventSequence: raise TypeError
             self.event_classes.append(cls)
     
-    __call__ = _from_str   #not a classmethod! So the first argument of the
-            # _from_str function is not cls but actually self
     from_str = _from_str
     
-    def _create_from_str(self, s):
+
+    def _create_from_str(self, s, only_defined_names=False):
         for cls in self.event_classes:
             try:
-                return cls._create_from_str(s, raise_error=True)
-            except ValueError:
+                return cls._create_from_str(s, only_defined_names=True)
+            except NameError:
                 continue
-        raise ValueError
-        
+        if only_defined_names:
+            raise NameError(f"String '{s}' could not be matched to any "
+            f"event class in {self.event_classes} of {self}.")
+        else:
+            return self.event_classes[0]._create_from_str(s,
+                    only_defined_names=False)
+
+
+class EventSenderMixin(ABC):
+    
+    @abstractmethod
+    def _send_event(self, event, **kwargs):
+        raise NotImplementedError
+    
+    @hotkeys.add_pause_option(True)
+    def send_event(self, *events, **kwargs):
+        for event in events:
+            if isinstance(event, EventSequence):
+                self.send_event(*event.members, **kwargs)
+            elif isinstance(event, EventCombination):
+                self.send_event(event.sending_version(), **kwargs)
+            else:
+                try:
+                    name = event.name
+                except AttributeError:
+                    pass
+                else:
+                    if name.startswith("[") and name.endswith("]"):
+                        name = name[1:-1]
+                        event.name = name
+                try:
+                    self._send_event(event, **kwargs)
+                except TypeError:
+                    raise TypeError(f"event argument {event} not allowed for "
+                    f"send_event method of object {self}.")

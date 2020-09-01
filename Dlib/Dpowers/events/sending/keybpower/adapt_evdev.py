@@ -16,26 +16,27 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-import pynput
+from evdev_prepared.uinput import global_uinput
 
-mouse = pynput.mouse.Controller()
+from evdev.ecodes import KEY, EV_KEY
 
-def pos():
-    return mouse.position
+names = {}
 
-move=mouse.move
+def iterator(dic):
+    for a, b in dic.items():
+        if isinstance(b, (tuple, list)):
+            for c in b: yield a,c
+        else:
+            yield a, b
 
+for integer, name in iterator(KEY):
+    n = name[4:]
+    names[n] = integer
+    
+global_uinput.start()
 
-def moveto(x,y):
-    mouse.position = (x,y)
+def press(keynumber):
+    global_uinput.write(EV_KEY, keynumber, 1)
 
-
-keynames = {i : pynput.mouse.Button(i) for i in range(1,31)}
-#this is necessary because somehow pynput send button.value instead of button
-
-click=mouse.click
-press=mouse.press
-rls=mouse.release
-
-def scroll(vertical,horizontal):
-    return mouse.scroll(horizontal,vertical)
+def rls(keynumber):
+    global_uinput.write(EV_KEY, keynumber, 0)

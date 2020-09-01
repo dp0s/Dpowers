@@ -16,16 +16,10 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from typing import Any
 
 from .baseclasses import KeepInstanceRefs
-from .arghandling import extract_if_single_collection, check_type
-from .decorators import (extend_to_collections, extend_to_collections_dirs,
-    ignore_first_arg)
-import collections
-
-
-#TODO: Standardizing classmethods should be made more clear.
+from .arghandling import check_type
+from .decorators import (extend_to_collections)
 
 
 class NamedObj(KeepInstanceRefs):
@@ -36,7 +30,7 @@ class NamedObj(KeepInstanceRefs):
     defined_groups = None
     NameContainer = None
     
-    __slots__ = ["names", "groups"]
+    __slots__ = ["names", "groups", "mapping_dict"]
     
     def __init_subclass__(cls, inherit_names=False):
         cls.names_with_important_capital_letters = set()
@@ -66,6 +60,7 @@ class NamedObj(KeepInstanceRefs):
         self.groups = []
         self.names = list()
         self.add_names(*names)
+        self.mappings = {}
 
 
     def add_to_group(self, group_name):
@@ -160,14 +155,10 @@ class NamedObj(KeepInstanceRefs):
         
     
     @classmethod
-    def get_stnd_name(cls, name, return_if_not_found=None):
-        if isinstance(name, cls):
-            return name.name
-        try:
-            return cls.name_to_stnd_name[cls.make_comparable(name)]
-        except KeyError:
-            return return_if_not_found
-    
+    def get_stnd_name(cls, name):
+        if isinstance(name, cls): return name.name
+        return cls.name_to_stnd_name[cls.make_comparable(name)]
+        
     # def set_stnd_name(self, stnd_name):
     #     self.stnd_name=stnd_name
     #     if self.stnd_name_comparable in self.stnd_names():
@@ -220,69 +211,151 @@ class NamedObj(KeepInstanceRefs):
     def __repr__(self):
         return super().__repr__()[:-1] + " with standard name '%s'>"%self.name
     
-    
-    @classmethod
-    def standardize_single(cls, string, applied_func):
-        if isinstance(string, int):
-            return applied_func(str(string))
-        if isinstance(string, cls):
-            return applied_func(string.name)
-        return cls.analyze_string(str(string), applied_func)
-    
-    
-    @classmethod
-    def analyze_string(cls, string, applied_func):
-        # override this in a subclass
-        return applied_func(string)
-    
-    @classmethod
-    @ignore_first_arg(extend_to_collections_dirs)
-    def standardize(cls, obj):
-        return cls.standardize_single(obj,
-                lambda name: cls.get_stnd_name(name, name))
+    def __str__(self):
+        return f"{self.__class__.__name__}({self.name})"
     
     
     
+class StandardizingDict:
     
-class StandardizingDict(dict):
-    
-    
+    _running_number = 0
     NamedClass = None  #set by NamedObj init_subclass method
         
-    def __init__(self, *new_info, func=None):
-        self.standardize = self.NamedClass.standardize
-        super().__init__()
-        if len(new_info) > 0:
-            # print(new_info)
-            self.update(*new_info, func=func)
+    def __init__(self, new_info=None, func=None, others_comparable=True):
+        self.running_number = self._running_number
+        self.__class__._running_number += 1
+        self.other_dict = dict()
+        self.registered_instances = dict()
+        self.registered_names = dict()
+        self.others_comparable= others_comparable
+        self.make_comparable = self.NamedClass.make_comparable
+        if new_info: self.update(new_info, func=func)
+            
+    def copy(self):
+        return self.__class__(self,others_comparable=self.others_comparable)
     
-    def update(self, *new_info, func=None):
-        new_info = extract_if_single_collection(new_info)
+    def update(self, new_info, func=None):
         if isinstance(new_info, (set, list, tuple)):
             new_info = dict(zip(new_info, new_info))
+        elif isinstance(new_info, StandardizingDict):
+            new_info = new_info.normal_version()
         check_type(dict, new_info)
         if not func: func = lambda x: x
-        dic = {self.standardize(k): func(v) for (k, v) in new_info.items()}
-        return super().update(dic)
+        for k,v in new_info.items(): self[k] = func(v)
+            
+    def __repr__(self) -> str:
+        old = super().__repr__()[:-1]
+        return old + f" with running number {self.running_number}>"
+    
+    def normal_version(self, str_of_inst=False):
+        if str_of_inst:
+            f = lambda inst: str(inst)
+        else:
+            f = lambda inst: inst.name
+        d = self.other_dict.copy()
+        d.update({f(inst): inst.mappings[self.running_number]
+            for inst in self.registered_instances})
+        return d
+    
+    def __eq__(self, other):
+        if isinstance(other,self.__class__):
+            if self.NamedClass == other.NamedClass and \
+                self.other_dict == other.other_dict and \
+                self.registered_instances == other.registered_instances:
+                    return True
+            return False
+        return NotImplemented
+    
+    
+    def __str__(self):
+        return "StandardizingDict" + str(self.normal_version(
+                str_of_inst=True)).replace("'","").replace('"','')
+    
     
     def __setitem__(self, k, v) -> None:
-        return super().__setitem__(self.standardize(k), v)
-    
-    def get(self, k, default):
-        return super().get(self.standardize(k), default)
+        try:
+            inst = self.NamedClass.instance(k)
+        except KeyError:
+            if self.others_comparable: k = self.make_comparable(k)
+            self.other_dict[k] = v
+        else:
+            inst.mappings[self.running_number]=v
+            for name in inst.names:
+                self.registered_names[self.make_comparable(name)] = v
+            self.registered_instances[inst] = v
     
     def __getitem__(self, k):
-        return super().__getitem__(self.standardize(k))
+        # this method is optimized for speed
+        try:
+            if isinstance(k, self.NamedClass):
+                return k.mappings[self.running_number]
+            k2 = self.make_comparable(k)
+            try:
+                return self.registered_names[k2] #this is fasted way to look up
+            except KeyError:
+                return self.other_dict[k2 if self.others_comparable else k]
+        except KeyError:
+            raise KeyError(k)
+
+        
+    def __delitem__(self, k):
+        try:
+            inst = self.NamedClass.instance(k)
+        except KeyError:
+            if self.others_comparable: k = self.make_comparable(k)
+            del self.other_dict[k]
+        else:
+            del inst.mappings[self._running_number]
+            for name in inst.names: del self.registered_names[name]
+            del self.registered_instances[inst]
+        
+    def get(self, k, default=None):
+        try:
+            return self[k]
+        except KeyError:
+            return default
+        
+    def pop(self, k, default=None):
+        try:
+            val = self[k]
+        except KeyError:
+            if default is not None: return default
+            raise
+        del self[k]
+        return val
+        
+    def apply(self, k):
+        try:
+            inst = self.NamedClass.instance(k)
+        except KeyError:
+            try:
+                return self.other_dict[k]
+            except KeyError:
+                return k  #if k is not a defined name of any kind, return itself
+        else:
+            try:
+                return inst.mappings[self.running_number]
+            except KeyError:
+                return inst.name
+                #if k is not in dict, at least it can be standardized
     
     def __contains__(self, item):
-        #print(repr(item), self.standardize(item))
-        return super().__contains__(self.standardize(item))
+        try:
+            self[item]
+            return True
+        except KeyError:
+            return False
     
-    def apply(self, obj):
-        # print(obj, type(obj))
-        return self.NamedClass.standardize_single(obj,
-                lambda name: self.get(name, self.standardize(name)))
+    def keys(self):
+        for inst in self.registered_instances: yield inst.name
+        for key in self.other_dict.keys(): yield key
     
+    def values(self):
+        for value in self.registered_instances.values(): yield value
+        for value in self.other_dict.values(): yield value
+        
+    def items(self):
+        return zip(self.keys(), self.values())
     
     
     
@@ -355,3 +428,17 @@ class NameContainer:
         
     def __call__(self, name):
         return self.NamedClass.instance(name)
+    
+    
+    
+    
+# class NameCombination:
+#
+#     def __init__(self, *named_subclasses):
+#         for NamedClass in named_subclasses:
+#             if not issubclass(NamedClass, NamedObj): raise TypeError
+#         self.NamedClasses = named_subclasses
+#         self.StandardizingDict = type(f"NameCombination.StandardizingDict",
+#                 (StandardizingDict,),{})
+#         self.StandardizingDict.NamedClass = self
+#

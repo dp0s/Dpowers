@@ -17,7 +17,7 @@
 #
 #
 from . import HookAdaptor, CallbackHook, hotkeys, KeyboardAdaptor, \
-    MouseAdaptor, EventSender
+    MouseAdaptor, CombinedSender
 from Dhelpers.all import check_type, launch
 import time
 from .. import NotificationAdaptor
@@ -143,7 +143,7 @@ class KeyWaiter(Waiter):
     hook = HookAdaptor(group="keywait", _primary=True)
     keyb = KeyboardAdaptor(group="keywait",_primary=True)
     mouse = MouseAdaptor(group="keywait", _primary=True)
-    send = EventSender(keyb,mouse)
+    send = CombinedSender(keyb,mouse)
     hotstring_keyb = KeyboardAdaptor(group="default")
     
     @classmethod
@@ -219,6 +219,7 @@ class KeyWaiter(Waiter):
             limit_allowed_keys += [i + "_rls" for i in limit_allowed_keys]
         elif endevents == ():
             endevents = ("Tab", "Return", "Space")
+        patterns = tuple(string_dict.keys())
         def checkinp(self, k, k_mapped):
             if limit_allowed_keys:
                 if self.eventmap and k_mapped not in limit_allowed_keys:
@@ -226,8 +227,7 @@ class KeyWaiter(Waiter):
                 if not self.eventmap and k not in limit_allowed_keys:
                     return f"forbidden key {k}"
             y = self.joined_events_mapped if self.eventmap else self.joined_events
-            if y in string_dict.keys():
-                #   ntfy("hit")
+            if y in patterns:
                 return "hit"
     
         with hotkeys.paused(15):

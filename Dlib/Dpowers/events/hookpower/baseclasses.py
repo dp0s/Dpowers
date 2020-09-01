@@ -325,6 +325,8 @@ class CallbackHook(AdditionContainer.Addend, TimedObject):
     
 
 
+
+
 class PressReleaseHook(CallbackHook):
     
     NamedClass = None # set by target modifier of HookAdaptor
@@ -357,9 +359,9 @@ class PressReleaseHook(CallbackHook):
         #this has to be called after cls.NamedClass has been set
         for i in range(len(cls.name_translation_dicts)):
             dic = cls.name_translation_dicts[i]
-            check_type(dict,dic)
             StandardizingDict = cls.NamedClass.StandardizingDict
             if not isinstance(dic, StandardizingDict):
+                check_type(dict,dic)
                 cls.name_translation_dicts[i] = StandardizingDict(dic)
         coll = cls.collector
         if coll is None: return
@@ -448,9 +450,9 @@ class KeyhookBase(PressReleaseHook):
             cls.currently_pressed.remove(info)
         return event_obj
 
+
 class ButtonhookBase(PressReleaseHook):
     pass
-
 
 
 class CursorhookBase(CallbackHook):
@@ -476,16 +478,16 @@ class HookContainer(AdditionContainer, basic_class=CallbackHook, ordered=False):
     
     def __init__(self, *args):
         super().__init__(*args)
-        self.members = list(m() for m in self.members)
+        self._members = list(m() for m in self._members)
         #this will creat a copy of all hook instances so that the
         # HookContainer Version is independent from the basic version
 
     def start(self):
-        return tuple(m.start() for m in self.members)
+        return tuple(m.start() for m in self._members)
     
     def stop(self):
         errors = []
-        for m in self.members:
+        for m in self._members:
             try:
                 m.stop()
             except RuntimeError as e:
@@ -495,8 +497,8 @@ class HookContainer(AdditionContainer, basic_class=CallbackHook, ordered=False):
         
     
     def join(self):
-        return tuple(m.join() for m in self.members)
+        return tuple(m.join() for m in self._members)
     
     @functools.wraps(CallbackHook.__call__)
     def __call__(self, *args, **kwargs):
-        return self.__class__(*tuple(m(*args, **kwargs) for m in self.members))
+        return self.__class__(*tuple(m(*args, **kwargs) for m in self._members))

@@ -250,8 +250,30 @@ class TimedObject(ABC):
 
 
 
+class AdditionContainerAddend:
 
+    ContainerClass = None
 
+    def __add__(self, other):
+        if isinstance(other,
+                (self.ContainerClass.basic_class, self.ContainerClass)):
+            return self.ContainerClass(self, other)
+        try:
+            return super().__add__(other)
+        except AttributeError:
+            return NotImplemented
+
+    def __radd__(self, other):
+        if other is 0: return self  # necessary for using sum()
+        try:
+            return super().__radd__(other)
+        except AttributeError:
+            return NotImplemented
+        
+    
+    @property
+    def members(self):
+        return (self,)
        
     
 
@@ -259,7 +281,12 @@ class AdditionContainer:
     
     # must be set in the subclass:
     basic_class = None
+    _methods_to_include = {}
+    Addend = AdditionContainerAddend
     
+    @property
+    def members(self):
+        return self._members
     
     def __init_subclass__(cls, basic_class=None, ordered=True):
         if basic_class is None:
@@ -268,14 +295,19 @@ class AdditionContainer:
         cls.basic_class = basic_class
         cls.ordered=ordered
         basic_class.ContainerClass = cls
+        for method_name, error_type in cls._methods_to_include.items():
+            if not issubclass(error_type,Exception): raise TypeError
+            setattr(cls, method_name, cls._create_combined_method(
+                    method_name, error_type))
+    
     
     def __init__(self, *args):
-        self.members = []
+        self._members = []
         for arg in args:
             if isinstance(arg, self.__class__):
-                self.members += arg.members
+                self._members += arg._members
             elif isinstance(arg, self.basic_class):
-                self.members += [arg]
+                self._members += [arg]
             else:
                 raise TypeError(arg)
     
@@ -296,35 +328,31 @@ class AdditionContainer:
 
     def __exit__(self, *error_info):
         booleans = tuple(bool(member.__exit__(*error_info)) for member in
-                self.members)
+                self._members)
         return True in booleans
 
     def __enter__(self):
-        for m in self.members:
+        for m in self._members:
             m.__enter__()
         return self
     
     def __bool__(self):
-        x = sum(bool(m) for m in self.members)
+        x = sum(bool(m) for m in self._members)
         return x > 0
-    
 
-    class Addend:
-    
-        ContainerClass = None
-    
-        def __add__(self, other):
-            if isinstance(other,
-                    (self.ContainerClass.basic_class, self.ContainerClass)):
-                return self.ContainerClass(self, other)
-            try:
-                return super().__add__(other)
-            except AttributeError:
-                return NotImplemented
-    
-        def __radd__(self, other):
-            if other is 0: return self  # necessary for using sum()
-            try:
-                return super().__radd__(other)
-            except AttributeError:
-                return NotImplemented
+        
+    @staticmethod
+    def _create_combined_method(method_name, error_type):
+        def combined_method(self, *args, **kwargs):
+            for member in self._members:
+                try:
+                    method = getattr(member,method_name)
+                except AttributeError:
+                    continue
+                try:
+                    return method(*args, **kwargs)
+                except error_type:
+                    continue
+            raise error_type(f"Arguments {args, kwargs} not allowed for "
+                    f"method {method_name} of AdditionObject {self}")
+        return combined_method

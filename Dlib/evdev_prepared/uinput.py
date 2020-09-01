@@ -26,7 +26,7 @@ class UinputWrapper:
     
     def __init__(self, **kwargs):
         self.capabilities = defaultdict(set)
-        self.capabilities[ecodes.EV_KEY] = ecodes.keys.keys()
+        self.capabilities[ecodes.EV_KEY] = set(ecodes.keys.keys())
         self.kwargs = kwargs
         self.filtered_types=(ecodes.EV_SYN, ecodes.EV_FF)
         self.uinput_object = None

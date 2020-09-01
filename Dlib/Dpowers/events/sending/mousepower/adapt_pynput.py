@@ -16,20 +16,26 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from evdev_prepared.uinput import global_uinput
+import pynput
 
-from evdev.ecodes import KEY, EV_KEY
+mouse = pynput.mouse.Controller()
 
-keynames = {}
-for a, b in KEY.items():
-    if isinstance(b, list): b = b[0]
-    b = b[4:].lower()
-    keynames[b] = a
-    
-global_uinput.start()
+def pos():
+    return mouse.position
 
-def press(keynumber):
-    global_uinput.write(EV_KEY, keynumber, 1)
+move=mouse.move
 
-def rls(keynumber):
-    global_uinput.write(EV_KEY, keynumber, 0)
+
+def moveto(x,y):
+    mouse.position = (x,y)
+
+
+names = {i : pynput.mouse.Button(i) for i in range(1,31)}
+#this is necessary because somehow pynput send button.value instead of button
+
+#click=mouse.click
+press=mouse.press
+rls=mouse.release
+
+def scroll(vertical,horizontal):
+    return mouse.scroll(horizontal,vertical)
