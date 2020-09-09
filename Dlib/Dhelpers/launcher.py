@@ -18,7 +18,7 @@
 #
 from warnings import warn
 import time, threading, subprocess, psutil, multiprocessing
-from .arghandling import PositiveInt
+from Dhelpers.arghandling import PositiveInt
 
 
 def get_running_processes(*ps):
@@ -57,7 +57,7 @@ def terminate_process(*pids_or_processes, timeout=1):
     for proc in procs: proc.terminate()
     gone, alive = psutil.wait_procs(procs, timeout)
     if alive:
-        for proc in alive: proc._kill()
+        for proc in alive: proc.kill()
         gone, alive = psutil.wait_procs(procs, timeout)
         if alive: raise TimeoutError(
                     "The following process(es) could not be killed after {"
@@ -147,7 +147,7 @@ class LaunchFuncs:
         try:
             exitCode = Popen_object.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
-            Popen_object._kill()
+            Popen_object.kill()
             Popen_object.wait()
             raise
         try:

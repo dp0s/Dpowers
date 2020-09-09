@@ -22,7 +22,7 @@ from Dhelpers.arghandling import ArgSaver
 pynput = "pynput"
 evdev = "evdev"
 
-class default_implementations:
+class implementations:
     
     class HookAdaptor:
         default  = pynput
@@ -36,7 +36,6 @@ class default_implementations:
         
     class WindowAdaptor:
         default = "xtools_bash"
-        
         
     class KeyboardAdaptor:
         default = (pynput, evdev)

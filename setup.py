@@ -16,13 +16,16 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
+
+
 from setuptools import setup, find_packages
 from time import sleep
-import multiprocessing, os, subprocess, warnings, shutil
+import multiprocessing, os, subprocess, warnings, shutil, sys
 
 dirname = os.path.dirname(os.path.realpath(__file__))
 os.chdir(dirname)
-
+module_folder = os.path.join(dirname,"Dlib")
+sys.path.insert(0, module_folder)
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -32,7 +35,10 @@ try:
 except FileNotFoundError as e:
     warnings.warn(str(e))
 
-from Dlib import Dpowers, Dhelpers, evdev_prepared
+
+
+
+import Dpowers, Dhelpers, evdev_prepared
 
 def my_setup(name, **kwargs):
     if "version" not in kwargs: raise ValueError

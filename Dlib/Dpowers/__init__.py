@@ -16,36 +16,43 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-
-
-
 __all__ = ["Dpowers","autoadapt","sleep","launch","ThisScript","Icon","Win",
     "keyb", "mouse","ntfy","dlg","hotkeys","hook","sendwait","nfsendwait",
     "clip", "Dfuncs","events", "KeyWaiter"]
 
-import os
-
+import os, sys
 from time import sleep
 
-from Dhelpers import __version__
+dpowers_folder = os.path.dirname(os.path.realpath(__file__))
+dpowers_startup_working_dir = os.getcwd()
+
+try:
+    import Dpowers  # this is to allow from Dpowers import * to also import the
+                    # Dpowers variable itself
+    import Dhelpers
+except ModuleNotFoundError:
+    sys.path.append(os.path.dirname(dpowers_folder))
+    import Dpowers
+    import Dhelpers
+
+
+__version__ = "0.0.3c3"
+from Dhelpers import __version__  as Dhelpers_version
+#Dpowers and Dhelpers share version number
+if __version__ != Dhelpers_version: raise ValueError
+
 from Dhelpers.all import (always_print_traceback, restore_print_func,
     launch, ThisScript, AdaptorBase, adaptionmethod, AdaptionError, ArgSaver,
     Layout)
 
-    
 try:
     always_print_traceback()
 
-    dpowers_folder = os.path.dirname(os.path.realpath(__file__))
-    dpowers_startup_working_dir = os.getcwd()
-    #dependency_folder = os.path.join(dpowers_folder, "dependencies")
-    #dependency_package = __name__ + ".dependencies"
-
-    from .default_implementations import default_implementations
+    from .implementation_defs import implementations
 
     class Adaptor(AdaptorBase):
         #dependency_folder = dependency_folder
-        implementation_source = default_implementations
+        implementation_source = implementations
         NamedKeyClass = None  #set later
         NamedButtonClass = None  #set later
 
@@ -96,8 +103,8 @@ try:
 finally:
     restore_print_func()
 
-import Dpowers  # this is to allow from Dpowers import * to also import the
-                # Dpowers variable itself
+
 
 #clean up this namespace
-del os, AdaptorBase, adaptionmethod, always_print_traceback, restore_print_func, IconBase
+del os, sys, AdaptorBase, adaptionmethod, always_print_traceback, \
+    restore_print_func, IconBase, implementations

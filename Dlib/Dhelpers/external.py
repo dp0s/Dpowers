@@ -19,7 +19,7 @@
 import os,yaml, tempfile, __main__
 path = os.path
 import getpass,platform #useful for the profile functions
-from .launcher import launch
+from Dhelpers.launcher import launch
 from .strhandling import slugify
 
 # taken from https://stackoverflow.com/questions/13293680/pyyaml-how-to-align-map-entries

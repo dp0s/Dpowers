@@ -18,7 +18,7 @@
 #
 import json, os
 from abc import ABC, abstractmethod
-from ..launcher import launch
+from Dhelpers.launcher import launch
 path = os.path
 
 parentfolder = path.split(__file__)[0]
