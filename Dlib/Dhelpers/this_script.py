@@ -16,9 +16,9 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-import os, psutil, __main__
+import os, psutil, __main__, time
 from .external import ExternalDict
-from .launcher import terminate_process
+from .launcher import terminate_process, launch
 
 path = os.path
 
@@ -75,7 +75,9 @@ class ThisScript:
         self.external_dict = ProcessCheckerExternalDict("Script_processes",
                 folder=folder, profile=self.name, incl_default_profiles=False)
         self.process = psutil.Process()
-        if register: self.register()
+        if register:
+            self.register()
+            launch.thread(self.register_thread)
 
     @property
     def active_processes(self):
@@ -91,14 +93,24 @@ class ThisScript:
         # identifying a process needs pid AND  # creation time. this is
         # actually also stored in  # process._ident and used for comparison
         # checks in the __eq__  # method of the process class of psutil
-        
+        self.external_dict.load()
+    
+    def register_thread(self):
+        while True:
+            time.sleep(10)
+            self.register()
+            
+            
 
     def other_instance_procs(self):
-        return tuple(proc
+        t=  tuple(proc
             for proc in self.active_processes if proc != self.process)
-
-    def terminate_other_instances(self):
-        terminate_process(*self.other_instance_procs())
+        if t: print(f"Found earlier instances: {t}")
+        return t
+    
+    
+    def terminate_other_instances(self, timeout=5):
+        terminate_process(*self.other_instance_procs(), timeout=timeout)
         aprocs = self.active_processes
         assert len(aprocs) == 1
         assert aprocs[0] == self.process
