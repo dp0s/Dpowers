@@ -108,7 +108,7 @@ class WindowObject(ABC):
     def geometries_(self):
         for ID in self.IDs():
             x = self.adaptor._property_from_ID(ID, "geometry")
-            check_type(CollectionWithProps(NonNegativeInt, len=4), x)
+            check_type(CollectionWithProps(int, len=4), x)
             yield x
     def geometries(self):
         return tuple(self.geometries_())

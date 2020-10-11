@@ -235,8 +235,8 @@ class TimedObject(ABC):
             return ret
     
     def __enter__(self):
-        self.start()
-        return self
+        return self.start()
+
   
     def __exit__(self, *error_info):
         if self.active: self.stop()

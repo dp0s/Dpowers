@@ -81,7 +81,7 @@ class IconBase:
     def start(self):
         self.child_process = self.adaptor.start(self)
         if self.couple:
-            launch.CoupleProcess(self.child_process)
+            self.couple_process = launch.CoupleProcess(self.child_process)
         if self.queue is not None:
             if not isinstance(self.queue,multiprocessing.queues.Queue):
                 raise ValueError

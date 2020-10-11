@@ -161,8 +161,7 @@ class _CollectionWithPropsMeta(type):
 def CollectionWithProps(allowed_item_types=None, len=None, minlen=0,
         maxlen=None, allowed_items=(), allow_list=True, allow_tuple=True,
         allow_set=True, name="CollectionWithPropsClass"):
-    if len:
-        minlen, maxlen = len, len
+    if len: minlen, maxlen = len, len
     allowed_collection_types = \
         (list,)*allow_list + (tuple,)*allow_tuple + (set,)*allow_set
     return _CollectionWithPropsMeta(name, (), locals())

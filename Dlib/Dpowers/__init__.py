@@ -100,4 +100,5 @@ import Dpowers  # this is to allow from Dpowers import * to also import the
                 # Dpowers variable itself
 
 #clean up this namespace
-del os, AdaptorBase, adaptionmethod, always_print_traceback, restore_print_func, IconBase
+del os, AdaptorBase, adaptionmethod, always_print_traceback, \
+    restore_print_func, IconBase, default_implementations

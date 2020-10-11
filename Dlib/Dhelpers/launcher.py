@@ -53,16 +53,21 @@ def get_running_process(p):
 
 
 
-def terminate_process(*pids_or_processes, timeout=5):
+def terminate_process(*pids_or_processes, timeout=5, kill=True):
     procs = tuple(select_running_processes(*pids_or_processes))
     for proc in procs: proc.terminate()
     gone, alive = psutil.wait_procs(procs, timeout)
+    if alive and kill:
+        kill_process(*alive, timeout=timeout)
+        
+        
+def kill_process(*pids_or_processes, timeout=5):
+    procs = tuple(select_running_processes(*pids_or_processes))
+    for proc in procs: proc.kill()
+    gone, alive = psutil.wait_procs(procs, timeout)
     if alive:
-        for proc in alive: proc.kill()
-        gone, alive = psutil.wait_procs(procs, timeout)
-        if alive:
-            raise TimeoutError(f"The following process(es) could not be "
-                       f"killed after {timeout} seconds:\n{alive}")
+        raise TimeoutError(f"The following process(es) could not be "
+                           f"killed after {timeout} seconds:\n{alive}")
 
 
 def find_other_instances(compare=("name", "exe", "cmdline"), ad_value=None):
@@ -143,7 +148,8 @@ class LaunchFuncs:
         Popen_object = psutil.Popen(args, shell=s, stdout=stdout, stderr=stderr,
                 stdin=stdin, **kwargs)
         Popen_object.time_started = time.time()
-        if couple: self.CoupleProcess(Popen_object)
+        if couple:
+            Popen_object.couple_object = self.CoupleProcess(Popen_object)
         if wait:
             self.wait_check_process(Popen_object, check, check_err, timeout,
                     raise_error=True)
@@ -232,7 +238,7 @@ class LaunchFuncs:
     
     
     class CoupleProcess:
-        def __init__(self, child, parent=None, checktime=.5):
+        def __init__(self, child, parent=None, checktime=1):
             self.checktime = checktime
             self.child = get_running_process(child)
             if parent:
@@ -245,9 +251,13 @@ class LaunchFuncs:
             checker_process.daemon = True
             checker_process.start()
         def run(self):
-            while self.parent.is_running() and self.child.is_running():
+            time.sleep(self.checktime)
+            while self.parent.is_running() and self.child.is_running() and \
+                self.parent.status() != psutil.STATUS_ZOMBIE  and  \
+                    self.child.status() != psutil.STATUS_ZOMBIE:
                 time.sleep(self.checktime)
-            terminate_process(self.child)
+            #print(self.parent.status(), self.child.status())
+            kill_process(self.child, self.parent)
 
 
 
