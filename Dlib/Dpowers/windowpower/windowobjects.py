@@ -19,7 +19,7 @@
 from Dhelpers.all import (check_type, PositiveInt, CollectionWithProps,
     NonNegativeInt, AdditionContainer)
 
-import inspect, time, functools
+import inspect, time
 from abc import ABC, abstractmethod
 
 
@@ -28,13 +28,12 @@ class WindowNotFoundError(Exception):
     
 class WindowObject(ABC):
     
-    adaptor = NotImplemented
-    
-    def _FoundWindows(self,*args,**kwargs):
-        return FoundWindows(*args,adaptor=self.adaptor, **kwargs)
 
-    def _WindowSearch(self, *args, **kwargs):
-        return WindowSearch(*args, adaptor=self.adaptor, **kwargs)
+    
+    #to be set by subclasses:
+    adaptor = None
+    _FoundWinClass = None
+    _WinSearchClass = None
     
     @abstractmethod
     def IDs(self):
@@ -114,7 +113,8 @@ class WindowObject(ABC):
         return tuple(self.geometries_())
     def geometry(self):
         return self._make_single_val(self.geometries_())
-    
+
+        
     
     def infos_(self):
         for a in zip(self.titles_(), self.wclasses_()): yield a
@@ -134,6 +134,7 @@ class WindowObject(ABC):
     
     def print_all_infos(self):
         print(*self.all_infos(), sep="\n")
+        return self
     
     
 
@@ -142,6 +143,7 @@ class WindowObject(ABC):
             for ID in self.IDs(): self.adaptor._activate(ID)
         else:
             return self.adaptor._activate(self.ID())
+        return self
         
     
     def set_prop(self, action: str, prop: str, prop2: str = False, all=False):
@@ -150,6 +152,7 @@ class WindowObject(ABC):
                 self.adaptor._set_prop(ID, action, prop, prop2)
         else:
             return self.adaptor._set_prop(self.ID(), action, prop, prop2)
+        return self
         
     
 
@@ -159,6 +162,7 @@ class WindowObject(ABC):
             for ID in self.IDs(): self.adaptor._move(ID, x, y, width, height)
         else:
             return self.adaptor._move(self.ID(), x, y, width, height)
+        return self
         
     
     def close(self, all=False):
@@ -166,6 +170,7 @@ class WindowObject(ABC):
             for ID in self.IDs(): self.adaptor._close(ID)
         else:
             return self.adaptor._close(self.ID())
+        return self
         
     
     def kill(self, all=False):
@@ -173,6 +178,7 @@ class WindowObject(ABC):
             for ID in self.IDs(): self.adaptor._kill(ID)
         else:
             return self.adaptor._kill(self.ID())
+        return self
         
     
     def minimize(self, all=False):
@@ -180,24 +186,36 @@ class WindowObject(ABC):
             for ID in self.IDs(): self.adaptor._minimize(ID)
         else:
             return self.adaptor._minimize(self.ID())
+        return self
         
     def maximize(self, all=False):
         sr = self.adaptor.screen_res()
         self.move(0,0,*sr, all=all)
+        return self
         
     def max_left(self, all=False):
+        try:
+            self.set_prop("remove", "maximized_horz", prop2="maximized_vert")
+        except Exception:
+            pass
         a,b = self.adaptor.screen_res()
         self.move(0,0,a/2,b, all=all)
+        return self
     
     def max_right(self, all=False):
+        try:
+            self.set_prop("remove", "maximized_horz", prop2="maximized_vert")
+        except Exception:
+            pass
         a,b = self.adaptor.screen_res()
         self.move(a/2,0,a/2,b, all=all)
+        return self
     
     def wait_active(self, timeout=5, pause_when_found=0.05, timestep=0.2,
             reverse=False):
         waited = 0
         while waited <= timeout:
-            awin = self._WindowSearch()
+            awin = self._WinSearchClass()
             # this WindowSearch Object is refreshed everytime
             if awin in self.IDs():
                 if not reverse:
@@ -229,7 +247,7 @@ class WindowObject(ABC):
                     # if appropriate number of existing windows was found,
                     # return the IDs
                     time.sleep(pause_when_found)
-                    if IDs: return self._FoundWindows(IDs, at_least_one=True)
+                    if IDs: return self._FoundWinClass(IDs, at_least_one=True)
                     return True
             if timeout == 0:
                 break  # zero length timeout, if not matched go straight to end
@@ -281,22 +299,28 @@ class WindowObject(ABC):
 
 
 class WindowSearch(AdditionContainer.Addend, WindowObject):
-  
+    
+    # _FoundWinClass and _WinSearchClass are set by
+    # init_subclass of FoundWindows
+    
+    @property
+    def adaptor(self):
+        return self._FoundWinClass.adaptor
+    
     def find(self):
-        return self._FoundWindows(self)
+        return self._FoundWinClass(self)
     
     def update_properties(self, **kwargs):
         new_kwargs = self.creation_kwargs.copy()
         new_kwargs.update(kwargs)
-        return self._WindowSearch(*self.creation_args,**new_kwargs)
+        return self.__class__(*self.creation_args, **new_kwargs)
     
-    def __init__(self, *args, adaptor, **kwargs):
-        self.adaptor = adaptor
-        self.creation_args = args
-        self.creation_kwargs = kwargs
-        self.init(*args, **kwargs)
+    def __init__(self, *winargs, **winkwargs):
+        self.creation_args = winargs
+        self.creation_kwargs = winkwargs
+        self.process_args(*winargs, **winkwargs)
     
-    def init(self, title_or_ID=None, loc=None, limit=None, **properties):
+    def process_args(self, title_or_ID=None,*, loc=None, limit=None, **properties):
         check_type(PositiveInt, limit, allowed=(None,))
         self.location = loc
         self.fixed_IDs = None
@@ -326,23 +350,20 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
         if self.location and not self.fixed_IDs:
             return (self.adaptor._ID_from_location(self.location),)
         
-        else:
-            winlist = None
-            if self.fixed_IDs:
-                winlist = set(ID for ID in self.fixed_IDs if
-                    self.adaptor.id_exists(ID))
-            
-            for prop, prop_val in self._properties.items():
-                matching_ids = set(
-                        self.adaptor._IDs_from_property(prop, prop_val))
-                if winlist is None:
-                    winlist = matching_ids
-                else:
-                    winlist &= matching_ids  # make intersection
-                if winlist is set():
-                    break
-            out = tuple(winlist) if winlist else tuple()
-            if self.limit: out = out[:self.limit]
+        winlist = None
+        if self.fixed_IDs:
+            winlist = set(ID for ID in self.fixed_IDs if
+                self.adaptor.id_exists(ID))
+        
+        for prop, prop_val in self._properties.items():
+            matching_ids = set(self.adaptor._IDs_from_property(prop, prop_val))
+            if winlist is None:
+                winlist = matching_ids
+            else:
+                winlist &= matching_ids  # make intersection
+            if winlist is set(): break
+        out = tuple(winlist) if winlist else tuple()
+        if self.limit: out = out[:self.limit]
         return out
     
     def existing_IDs(self):
@@ -375,27 +396,33 @@ class WindowSearchContainer(AdditionContainer, WindowSearch,
 
 
 class FoundWindows(WindowObject):
-    
-    
-    def __init__(self, *args, adaptor, at_least_one=False, **kwargs):
-        self.adaptor = adaptor
-        if len(args) == 1 and not kwargs and isinstance(args[0], WindowSearch):
-            WinSearch_instance = args[0]
+
+    def __init_subclass__(cls):
+        winsearch = type("WindowSearch", (WindowSearch,), {})
+        winsearch.__module__ = WindowSearch.__module__
+        winsearch._FoundWinClass = cls
+        winsearch._WinSearchClass = winsearch
+        cls._FoundWinClass = cls
+        cls._WinSearchClass = winsearch
+        cls.Search = winsearch
+        
+
+    def __init__(self, *winargs, at_least_one=False, **winkwargs):
+        if len(winargs) == 1 and not winkwargs and isinstance(winargs[0], WindowSearch):
+            WinSearch_instance = winargs[0]
             if WinSearch_instance.adaptor is not self.adaptor: raise TypeError
             self.winsearch_object = WinSearch_instance
             # reuse the WindwoSearch object
         else:
-            self.winsearch_object = self._WindowSearch(*args, **kwargs)
+            self.winsearch_object = self._WinSearchClass(*winargs, **winkwargs)
             # this will initialize instance attributes according to
             # WindowSearch init method.
         self.found_IDs = self.winsearch_object.IDs()
         if not self.found_IDs:
             self.found_IDs = ()
-            if at_least_one:
-                raise WindowNotFoundError(
-                        "\nCould not find windows of specified "
-                        "properties. Please use WindowSearch / "
-                        "WindowSearch class instead.")
+            if at_least_one: raise WindowNotFoundError(
+                "\nCould not find windows of specified properties. Please "
+                "use WindowSearch class instead.")
     
     def IDs(self):
         # careful: these IDs might not be existing any more
@@ -426,11 +453,11 @@ class FoundWindows(WindowObject):
     def wait_exist(self, timeout=5, pause_when_found=0.05, timestep=0.2,
             min_wincount=1, max_wincount=None):
         if self.num >= min_wincount:
-            # this means that this instane of FoundWindows contains
+            # this means that this instane of WindowFinder contains
             # enough window IDs to theoretically satisfy the condition
             return super().wait_exist(timeout, pause_when_found, timestep,
                     min_wincount, max_wincount)
-            # raise ValueError("FoundWindows does not contain enough IDs "
+            # raise ValueError("WindowFinder does not contain enough IDs "
             #                "to satisfy condition.")
         # if this FoundWindow instance does not contain enough windows,
         # then just use the windowsearch used to define this instance
@@ -458,14 +485,14 @@ class FoundWindows(WindowObject):
     
     def __add__(self, other):
         if isinstance(other, self.__class__):
-            return self._FoundWindows(set(self.IDs()) | set(other.IDs()))
+            return self._FoundWinClass(set(self.IDs()) | set(other.IDs()))
         return NotImplemented
     __or__ = __add__
     
     
     def __sub__(self, other):
         if isinstance(other, self.__class__):
-            return self._FoundWindows(set(self.IDs()) - set(other.IDs()))
+            return self._FoundWinClass(set(self.IDs()) - set(other.IDs()))
         return NotImplemented
     # def __rsub__(self, other):
     #     if isinstance(other, self.__class__):
@@ -474,7 +501,7 @@ class FoundWindows(WindowObject):
     
     def __and__(self, other):
         if isinstance(other, self.__class__):
-            return self._FoundWindows(set(self.IDs()) & set(other.IDs()))
+            return self._FoundWinClass(set(self.IDs()) & set(other.IDs()))
         return NotImplemented
     
     

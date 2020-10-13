@@ -16,7 +16,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from Dhelpers.arghandling import PositiveInt, check_type
+
 from .. import Adaptor, adaptionmethod
 from .windowobjects import FoundWindows, WindowSearch, WindowObject
 
@@ -31,13 +31,9 @@ class WindowAdaptor(Adaptor):
         try:
             i = self._ID_from_location.target_with_args()
         except NotImplementedError as e:
-            raise NotImplementedError("The adaption module " + str(
-                    self._ID_from_location.module) + " does not support the " \
-                                                    "following location "
-                                                    "argument for window "
-                                                    "objects: " + str(
-                    param)) from e
-        #check_type(PositiveInt, i, allowed=(None,))
+            raise NotImplementedError(f"The adaption module "
+              f" {self._ID_from_location.module} does not support the following"
+              f" location argument for window objects: {param}") from e
         return i
     
     
@@ -94,11 +90,27 @@ class WindowAdaptor(Adaptor):
         return self._minimize.target_with_args()
     
     
-    def __call__(self, title_or_ID=None, loc=None, limit=None, *,
-            at_least_one=False, **properties):
-        return FoundWindows(title_or_ID, loc, limit,  at_least_one=at_least_one,
-                adaptor=self, **properties)
+    def get_handler(self):
+        handler = type(f"WindowHandler",(WindowHandlerBase,),{})
+        handler.adaptor = self
+        handler.__module__ = WindowHandlerBase.__module__
+        return handler
     
     
-    def Search(self, title_or_ID=None, loc=None, limit=None, **properties):
-        return WindowSearch(title_or_ID, loc, limit, adaptor=self, **properties)
+    
+    
+class WindowHandlerBase(FoundWindows):
+    
+    
+    adaptor = None
+    
+    @classmethod
+    def screen_res(cls):
+        return cls.adaptor.screen_res()
+    
+    @classmethod
+    def adapt(cls, *args, **kwargs):
+        if cls.adaptor is None: cls.adaptor = WindowAdaptor()
+        return cls.adaptor.adapt(*args, **kwargs)
+    
+    

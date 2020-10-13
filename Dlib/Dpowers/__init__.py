@@ -71,7 +71,8 @@ try:
 
 
     from .windowpower import WindowAdaptor
-    Win = WindowAdaptor(_primary=True)
+    winadaptor = WindowAdaptor(_primary=True)
+    Win = winadaptor.get_handler()
 
 
     from .dialogpower import DialogAdaptor
