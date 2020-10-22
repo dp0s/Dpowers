@@ -17,7 +17,6 @@
 #
 #
 from Dhelpers.all import launch, check_bash_cmd
-import shlex
 
 check_bash_cmd("yad")
 

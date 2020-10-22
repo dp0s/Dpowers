@@ -322,10 +322,9 @@ class AdaptorBase(KeepInstanceRefs):
                 warnings.warn(text)
             return False
         if impl.main_info is None and not impl.method_infos:
-            if check_adapted: raise AdaptionError("Given implementation "
-                                                  "information not valid and "
-                                                  "none found in default "
-                                                  "implementations")
+            if check_adapted:
+                raise AdaptionError("Given implementation information not "
+                            "valid and none found in default implementations")
         self.implementation = impl
         for amethod in self.adaptionmethods(): amethod.set_target()
         return impl.show_target_spaces()
@@ -524,6 +523,33 @@ class AdaptorBase(KeepInstanceRefs):
                 print("on line:", i.creation_line)
             print("")
             print("")
+            
+            
+            
+    @classmethod
+    def coupled_class(cls):
+        """Immediately creates a baseclass to be used"""
+        return type(cls.__name__ + ".CoupledClass", (CoupledClass,),
+                dict(adaptor_class = cls))
+
+
+
+wrap = functools.wraps(AdaptorBase.adapt)
+class CoupledClass:
+    
+    adaptor_class = None
+    adaptor = None
+
+    @classmethod
+    @wrap
+    def adapt(cls, *args, **kwargs):
+        cls.adaptor = cls.adaptor_class(group=None)
+        return cls.adaptor.adapt(*args, **kwargs)
+        
+    @wrap
+    def adapt_instance(self, *args, **kwargs):
+        self.adaptor = self.adaptor_class(group=None)
+        return self.adaptor.adapt(*args, **kwargs)
 
 
 
@@ -543,14 +569,12 @@ class Implementation:
         return s
     
     def show_target_spaces(self):
-        if self.method_infos:
-            return self.method_target_spaces
+        if self.method_infos: return self.method_target_spaces
         return self.main_target_space
     
     
     def __init__(self, adaptorclass=None, main_info=None, method_infos={}):
-        if not issubclass(adaptorclass, AdaptorBase):
-            raise TypeError
+        if not issubclass(adaptorclass, AdaptorBase): raise TypeError
         self.adaptorcls = adaptorclass
         self.dependency_folder = adaptorclass.dependency_folder
         self.main_target_space = None
@@ -579,13 +603,13 @@ class Implementation:
                 self.method_infos[name] = r2
             elif self.main_target_space is not None:
                 self.method_target_spaces[
-                    name] = self.main_target_space  # note: after using
-                # update_target_space (given info arguments),
-                # the method_target_space dict will contain all method names.
-                # while the method_info dict will only contain those infos
-                # explicitly  # given. This is why you should use  #
-                # self.method_target_dict.get(name) but  #
-                # self.method_info.get(name,self.main_info)
+                    name] = self.main_target_space
+    # note: after using update_target_space (giving info arguments), the
+    # self.method_target_spaces will contain all method names. while the
+    # self.method_infos dict will only contain those infos explicitly  given.
+    # This is why you should use  exactly the following expressions to query:
+    # self_or_cls.method_target_spaces.get(name) and
+    # self_or_cls.method_infos.get(name,self_or_cls.main_info)
     
     
     def refresh_target_spaces(self):
@@ -596,8 +620,7 @@ class Implementation:
         old1, old2 = main_info, method_infos
         for _ in range(50):
             new1, new2 = self._find_arguments(old1, old2)
-            if new1 == old1 and new2 == old2:
-                break
+            if new1 == old1 and new2 == old2: break
             old1, old2 = new1, new2
         else:
             raise RecursionError
@@ -667,17 +690,3 @@ class Implementation:
             raise TypeError(
                     f"Require string, but got {info}.")  # TODO: Add option
             # for implementation classes
-
-
-
-class AdaptiveClass:
-    """An base class for classes with an .adaptor attribute."""
-    
-    adaptor = None  # class attribute, must be set in a subclass
-    
-    
-    def adapt(cls, *args, **kwargs):
-        """To adapt the default adaptor for the whole class"""
-        cls.adaptor.adapt(*args, **kwargs)
-    adapt.__signature__ = inspect.signature(AdaptorBase.adapt)
-    adapt = classmethod(adapt)

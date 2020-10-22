@@ -16,6 +16,9 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
+
+
+
 __all__ = ["Dpowers","autoadapt","sleep","launch","ThisScript","Icon","Win",
     "keyb", "mouse","ntfy","dlg","hotkeys","hook","sendwait","nfsendwait",
     "clip", "Dfuncs","events", "KeyWaiter"]
@@ -45,6 +48,7 @@ from Dhelpers.all import (always_print_traceback, restore_print_func,
     launch, ThisScript, AdaptorBase, adaptionmethod, AdaptionError, ArgSaver,
     Layout)
 
+    
 try:
     always_print_traceback()
 
@@ -77,9 +81,11 @@ try:
     ntfy = NotificationAdaptor(_primary=True)
 
 
-    from .windowpower import WindowAdaptor
-    Win = WindowAdaptor(_primary=True)
-
+    from .windowpower import WindowAdaptor, WindowHandlerBase
+    class WindowHandler(WindowHandlerBase):
+        adaptor = WindowAdaptor(_primary=True)
+    class Win(WindowHandler):
+        pass
 
     from .dialogpower import DialogAdaptor
     dlg = DialogAdaptor(_primary=True)
@@ -93,9 +99,11 @@ try:
     clip = ClipboardAdaptor(_primary=True)
 
 
-    from .iconpower import IconAdaptor, IconBase
-    class Icon(IconBase):
+    from .iconpower import IconAdaptor, IconHandlerBase
+    class IconHandler(IconHandlerBase):
         adaptor = IconAdaptor(_primary=True)
+    class Icon(IconHandler):
+        pass
 
     from . import Dfuncs
     from .Dfuncs import sendwait, nfsendwait
@@ -103,8 +111,7 @@ try:
 finally:
     restore_print_func()
 
-
-
 #clean up this namespace
-del os, sys, AdaptorBase, adaptionmethod, always_print_traceback, \
-    restore_print_func, IconBase, implementations
+del os, AdaptorBase, adaptionmethod, always_print_traceback, \
+    restore_print_func, implementations, IconHandlerBase, \
+    WindowHandlerBase

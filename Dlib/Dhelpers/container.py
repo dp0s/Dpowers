@@ -18,41 +18,68 @@
 #
 from Dhelpers.launcher import launch
 from .baseclasses import TimedObject
-import time
+import time, collections
 
-class container:
-    dependency_paths = {}
+class Container:
     
-    store = {}
+    def __init__(self):
+        self.store = {}
+        self.active_object_lists = collections.defaultdict(list)
     
-    @staticmethod
-    def set_temp_store_key(keyname, value, timeout=60*30):
-        container.store[keyname] = value
+    def set_temp_store_key(self,keyname, value, timeout=60*30):
+        self.store[keyname] = value
         if timeout:
-            launch.thread(container.remove_temp_store_key, keyname, timeout)
+            launch.thread(self.remove_temp_store_key, keyname, timeout)
     
-    @staticmethod
-    def remove_temp_store_key(keyname, timeout=0):
+    def remove_temp_store_key(self,keyname, timeout=0):
         time.sleep(timeout)
-        if keyname in container.store:
-            container.store.pop(keyname, None)
+        if keyname in self.store: self.store.pop(keyname, None)
     
     
-    class key_stored(TimedObject):
-        def __init__(self, keyname, timeout=60*30, new_value=None):
-            super().__init__(timeout=timeout)
-            self.keyname = keyname
-            self.value = new_value
-        
-        def _start_action(self):
-            self.saved_keyval = container.store.get(self.keyname, "__Nothing__")
-            if self.value is not None:
-                container.store[self.keyname] = self.value
-            return self.saved_keyval
-        
-        def _stop_action(self):
-            if self.saved_keyval == "__Nothing__":
-                if self.keyname in container.store:
-                    container.store.pop(self.keyname)
+    def key_stored(self, *args, **kwargs):
+        return key_stored(self, *args,**kwargs)
+    
+    
+class key_stored(TimedObject):
+    def __init__(self, container_instance, keyname, timeout=60*30, value=None):
+        super().__init__(timeout=timeout)
+        self.keyname = keyname
+        self.value = value
+        self.value_before = None
+        self.container = container_instance
+        self.store = container_instance.store
+        self.active_objects = container_instance.active_object_lists[keyname]
+    
+    def _start_action(self):
+        self.value_before = self.store.get(self.keyname)
+        self.active_objects.append(self)
+        if self.value is not None:
+            self.store[self.keyname] = self.value
+        return self.active_objects
+    
+    def _stop_action(self):
+        ao = self.active_objects
+        if self not in ao: raise ValueError
+        last = ao[-1]
+        if last is self:
+            if self.value_before is not None:
+                self.store[self.keyname] = self.value_before
             else:
-                container.store[self.keyname] = self.saved_keyval
+                try:
+                    self.store.pop(self.keyname)
+                except KeyError:
+                    pass
+        else:
+            for i in range(len(ao)):
+                if ao[i] is self: break
+            ao[i+1].value_before = self.value_before
+        ao.remove(self)
+    
+    def __repr__(self) -> str:
+        sup = super().__repr__()[:-1]
+        return sup + f" (key:{self.keyname}, value:{self.value}, " \
+                     f"value_before:{self.value_before}) >"
+
+
+
+container = Container()

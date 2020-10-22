@@ -136,8 +136,8 @@ class ExternalDict:
                 if retrieved[0] == "__key_val__":
                     if len(retrieved) != 3: raise ValueError
                     d[retrieved[1]] = retrieved[2]
-            else:
-                d[fname] = retrieved
+                    continue
+            d[fname] = retrieved
         return d
     
     def path(self, profile=None, *args):
@@ -229,4 +229,4 @@ class ExternalDict:
         return hash(self.__info__())
     
     def __str__(self):
-        return f"<ExternalDict {self.__info__()}>"
+        return f"<{self.__class__.__name__}: {self.__info__()}>"

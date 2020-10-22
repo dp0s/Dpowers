@@ -29,11 +29,9 @@ class IconAdaptor(Adaptor):
         # attribute. See the get_running_processes function definition
         # this will return a psutil.Process instance
         return get_running_process(p)
-
-
-class IconBase:
     
-    adaptor = None   #must be defined in subclass
+
+class IconHandlerBase(IconAdaptor.coupled_class()):
     
     def __init__(self):
         super().__init__()
@@ -52,10 +50,7 @@ class IconBase:
                 Dfuncs.monitor_input_events)
         self.menuitem("Toggle notifications", ntfy.toggle)
         self.queue = None
-        
-    @functools.wraps(IconAdaptor.adapt)
-    def adapt(self,*args,**kwargs):
-        return self.adaptor.adapt(*args,**kwargs)
+    
         
     
     # def iconpath(self,path):
@@ -81,7 +76,7 @@ class IconBase:
     def start(self):
         self.child_process = self.adaptor.start(self)
         if self.couple:
-            launch.CoupleProcess(self.child_process)
+            self.couple_process = launch.CoupleProcess(self.child_process)
         if self.queue is not None:
             if not isinstance(self.queue,multiprocessing.queues.Queue):
                 raise ValueError
