@@ -70,10 +70,9 @@ try:
     ntfy = NotificationAdaptor(_primary=True)
 
 
-    from .windowpower import WindowAdaptor
-    winadaptor = WindowAdaptor(_primary=True)
-    Win = winadaptor.get_handler()
-
+    from .windowpower import WindowAdaptor, WindowHandler
+    class Win(WindowHandler):
+        adaptor = WindowAdaptor(_primary=True)
 
     from .dialogpower import DialogAdaptor
     dlg = DialogAdaptor(_primary=True)
@@ -87,8 +86,8 @@ try:
     clip = ClipboardAdaptor(_primary=True)
 
 
-    from .iconpower import IconAdaptor, IconBase
-    class Icon(IconBase):
+    from .iconpower import IconAdaptor, IconHandler
+    class Icon(IconHandler):
         adaptor = IconAdaptor(_primary=True)
 
     from . import Dfuncs
@@ -102,4 +101,4 @@ import Dpowers  # this is to allow from Dpowers import * to also import the
 
 #clean up this namespace
 del os, AdaptorBase, adaptionmethod, always_print_traceback, \
-    restore_print_func, IconBase, default_implementations
+    restore_print_func, default_implementations

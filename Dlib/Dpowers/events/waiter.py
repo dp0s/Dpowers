@@ -22,9 +22,10 @@ from Dhelpers.all import check_type, launch
 import time
 from .. import NotificationAdaptor
 
-ntfy = NotificationAdaptor(group="waiter", _primary=True)
+
 
 class Waiter:
+    ntfy = NotificationAdaptor(group="waiter", _primary=True)
     
     def __init__(self, callback_hook=None, maxlen = None, maxtime = 20, *,
             endevents=(), cond_func=None, eventmap=None, wait=True,
@@ -55,7 +56,7 @@ class Waiter:
         self.endtime = None
         
         if notify:
-            ntfy("Waiter active", 0.5, f"maxlen:{self.maxlen}, maxtime:"
+            self.ntfy("Waiter active", 0.5, f"maxlen:{self.maxlen}, maxtime:"
             f"{self.maxtime}")
         self.callback_hook.start()
         
@@ -138,17 +139,13 @@ class Waiter:
     #         time.sleep(delay)
         
         
-class KeyWaiter(Waiter):
+class KeyWaiter(Waiter, HookAdaptor.coupled_class()):
     
-    hook = HookAdaptor(group="keywait", _primary=True)
+    adaptor = HookAdaptor(group="keywait", _primary=True)
     keyb = KeyboardAdaptor(group="keywait",_primary=True)
     mouse = MouseAdaptor(group="keywait", _primary=True)
     send = EventSender(keyb,mouse)
     hotstring_keyb = KeyboardAdaptor(group="default")
-    
-    @classmethod
-    def adapt(cls, *args, **kwargs):
-        cls.hook.adapt(*args,**kwargs)
 
     def __init__(self, *args, eventmap=None, keys=True,  buttons=False,
             press=True, release=False, write_rls=True, join_events=False, **kwargs):
@@ -163,8 +160,8 @@ class KeyWaiter(Waiter):
             self.joined_events_mapped = ""
             
         hook_creator = 0
-        if keys: hook_creator += self.hook.keys()
-        if buttons: hook_creator += self.hook.buttons()
+        if keys: hook_creator += self.adaptor.keys()
+        if buttons: hook_creator += self.adaptor.buttons()
         callback_hook = hook_creator(press=press, release=release,
                 write_rls=write_rls)
         self.press = press
@@ -205,7 +202,7 @@ class KeyWaiter(Waiter):
                 # not explicitly set to True, remove the _rls tag by default
                 key = key.strip_rls()
         elif get1.exitcode == "timeout":
-            key = cls.hook.NamedKeyClass.Event() #return empty event
+            key = cls.adaptor.NamedKeyClass.Event() #return empty event
         else:
             raise RuntimeError
         return key

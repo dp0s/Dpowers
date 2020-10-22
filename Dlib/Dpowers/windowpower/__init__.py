@@ -88,29 +88,15 @@ class WindowAdaptor(Adaptor):
     @adaptionmethod("minimize")
     def _minimize(self, ID):
         return self._minimize.target_with_args()
+
+
     
+class WindowHandler(FoundWindows, WindowAdaptor.coupled_class()):
     
-    def get_handler(self):
-        handler = type(f"WindowHandler",(WindowHandlerBase,),{})
-        handler.adaptor = self
-        handler.__module__ = WindowHandlerBase.__module__
-        return handler
-    
-    
-    
-    
-class WindowHandlerBase(FoundWindows):
-    
-    
-    adaptor = None
     
     @classmethod
     def screen_res(cls):
         return cls.adaptor.screen_res()
     
-    @classmethod
-    def adapt(cls, *args, **kwargs):
-        if cls.adaptor is None: cls.adaptor = WindowAdaptor()
-        return cls.adaptor.adapt(*args, **kwargs)
     
     
