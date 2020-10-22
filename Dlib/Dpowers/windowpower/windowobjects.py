@@ -405,6 +405,7 @@ class FoundWindows(WindowObject):
         cls._FoundWinClass = cls
         cls._WinSearchClass = winsearch
         cls.Search = winsearch
+        super().__init_subclass__()
         
 
     def __init__(self, *winargs, at_least_one=False, **winkwargs):
