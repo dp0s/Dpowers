@@ -38,13 +38,14 @@ class KeyboardAdaptor(AdaptivePressReleaseSender):
     def key(self):
         return self.NamedKeyClass.NameContainer
 
-    @adaptionmethod
-    @hotkeys.add_pause_option(True)
-    def text(self, string, delay = None):
-        delay = self.default_delay if delay is None else delay
-        func = self.text.target
+    @adaptionmethod("text")
+    def _text(self, string):
+        func = self._text.target
         if func is NotImplemented: func = self.tap
         for character in string:
             func(character)
-            if delay: time.sleep(delay/1000)
- 
+            
+    @_text.target_modifier
+    def _text_tm(self, target):
+        if target is NotImplemented: target = self.tap
+        return target

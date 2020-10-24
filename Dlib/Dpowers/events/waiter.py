@@ -143,7 +143,6 @@ class KeyWaiter(Waiter):
     hook = HookAdaptor(group="keywait", _primary=True)
     keyb = KeyboardAdaptor(group="keywait",_primary=True)
     mouse = MouseAdaptor(group="keywait", _primary=True)
-    send = CombinedSender(keyb,mouse)
     hotstring_keyb = KeyboardAdaptor(group="default")
     
     @classmethod
@@ -162,11 +161,16 @@ class KeyWaiter(Waiter):
             self.joined_events = ""
             self.joined_events_mapped = ""
             
-        hook_creator = 0
-        if keys: hook_creator += self.hook.keys()
-        if buttons: hook_creator += self.hook.buttons()
+        hook_creator = sender = 0
+        if keys:
+            hook_creator += self.hook.keys()
+            sender += self.keyb
+        if buttons:
+            hook_creator += self.hook.buttons()
+            sender += self.mouse
         callback_hook = hook_creator(press=press, release=release,
                 write_rls=write_rls)
+        self.sender = sender
         self.press = press
         self.release = release
         self.write_rls = write_rls
@@ -182,12 +186,15 @@ class KeyWaiter(Waiter):
     
     
     def reinject(self, delay=10):
-        if self.press and self.release:
-            self.send(*self.events, delay=delay, autorelease=False)
-        elif self.press and not self.release:
-            self.send(*self.events, delay=delay,autorelease=True)
+        reverse_press = False
+        if self.press and self.release: autorelease = False
+        elif self.press and not self.release: autorelease = True
         elif not self.press and self.release:
-            self.send(delay=delay, autorelease=True, reverse_press=True)
+            autorelease = True
+            reverse_press = True
+        else: raise ValueError
+        self.sender.send_event(*self.events, delay=delay,
+                autorelease =autorelease, reverse_press= reverse_press)
 
     @classmethod
     def get1key(cls, maxtime = 2, wait = True, press=True, release=True,

@@ -18,7 +18,7 @@
 #
 from abc import ABC, abstractmethod
 from Dhelpers.all import AdditionContainer, AdaptionError, check_type
-from ..event_classes import split_str, EventSenderMixin
+from ..event_classes import StringEvent, EventObjectSender
 from .. import hotkeys, Adaptor, adaptionmethod
 import time, functools
 
@@ -39,14 +39,27 @@ class Sender(AdditionContainer.Addend,ABC):
             self._press(k)
             if delay: time.sleep(delay/1000)
 
-    def text(self, string, **kwargs):
+    @hotkeys.add_pause_option(True)
+    def text(self, string, delay = None, avoid_error = True, **kwargs):
+        delay = self.default_delay if delay is None else delay
+        for character in string:
+            try:
+                self._text(character, **kwargs)
+            except NotImplementedError:
+                if avoid_error:
+                    self.send_eventstring(string, delay=delay,
+                            hotkey=True, **kwargs)
+                    break
+                raise
+            if delay: time.sleep(delay/1000)
+        
+        
+    def _text(self, character, **kwargs):
         raise NotImplementedError
 
     
-    def send_eventstring(self, string, delay=None):
-        #self.send_event(self.StringEventCreator.from_str(string, hotkey=hotkey,
-        #        only_defined_names=self.only_defined_names), **kwargs)
-        for entry in split_str(string):
+    def send_eventstring(self, string, hotkey=False, delay=None):
+        for entry in StringEvent.split_str(string):
             if isinstance(entry, str):
                 self.press(entry, delay=delay)
             else:
@@ -92,7 +105,7 @@ class Sender(AdditionContainer.Addend,ABC):
 
 
 
-class PressReleaseMixin:
+class PressReleaseSender(Sender):
     
     hotkey_enabled_default = True
 
@@ -109,7 +122,7 @@ class PressReleaseMixin:
     
     def send_eventstring(self, string, hotkey=True, delay=None):
         if hotkey is None: hotkey=self.hotkey_enabled_default
-        for entry in split_str(string):
+        for entry in StringEvent.split_str(string):
             if isinstance(entry, str):
                 if entry.endswith("_rls"):
                     if hotkey: raise ValueError
@@ -138,11 +151,6 @@ class PressReleaseMixin:
     def comb(self, *keynames, delay=None, duration=0.01):
         with self.pressed(*keynames, delay=delay):
             time.sleep(duration)
-
-
-
-class PressReleaseSender(PressReleaseMixin, Sender):
-    pass
 
 
 
@@ -186,6 +194,10 @@ class AdaptiveMixin(Adaptor):
     NamedClass = None
     #stand_dicts = defaultdict(lambda : defaultdict(lambda : list()))
     
+    @property
+    def Event(self):
+        return self.NamedClass.Event
+    
     @adaptionmethod("press", require=True)
     def _press(self, name, apply_map = True):
         if apply_map:
@@ -196,8 +208,7 @@ class AdaptiveMixin(Adaptor):
         try:
             return self._press.target(name)
         except Exception as e:
-            if isinstance(e,self._press_errortype):
-                raise NameError(name) from e
+            if isinstance(e,self._press_errortype): raise NameError(name) from e
             raise
     
     @_press.target_modifier
@@ -267,11 +278,11 @@ class AdaptiveSender(AdaptiveMixin, Sender):
     pass
 
 
-
-@PressReleaseSender.register
+#we don't inherit from AdaptiveSender directly
+# because that would give an undesired method resolution order.
 @AdaptiveSender.register
-class AdaptivePressReleaseSender(AdaptiveMixin, PressReleaseMixin,
-        EventSenderMixin, Sender):
+class AdaptivePressReleaseSender(AdaptiveMixin, PressReleaseSender,
+        EventObjectSender):
     
     @adaptionmethod("rls", require=True)
     def _rls(self, name, apply_map=True):
@@ -293,7 +304,7 @@ class AdaptivePressReleaseSender(AdaptiveMixin, PressReleaseMixin,
         self._create_standardizing_dict(amethod)
         return target
 
-    _press_rls_standdict = None # default_value
+    #_press_rls_standdict = None # default_value
     
     # def _create_standardizing_dict(self, amethod):
     #     super()._create_standardizing_dict(amethod)
@@ -312,31 +323,36 @@ class AdaptivePressReleaseSender(AdaptiveMixin, PressReleaseMixin,
         
 
 
-    def _send_event(self, event, delay=None, reverse_press=False,
-            autorelease=False):
-        if isinstance(event, self.NamedClass.Event):
-            if event.press and not reverse_press or not event.press and reverse_press:
-                self.press(event.name, delay=delay)
-                if autorelease: self.rls(event.name, delay=delay)
-            else:
-                self.rls(event.name, delay=delay)
+    def _send_event(self, event, reverse_press=False, autorelease=False):
+        if not isinstance(event, self.Event): raise TypeError
+        if event.press and not reverse_press or not event.press and reverse_press:
+            self.press(event.name)
+            if autorelease: self.rls(event.name)
         else:
-            raise TypeError
+            self.rls(event.name)
         
-    # def pressed(self, *names, delay=None, map_names=True):
-    #     return PressedContex_mapped(self, *names, delay=delay, map_names=map_names)
+    
 
-        
-        
-class CombinedSender(AdditionContainer, PressReleaseSender, basic_class=Sender):
+class CombinedSender(AdditionContainer, PressReleaseSender,
+        EventObjectSender, basic_class=Sender):
     
     _methods_to_include = {"_press": NameError, "_rls":NameError,
-        "_send_event": TypeError, "text":NotImplementedError}
+        "_send_event": TypeError, "_text": NotImplementedError}
         
         
     def __call__(self, *args, **kwargs):
         return self.send(*args,**kwargs)
-        
+    
+    def text(self, string, delay=None, avoid_error=False, **kwargs):
+        return super().text(string, delay, avoid_error, **kwargs)
+
+    # useful methods:
+    # -- send_event: This will call EventObjectSender.send_event and then
+    # iterate over all members' _send_event methods until no TypeError is raised
+    # -- press and rls will iterate over _press and _rls
+    # -- text will call super().text which will iterate over _text.
+    # -- send. This will automatically call prs, rls, text and thus iterate
+    #       as well
     
     
     

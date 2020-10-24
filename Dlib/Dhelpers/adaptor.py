@@ -173,29 +173,26 @@ class AdaptionMethod:
                 raise AdaptionError(f"Required function '{self.__name__}' "
                 f"was not found.\ntartget namespace: "
                 f" {target_space}\nimplementation: {impl}")
-            self.target = NotImplemented
-        else:
-            self.target_space = target_space
-            self.impl_info = impl.method_infos.get(name, impl.main_info)
-            obj, ty = target, type(target)
-            if ty is types.MethodType:
-                def turn_to_func(method):
-                    return lambda *args, **kwargs: method(*args, **kwargs)
-                obj = turn_to_func(target)
-            if self.target_modifier:
-                add = (self,) if self.placeholder.modifier_argnum == 3 else ()
-                obj = self.target_modifier(self.Adaptor_instance, obj, *add)
-            if obj is not target and callable(target):
-                assert callable(obj)
-                functools.update_wrapper(obj, target)
-            self.target = obj
-            if callable(self.target):
-                self.target_signature = inspect.signature(self.target,
-                        follow_wrapped=False)
-                self.target_param_num = len(
-                        self.target_signature.parameters)  # print(
-                # self.target, self.target_signature,  # self.signature_to_pass)
-            return self.target_space
+            target = NotImplemented
+        self.target_space = target_space
+        self.impl_info = impl.method_infos.get(name, impl.main_info)
+        obj, ty = target, type(target)
+        if ty is types.MethodType:
+            def turn_to_func(method):
+                return lambda *args, **kwargs: method(*args, **kwargs)
+            obj = turn_to_func(target)
+        if self.target_modifier:
+            add = (self,) if self.placeholder.modifier_argnum == 3 else ()
+            obj = self.target_modifier(self.Adaptor_instance, obj, *add)
+        if obj is not target and callable(target):
+            assert callable(obj)
+            functools.update_wrapper(obj, target)
+        if callable(obj):
+            self.target_signature = inspect.signature(obj, follow_wrapped=False)
+            self.target_param_num = len(self.target_signature.parameters)
+            # print( self.target, self.target_signature, self.signature_to_pass)
+        self.target = obj
+        return self.target_space
     
     def __repr__(self):
         if self.target is None or self.target is NotImplemented:

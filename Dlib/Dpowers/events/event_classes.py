@@ -19,61 +19,7 @@
 from Dhelpers.all import AdditionContainer, NamedObj
 from . import hotkeys
 from abc import ABC, abstractmethod
-
-
-combination_symbol = "+"
-sequence_symbol = " "
-
-def split_str(string):
-    splitted_string = string.split(sequence_symbol)  # split at space
-    #print("splitted", splitted_string)
-    corrected_split = []
-    skip_next = False
-    for n in range(len(splitted_string)):
-        if skip_next:
-            skip_next = False
-            continue
-        part = splitted_string[n]
-        if part.startswith(combination_symbol):
-            corrected_split[-1] += part
-        else:
-            corrected_split.append(part)
-        if part.endswith(combination_symbol):
-            corrected_split[-1] += splitted_string[n + 1]
-            skip_next=True
-        #print("corrected",corrected_split)
-    # now the corrected split has taken the combinations into account
-    for s in corrected_split:
-        if combination_symbol in s:
-            yield s.split(combination_symbol)
-        else:
-            yield s
-            
-def _from_str(cls_or_self, string, hotkey=False,**kwargs):
-    # DONT OVERRIDE THIS IN SUBCLASS!
-    events = []
-    for entry in split_str(string):
-        if isinstance(entry, str):
-            event = cls_or_self._create_from_str(entry, **kwargs)
-            events.append(event)
-            if hotkey:
-                try:
-                    p = event.press
-                except AttributeError: raise ValueError("Option hotkey=True "
-                        f"does not make sense for f{event}.")
-                if not p: raise ValueError("Hotkey mode enabled. Use option  "
-                      "hotkey=False to only send press or release events.")
-                events.append(event.reverse())
-        elif isinstance(entry, (tuple,list)):
-            t = tuple(cls_or_self._create_from_str(item,**kwargs)
-                        for item in entry)
-            events.append(EventCombination(*t))
-        else:
-            raise TypeError
-    if len(events) == 0: return cls_or_self()
-    if len(events) == 1: return events[0]
-    return EventSequence(*events)
-
+from time import sleep
 
 
 
@@ -92,6 +38,46 @@ class Event(AdditionContainer.Addend):
 
 
 
+class EventSequence(AdditionContainer, Event, basic_class=Event):
+    def __str__(self):
+        return StringEvent.sequence_symbol.join(str(m) for m in self.members)
+    
+    def sending_version(self):
+        return self.__class__(*tuple(m.sending_version() for m in self.members))
+    
+    def hotkey_version(self, rls=False):
+        return self.__class__(
+                *tuple(m.hotkey_version(rls=rls) for m in self.members))
+
+
+class EventCombination(Event):
+    
+    @property
+    def members(self):
+        return self._members
+    
+    def __init__(self, *args):
+        if len(args) < 2: raise ValueError
+        for a in args:
+            if not isinstance(a, PressReleaseEvent): raise TypeError
+            if a.press is False: raise ValueError
+        self._members = args
+    
+    def __str__(self):
+        return StringEvent.combination_symbol.join(str(m) for m in self.members)
+    
+    def sending_version(self):
+        return sum(m for m in self.members) + sum(
+                m.reverse() for m in reversed(self.members))
+    
+    def hotkey_version(self, rls=False):
+        ret = sum(m for m in self.members)
+        if rls: ret += self.members[-1].reverse()
+        return ret
+
+
+
+
 class MouseMoveEvent(Event):
     
     def __init__(self, x, y, relative = False, screen_coordinates=True):
@@ -103,12 +89,75 @@ class MouseMoveEvent(Event):
     def __str__(self):
         return f"(mouse_move,{self.abbr},{self.x},{self.y})"
         
-        
-        
 
 
 
-class StringEvent(Event, str):
+class StringEventUtilitites(ABC):
+    
+    combination_symbol = "+"
+    sequence_symbol = " "
+    
+    @classmethod
+    def split_str(cls,string):
+        splitted_string = string.split(cls.sequence_symbol)  # split at space
+        # print("splitted", splitted_string)
+        corrected_split = []
+        skip_next = False
+        for n in range(len(splitted_string)):
+            if skip_next:
+                skip_next = False
+                continue
+            part = splitted_string[n]
+            if part.startswith(cls.combination_symbol):
+                corrected_split[-1] += part
+            else:
+                corrected_split.append(part)
+            if part.endswith(cls.combination_symbol):
+                corrected_split[-1] += splitted_string[n + 1]
+                skip_next = True  # print("corrected",corrected_split)
+        # now the corrected split has taken the combinations into account
+        for s in corrected_split:
+            if cls.combination_symbol in s:
+                yield s.split(cls.combination_symbol)
+            else:
+                yield s
+    
+    def from_str(cls_or_self, string, hotkey=False, **kwargs):
+        events = []
+        for entry in cls_or_self.split_str(string):
+            if isinstance(entry, str):
+                event = cls_or_self._create_from_str(entry, **kwargs)
+                events.append(event)
+                if hotkey:
+                    try:
+                        p = event.press
+                    except AttributeError:
+                        raise ValueError("Option hotkey=True "
+                                         f"does not make sense for f{event}.")
+                    if not p: raise ValueError(
+                            "Hotkey mode enabled. Use option  hotkey=False to "
+                            "only send press or release events.")
+                    events.append(event.reverse())
+            elif isinstance(entry, (tuple, list)):
+                t = tuple(cls_or_self._create_from_str(item, **kwargs)  for
+                        item in entry)
+                events.append(EventCombination(*t))
+            else:
+                raise TypeError
+        if len(events) == 0: return ""
+        if len(events) == 1: return events[0]
+        return EventSequence(*events)
+
+
+    @abstractmethod
+    def _create_from_str(cls_or_self, s, **kwargs):
+        raise NotImplementedError
+
+
+
+
+
+class StringEvent(Event, StringEventUtilitites, str):
 
     __slots__ = ["name","given_name","named_instance"]
 
@@ -154,14 +203,12 @@ class StringEvent(Event, str):
     
     @classmethod
     def _create_from_str(cls, s, **kwargs):
+        # don't override
         return cls(*cls._args_from_str(s),**kwargs)
     
-    
-    from_str = classmethod(_from_str)
-                
-        
-        
-    
+    from_str = classmethod(StringEventUtilitites.from_str)
+
+
 
     # problem with redefining __eq__ and dicts/set __hash__ comparison
     # __hash__ method is needed for checking "self in dict" or "self in set"
@@ -271,47 +318,15 @@ class Buttonevent(PressReleaseEvent):
 
 
 
-class EventSequence(AdditionContainer, Event, basic_class=Event):
-    def __str__(self):
-        return sequence_symbol.join(str(m) for m in self.members)
-    
-    def sending_version(self):
-        return self.__class__(*tuple(m.sending_version() for m in self.members))
-    
-    def hotkey_version(self, rls=False):
-        return self.__class__(
-                *tuple(m.hotkey_version(rls=rls) for m in self.members))
-        
-    
-class EventCombination(Event):
-    
-    @property
-    def members(self):
-        return self._members
-    
-    def __init__(self, *args):
-        if len(args) < 2: raise ValueError
-        for a in args:
-            if not isinstance(a, PressReleaseEvent): raise TypeError
-            if a.press is False: raise ValueError
-        self._members = args
-    
-    def __str__(self):
-        return combination_symbol.join(str(m) for m in self.members)
-    
-    def sending_version(self):
-        return sum(m for m in self.members) + sum(m.reverse() for m in
-           reversed(self.members))
-    
-    def hotkey_version(self, rls=False):
-        ret = sum(m for m in self.members)
-        if rls: ret += self.members[-1].reverse()
-        return ret
 
 
 
 
-class StringAnalyzer:
+
+class StringAnalyzer(StringEventUtilitites):
+    
+    #inherits method from_str!
+    
     def __init__(self, *event_classes):
         self.event_classes = []
         for cls in event_classes:
@@ -320,7 +335,6 @@ class StringAnalyzer:
             if cls is EventSequence: raise TypeError
             self.event_classes.append(cls)
     
-    from_str = _from_str
     
 
     def _create_from_str(self, s, only_defined_names=False):
@@ -337,14 +351,18 @@ class StringAnalyzer:
                     only_defined_names=False)
 
 
-class EventSenderMixin(ABC):
+
+class EventObjectSender(ABC):
+    
+    default_delay=None
     
     @abstractmethod
     def _send_event(self, event, **kwargs):
         raise NotImplementedError
     
     @hotkeys.add_pause_option(True)
-    def send_event(self, *events, **kwargs):
+    def send_event(self, *events, delay=None,**kwargs):
+        delay = self.default_delay if delay is None else delay
         for event in events:
             if isinstance(event, EventSequence):
                 self.send_event(*event.members, **kwargs)
@@ -363,4 +381,5 @@ class EventSenderMixin(ABC):
                     self._send_event(event, **kwargs)
                 except TypeError:
                     raise TypeError(f"event argument {event} not allowed for "
-                    f"send_event method of object {self}.")
+                                    f"send_event method of object {self}.")
+                if delay: sleep(delay/1000)
