@@ -81,11 +81,9 @@ try:
     ntfy = NotificationAdaptor(_primary=True)
 
 
-    from .windowpower import WindowAdaptor, WindowHandlerBase
-    class WindowHandler(WindowHandlerBase):
-        adaptor = WindowAdaptor(_primary=True)
+    from .windowpower import WindowAdaptor, WindowHandler
     class Win(WindowHandler):
-        pass
+        adaptor = WindowAdaptor(_primary=True)
 
     from .dialogpower import DialogAdaptor
     dlg = DialogAdaptor(_primary=True)
@@ -99,11 +97,9 @@ try:
     clip = ClipboardAdaptor(_primary=True)
 
 
-    from .iconpower import IconAdaptor, IconHandlerBase
-    class IconHandler(IconHandlerBase):
-        adaptor = IconAdaptor(_primary=True)
+    from .iconpower import IconAdaptor, IconHandler
     class Icon(IconHandler):
-        pass
+        adaptor = IconAdaptor(_primary=True)
 
     from . import Dfuncs
     from .Dfuncs import sendwait, nfsendwait
@@ -113,5 +109,4 @@ finally:
 
 #clean up this namespace
 del os, AdaptorBase, adaptionmethod, always_print_traceback, \
-    restore_print_func, implementations, IconHandlerBase, \
-    WindowHandlerBase
+    restore_print_func, implementations

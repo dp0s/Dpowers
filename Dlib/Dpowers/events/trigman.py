@@ -19,22 +19,22 @@
 from warnings import warn
 from . import NamedKey, keyb, NamedButton
 from .hookpower import HookAdaptor
-from Dhelpers.all import launch, TimedObject, dpress
-from .event_classes import StringAnalyzer, EventSequence, StringEvent, EventCombination
-import collections
+from Dhelpers.all import launch, TimedObject, dpress, check_type
 
-class TriggerManager(TimedObject):
+
+
+class TriggerManager(TimedObject, HookAdaptor.coupled_class()):
     
-    triggermanhook = HookAdaptor(group="triggerman", _primary=True)
+    adaptor = HookAdaptor(group="triggerman", _primary=True)
     
     def __init__(self, hook_adaptor=None, timeout=60, hook_mouse=False,
             buffer=2):
         super().__init__(timeout=timeout)
         self.eventdict = dict()
         self.blocked_hks = []
-        if hook_adaptor is None: hook_adaptor = self.triggermanhook
-        if not isinstance(hook_adaptor, HookAdaptor): raise TypeError
-        self.hook_adaptor = hook_adaptor
+        if hook_adaptor is not None: self.adaptor = hook_adaptor
+        check_type(HookAdaptor, self.adaptor)
+        self.k_old = ""
         self.hm= None
         self.recent_events = collections.deque()
         self.buffer = buffer
@@ -50,10 +50,10 @@ class TriggerManager(TimedObject):
             reinject_func = self.reinject_func
         else:
             reinject_func = None
-        self.hm = self.hook_adaptor.keys(self.event, timeout=timeout,
+        self.hm = self.adaptor.keys(self.event, timeout=timeout,
                 reinject_func=reinject_func)
         if self.hook_mouse:
-            self.hm += self.hook_adaptor.buttons(self.event, timeout=timeout)
+            self.hm += self.adaptor.buttons(self.event, timeout=timeout)
         return self.hm.start()
     
     def reinject_func(self, event_obj):

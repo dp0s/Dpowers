@@ -91,7 +91,7 @@ class WindowAdaptor(Adaptor):
 
 
     
-class WindowHandlerBase(FoundWindows, WindowAdaptor.coupled_class()):
+class WindowHandler(FoundWindows, WindowAdaptor.coupled_class()):
     
     
     @classmethod

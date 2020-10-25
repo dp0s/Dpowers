@@ -31,7 +31,7 @@ class IconAdaptor(Adaptor):
         return get_running_process(p)
     
 
-class IconHandlerBase(IconAdaptor.coupled_class()):
+class IconHandler(IconAdaptor.coupled_class()):
     
     def __init__(self):
         super().__init__()
