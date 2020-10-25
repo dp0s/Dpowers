@@ -34,6 +34,7 @@ class SenderAdaptorMixin:
         self.selected_devs+= devices
         return self.selected_devs
     
+    
 class SenderAdaptor(SenderAdaptorMixin, AdaptiveSender):
     # inherits adaptionmethod _press
     pass

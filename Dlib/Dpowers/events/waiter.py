@@ -18,18 +18,19 @@
 #
 from . import HookAdaptor, CallbackHook, hotkeys, KeyboardAdaptor, \
     MouseAdaptor
-from Dhelpers.all import check_type, launch
+from Dhelpers.all import check_type, launch, TimedObject
 import time
 from .. import NotificationAdaptor
 
 
 
-class Waiter:
+class Waiter(TimedObject):
     ntfy = NotificationAdaptor(group="waiter", _primary=True)
     
     def __init__(self, callback_hook=None, maxlen = None, maxtime = 20, *,
-            endevents=(), cond_func=None, eventmap=None, wait=True,
-            capture=False, notify=True):
+            endevents=(), cond_func=None, eventmap=None,
+            wait=True, capture=False, notify=True):
+        super().__init__(timeout=maxtime, wait=wait)
         check_type(CallbackHook, callback_hook)
         if callback_hook: raise ValueError(f"Arguments of callback hook "
             f"{callback_hook} were already set.")
@@ -50,24 +51,16 @@ class Waiter:
         self.num = 0
         self.events = []
         if self.eventmap: self.events_mapped = []
-        self.exitcode = "active"
-        self.starttime = time.time()
-        self.endtime = None
-        
-        if notify:  self.ntfy("Waiter active", 0.5, f"maxlen:{self.maxlen}, "
-                                                    f"maxtime:{self.maxtime}")
-        self.callback_hook.start()
-        
-        if self.maxtime:
-            launch.thread(self.stop, "timeout", initial_time_delay=self.maxtime)
-        if self.wait: self.callback_hook.join()
-        else: time.sleep(0.1)
-            # this time is needed for the hook manager to initialize
+        self.notify = notify
     
-    def stop(self, exitcode):
-        if (exitcode is None) or (self.exitcode != "active"): return
-        self.exitcode = exitcode
-        self.endtime = time.time()
+    def _start_action(self):
+        if self.notify:  self.ntfy("Waiter active", 0.5,
+                        f"maxlen:{self.maxlen}, maxtime:{self.maxtime}")
+        self.callback_hook.start()
+        time.sleep(0.1)
+        # this time is needed for the hook manager to initialize
+    
+    def _stop_action(self):
         self.callback_hook.stop()
 
     def called(self, event):
@@ -83,7 +76,8 @@ class Waiter:
             else:
                 self.events_mapped.append(event_mapped)
         exitcode = self.event_condition(event, event_mapped)
-        if exitcode: self.stop(exitcode)
+        if exitcode is not None: self.stop(exitcode)
+    
     
     def event_condition(self, event, ev_mapped):
         if self.maxlen and self.num >= self.maxlen:
@@ -92,37 +86,29 @@ class Waiter:
             return "endevent"
         f = self.cond_func
         if f:
-            argcount = f.__code__.co_argcount
-            if argcount == 0:
-                return f()
-            elif argcount == 1:
-                return f(self)
-            elif argcount == 2:
-                return f(self, event)
-            elif argcount == 3:
-                return f(self, event, ev_mapped)
-            else:
-                raise SyntaxError
+            try:
+                argcount = f.__code__.co_argcount
+                if argcount == 0:
+                    return f()
+                elif argcount == 1:
+                    return f(self)
+                elif argcount == 2:
+                    return f(self, event)
+                elif argcount == 3:
+                    return f(self, event, ev_mapped)
+                else:
+                    raise SyntaxError
+            except Exception as e:
+                self.stop(e)
+                raise
 
-    def duration(self):
-        try:  # check if self.endtime has been defined yet
-            return self.endtime - self.starttime
-        except (NameError, AttributeError):
-            # if not, the thread is not finished, so show the current time:
-            return time.time() - self.starttime
-        
-    def join(self, timeout=None):
-        self.callback_hook.join(timeout)
-        time.sleep(0.01)  # just in case
-        
-        
-        
+    
     @classmethod
     def get1(cls, callback_hook, maxtime =2, wait = True, **options):
         if wait is not True:
             raise Exception("ERROR: get1 a arg 'wait' must be true")
         get1 = cls(callback_hook, maxlen=1, maxtime = maxtime, wait=True,
-                **options)
+                **options).start()
         if get1.exitcode == "maxlen":
             return get1.events[0]
         if get1.exitcode != "timeout": raise RuntimeError
@@ -135,9 +121,9 @@ class Waiter:
     #         time.sleep(delay)
         
         
-class KeyWaiter(Waiter, HookAdaptor.coupled_class()):
+class KeyWaiter(Waiter):
     
-    adaptor = HookAdaptor(group="keywait", _primary=True)
+    hook = HookAdaptor(group="keywait", _primary=True)
     keyb = KeyboardAdaptor(group="keywait",_primary=True)
     mouse = MouseAdaptor(group="keywait", _primary=True)
     hotstring_keyb = KeyboardAdaptor(group="hotstring")
@@ -156,10 +142,10 @@ class KeyWaiter(Waiter, HookAdaptor.coupled_class()):
             
         hook_creator = sender = 0
         if keys:
-            hook_creator += self.adaptor.keys()
+            hook_creator += self.hook.keys()
             sender += self.keyb
         if buttons:
-            hook_creator += self.adaptor.buttons()
+            hook_creator += self.hook.buttons()
             sender += self.mouse
         callback_hook = hook_creator(press=press, release=release,
                 write_rls=write_rls)
@@ -197,7 +183,7 @@ class KeyWaiter(Waiter, HookAdaptor.coupled_class()):
             raise Exception("ERROR: get1 keyword arg 'wait' must be true")
         with hotkeys.paused(3):
             get1 = cls(maxlen=1, maxtime=maxtime, wait=True, press=press,
-                    release = release, capture=capture,**options)
+                    release = release, capture=capture,**options).start()
         if get1.exitcode == "maxlen":
             key = get1.events[0]
             if not press and not key.press and not options.get("write_rls",
@@ -206,7 +192,7 @@ class KeyWaiter(Waiter, HookAdaptor.coupled_class()):
                 # not explicitly set to True, remove the _rls tag by default
                 key = key.strip_rls()
         elif get1.exitcode == "timeout":
-            key = cls.adaptor.NamedKeyClass.Event() #return empty event
+            key = cls.hook.NamedKeyClass.Event() #return empty event
         else:
             raise RuntimeError
         return key
@@ -228,13 +214,12 @@ class KeyWaiter(Waiter, HookAdaptor.coupled_class()):
                 if not self.eventmap and k not in limit_allowed_keys:
                     return f"forbidden key {k}"
             y = self.joined_events_mapped if self.eventmap else self.joined_events
-            if y in patterns:
-                return "hit"
+            if y in patterns: return "hit"
     
         with hotkeys.paused(15):
             inp = cls(20, 5, endevents=endevents,eventmap=eventmap,
                     cond_func=checkinp, press=False, release=True,
-                    write_rls=False, capture=False, join_events=True)
+                    write_rls=False, capture=False, join_events=True).start()
         if inp.exitcode == "hit":
             if undo:
                 cls.hotstring_keyb.send("<BackSpace>"*(inp.num +

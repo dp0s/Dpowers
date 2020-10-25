@@ -22,6 +22,7 @@ import collections, traceback, threading, time, weakref
 from .arghandling import check_type
 from Dhelpers.launcher import launch
 from abc import ABC, abstractmethod
+from inspect import signature
 
 class KeepInstanceRefs:
     __instance_ref_dict__ = collections.defaultdict(list)
@@ -166,13 +167,25 @@ def check_existence_after_creation(obj, frame):
 
 class TimedObject(ABC):
     
-    def __init__(self, *args, timeout, **kwargs):
+    def __init__(self, *args, timeout, duration=True, wait = False, **kwargs):
         self.timeout = timeout
         self._timeout_thread = None
         self.active = False
         self.start_flag = threading.Event()
         self.stop_flag = threading.Event()
+        self.measure_duration = duration
+        self.wait = wait
+        self.exitcode = None
+        if duration:
+            self.starttime = None
+            self.endtime = None
         super().__init__(*args,**kwargs)
+    
+    def __init_subclass__(cls) -> None:
+        super().__init_subclass__()
+        cls.start.__signature__ = signature(cls._start_action)
+        cls.stop.__signature__ = signature(cls._stop_action)
+        
 
     def _timeout_action(self):
         # if this returns True, then the timeout will not be performed
@@ -185,24 +198,27 @@ class TimedObject(ABC):
     
     
     @abstractmethod
-    def _start_action(self):
-        pass
+    def _start_action(self,*args,**kwargs):
+        raise NotImplementedError
     
     @abstractmethod
-    def _stop_action(self):
-        pass
+    def _stop_action(self, *args, **kwargs):
+        raise NotImplementedError
     
-    def start(self):
+    def start(self, *args, wait=None, **kwargs):
         if self.active:
             raise RuntimeError("TimedObject %s cannot be started as it "
                                "is already active." % str(self))
         self.active = True
-        ret = self._start_action()
+        ret = self._start_action(*args,**kwargs)
+        if ret is None: ret = self
+        if self.measure_duration: self.starttime = time.time()
         if self.timeout:
             self._timeout_thread = launch.thread(self._timeout_stop,
                     initial_time_delay=self.timeout)
         self.start_flag.set()
         self.start_flag.clear()
+        if wait is None and self.wait or wait is True: self.join()
         return ret
         
     def _timeout_stop(self):
@@ -210,10 +226,10 @@ class TimedObject(ABC):
             if self._timeout_action() is True:
                 self._timeout_thread = None
             else:
-                self.stop()
+                self.stop("timeout")
                 self._timeout_thread = True
     
-    def stop(self, raise_errors = True):
+    def stop(self, exitcode = None, *args, raise_errors = True, **kwargs):
         if not self.active and raise_errors:
             if self._timeout_thread is True:
                     raise TimeoutError("TimedObject %s can not be stopped as it has "
@@ -229,17 +245,29 @@ class TimedObject(ABC):
         self._timeout_thread = None
         if self.active:
             self.active = False
-            ret = self._stop_action()
+            if self.measure_duration: self.endtime = time.time()
+            self.exitcode = exitcode
+            ret = self._stop_action(*args,**kwargs)
             self.stop_flag.set()
             self.stop_flag.clear()
+            if ret is None and self.measure_duration: return self.duration()
             return ret
-    
+
+
+    def duration(self):
+        if not self.measure_duration: raise ValueError
+        if self.starttime is None: return 0
+        t = self.endtime if self.endtime else time.time()
+        return t-self.starttime
+
+
+
     def __enter__(self):
-        return self.start()
+        return self.start(wait=False)
 
   
     def __exit__(self, *error_info):
-        if self.active: self.stop()
+        if self.active: self.stop("__exit__")
         return self._error_handler(*error_info)
     
     def join(self, timeout=None):

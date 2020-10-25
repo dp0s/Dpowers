@@ -45,7 +45,7 @@ def cut_left(string: str, keywords_to_cut, max_number_of_cuts=1):
 
 
 import re, unicodedata
-
+from warnings import warn
 
 
 # source: https://github.com/django/django/blob/master/django/utils/text.py
@@ -58,8 +58,13 @@ def slugify(value, allow_unicode=True):
     """
     value = str(value)
     if allow_unicode:
-        value = unicodedata.normalize('NFKC', value)
+        value2 = unicodedata.normalize('NFKC', value)
     else:
-        value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
-    value = re.sub(r'[^\w\s-]', '', value.lower()).strip()
-    return re.sub(r'[-\s]+', '-', value)
+        value2 = unicodedata.normalize('NFKD', value).encode('ascii',
+                'ignore').decode('ascii')
+    value2 = re.sub(r'[^\w\s-]', '', value2.lower()).strip()
+    ret = re.sub(r'[-\s]+', '-', value2)
+    if ret =="":
+        warn(f"Could not slugify following string: '{value}'")
+        ret = value
+    return ret
