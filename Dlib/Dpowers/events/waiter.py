@@ -35,8 +35,7 @@ class Waiter:
             f"{callback_hook} were already set.")
         self.maxlen = maxlen
         self.maxtime = maxtime
-        if type(endevents) not in (list, tuple):
-            endevents = [endevents]
+        if type(endevents) not in (list, tuple): endevents = [endevents]
         self.endevents =endevents
         self.eventmap = eventmap
         self.wait = wait
@@ -55,17 +54,14 @@ class Waiter:
         self.starttime = time.time()
         self.endtime = None
         
-        if notify:
-            self.ntfy("Waiter active", 0.5, f"maxlen:{self.maxlen}, maxtime:"
-            f"{self.maxtime}")
+        if notify:  self.ntfy("Waiter active", 0.5, f"maxlen:{self.maxlen}, "
+                                                    f"maxtime:{self.maxtime}")
         self.callback_hook.start()
         
-        if self.maxtime: launch.thread(self.stop, "timeout",
-                initial_time_delay=self.maxtime)
-        if self.wait:
-            self.callback_hook.join()
-        else:
-            time.sleep(0.1)
+        if self.maxtime:
+            launch.thread(self.stop, "timeout", initial_time_delay=self.maxtime)
+        if self.wait: self.callback_hook.join()
+        else: time.sleep(0.1)
             # this time is needed for the hook manager to initialize
     
     def stop(self, exitcode):
