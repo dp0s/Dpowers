@@ -41,6 +41,7 @@ class implementations:
         default = (pynput, evdev)
         Dfuncs = pynput
         keywait = (evdev, pynput)
+        hotstring = pynput
         
     class IconAdaptor:
         default = "pystray"

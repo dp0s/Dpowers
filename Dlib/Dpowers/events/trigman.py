@@ -18,9 +18,11 @@
 #
 from warnings import warn
 from . import NamedKey, keyb, NamedButton
+from .event_classes import StringAnalyzer, EventCombination, EventSequence, \
+    StringEvent
 from .hookpower import HookAdaptor
 from Dhelpers.all import launch, TimedObject, dpress, check_type
-
+import collections
 
 
 class TriggerManager(TimedObject, HookAdaptor.coupled_class()):

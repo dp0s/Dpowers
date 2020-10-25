@@ -226,7 +226,7 @@ class AdaptiveMixin(Adaptor):
     
     def _create_standardizing_dict(self,  amethod):
         #this should be executed when amethod is adapted, when NamedClass
-        # changes or when add_key_dict_changes
+        # changes or when name_translation changes
         target_space = amethod.target_space
         try:
             names = target_space.names
@@ -236,6 +236,11 @@ class AdaptiveMixin(Adaptor):
             stand_dict = self.NamedClass.StandardizingDict(names)
         else:
             stand_dict = names
+        if not self.name_translation:
+            try:
+                self.name_translation = self.universal_name_translations[target_space]
+            except KeyError:
+                pass
         if self.name_translation:
             old_dict = stand_dict.copy()
             for key,val in self.name_translation.items():
@@ -258,19 +263,31 @@ class AdaptiveMixin(Adaptor):
             if amethod.target in (None,NotImplemented): continue
             self._create_standardizing_dict(amethod)
 
-    _name_translation = None
+    name_translation = None
+    universal_name_translations = dict()
     
-    @property
-    def name_translation(self):
-        return self._name_translation
-        
-    @name_translation.setter
-    def name_translation(self, val):
+    
+    def set_name_translation(self, val, universal=False):
         check_type(dict,val)
-        self._name_translation = val
+        self.name_translation = val
         self._update_stand_dicts()
-        
-        
+        if universal:
+            target_space1 = self._press.target_space
+            try:
+                target_space2 = self._rls.target_space
+            except AttributeError:
+                target_space2 = None
+            if target_space1 and target_space2:
+                assert target_space1 == target_space2
+            target_space = target_space1 if target_space1 else target_space2
+            if not target_space: raise ValueError
+            self.universal_name_translations[target_space] = val
+            for instance in self.get_instances():
+                if instance is self: continue
+                instance._update_stand_dicts()
+            
+            
+    
 
 
 

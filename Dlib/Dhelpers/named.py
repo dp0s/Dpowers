@@ -230,6 +230,11 @@ class StandardizingDict:
         self.others_comparable= others_comparable
         self.make_comparable = self.NamedClass.make_comparable
         if new_info: self.update(new_info, func=func)
+        
+    
+    def _comparable(self, k):
+        return self.make_comparable(k) if self.others_comparable else k
+        
             
     def copy(self):
         return self.__class__(self,others_comparable=self.others_comparable)
@@ -242,10 +247,6 @@ class StandardizingDict:
         check_type(dict, new_info)
         if not func: func = lambda x: x
         for k,v in new_info.items(): self[k] = func(v)
-            
-    def __repr__(self) -> str:
-        old = super().__repr__()[:-1]
-        return old + f" with running number {self.running_number}>"
     
     def normal_version(self, str_of_inst=False):
         if str_of_inst:
@@ -256,6 +257,10 @@ class StandardizingDict:
         d.update({f(inst): inst.mappings[self.running_number]
             for inst in self.registered_instances})
         return d
+    
+    def __repr__(self) -> str:
+        old = super().__repr__()[:-1]
+        return old + f" with running number {self.running_number}>"
     
     def __eq__(self, other):
         if isinstance(other,self.__class__):
@@ -276,8 +281,7 @@ class StandardizingDict:
         try:
             inst = self.NamedClass.instance(k)
         except KeyError:
-            if self.others_comparable: k = self.make_comparable(k)
-            self.other_dict[k] = v
+            self.other_dict[self._comparable(k)] = v
         else:
             inst.mappings[self.running_number]=v
             for name in inst.names:
@@ -289,11 +293,11 @@ class StandardizingDict:
         try:
             if isinstance(k, self.NamedClass):
                 return k.mappings[self.running_number]
-            k2 = self.make_comparable(k)
             try:
-                return self.registered_names[k2] #this is fasted way to look up
+                return self.registered_names[self.make_comparable(k)]
+                #this is fast way to look up
             except KeyError:
-                return self.other_dict[k2 if self.others_comparable else k]
+                return self.other_dict[self._comparable(k)]
         except KeyError:
             raise KeyError(k)
 
@@ -302,8 +306,7 @@ class StandardizingDict:
         try:
             inst = self.NamedClass.instance(k)
         except KeyError:
-            if self.others_comparable: k = self.make_comparable(k)
-            del self.other_dict[k]
+            del self.other_dict[self._comparable(k)]
         else:
             del inst.mappings[self._running_number]
             for name in inst.names: del self.registered_names[name]
@@ -329,7 +332,7 @@ class StandardizingDict:
             inst = self.NamedClass.instance(k)
         except KeyError:
             try:
-                return self.other_dict[k]
+                return self.other_dict[self._comparable(k)]
             except KeyError:
                 return k  #if k is not a defined name of any kind, return itself
         else:

@@ -96,16 +96,17 @@ class LayoutBase(ABC):
     
     
     def __lt__(self, other):
-        if not isinstance(other, self.__class__):
-            return NotImplemented
+        if not isinstance(other, self.__class__): return NotImplemented
         d = {}
         kd2 = self.key_dict
         kd1 = other.key_dict
         for key in kd2:
-            if key in kd1:
-                d[kd1[key][0]] = kd2[key][0]
-            else:
-                d[key] = kd2[key][0]
+            right = kd2[key][0]
+            try:
+                left = kd1[key][0]
+            except KeyError:
+                left = key
+            if left is not right: d[left] = right
         return d
     
     

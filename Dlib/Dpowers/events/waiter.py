@@ -140,7 +140,7 @@ class KeyWaiter(Waiter, HookAdaptor.coupled_class()):
     adaptor = HookAdaptor(group="keywait", _primary=True)
     keyb = KeyboardAdaptor(group="keywait",_primary=True)
     mouse = MouseAdaptor(group="keywait", _primary=True)
-    hotstring_keyb = KeyboardAdaptor(group="default")
+    hotstring_keyb = KeyboardAdaptor(group="hotstring")
 
     def __init__(self, *args, eventmap=None, keys=True,  buttons=False,
             press=True, release=False, write_rls=True, join_events=False, **kwargs):
@@ -179,6 +179,7 @@ class KeyWaiter(Waiter, HookAdaptor.coupled_class()):
     
     
     def reinject(self, delay=10):
+        _print(self.events, self.keyb.name_translation)
         reverse_press = False
         if self.press and self.release: autorelease = False
         elif self.press and not self.release: autorelease = True

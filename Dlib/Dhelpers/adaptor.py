@@ -565,6 +565,18 @@ class Implementation:
             s += f", {self.method_infos}"
         return s
     
+    def __info__(self):
+        return self.adaptorcls, self.main_target_space, \
+            self.method_target_spaces
+    
+    def __eq__(self, other):
+        if isinstance(other,self.__class__):
+            return self.__info__() == other.__info__()
+        return NotImplemented
+    
+    def __hash__(self):
+        return hash(str(self.__info__()))
+
     def show_target_spaces(self):
         if self.method_infos: return self.method_target_spaces
         return self.main_target_space
