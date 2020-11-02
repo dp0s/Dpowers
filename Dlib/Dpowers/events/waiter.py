@@ -165,7 +165,7 @@ class KeyWaiter(Waiter):
     
     
     def reinject(self, delay=10):
-        _print(self.events, self.keyb.name_translation)
+        #_print(self.events, self.keyb.name_translation)
         reverse_press = False
         if self.press and self.release: autorelease = False
         elif self.press and not self.release: autorelease = True

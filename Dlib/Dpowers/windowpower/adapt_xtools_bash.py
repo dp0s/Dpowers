@@ -130,6 +130,8 @@ def ID_from_location(param):
             return _xdo_get_ids(title=":SELECT:")[0]
     raise NotImplementedError
 
+allowed_properties = "title", "wcls", "pid"
+
 def IDs_from_property(prop_name, prop_val):
     if prop_name == "title":
         return _xdo_get_ids(title=prop_val)

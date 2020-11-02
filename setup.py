@@ -24,8 +24,7 @@ import multiprocessing, os, subprocess, warnings, shutil, sys
 
 dirname = os.path.dirname(os.path.realpath(__file__))
 os.chdir(dirname)
-module_folder = os.path.join(dirname,"Dlib")
-sys.path.insert(0, module_folder)
+
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -37,7 +36,9 @@ except FileNotFoundError as e:
 
 
 
-
+module_folder = os.path.join(dirname,"Dlib")
+sys.path.insert(0, module_folder)
+#this way we will import from this folder not from pip
 import Dpowers, Dhelpers, evdev_prepared
 
 def my_setup(name, **kwargs):
@@ -88,7 +89,6 @@ my_setup("Dpowers",
         )
 
 
-
 my_setup("Dhelpers",
     version = Dhelpers.__version__,
     package_data = {"Dhelpers.KeyboardLayouts.layouts_imported_from_xkb"
@@ -99,7 +99,7 @@ my_setup("Dhelpers",
 
 my_setup("evdev_prepared",
     version = evdev_prepared.__version__,
-    install_requires=["evdev>=1.2.0"],
+    install_requires=["evdev>=1.3.0", "setuptools >= 45"],
     description="Useful classes to make usage of python evdev easier"
     )
 

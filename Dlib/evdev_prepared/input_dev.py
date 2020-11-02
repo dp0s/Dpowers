@@ -17,7 +17,7 @@
 #
 #
 from evdev import ecodes, InputDevice, uinput
-import selectors, threading
+import selectors, threading, os
 
 class EvdevDeviceGrabError(Exception):
     pass
@@ -134,7 +134,11 @@ class AdhancedInputDevice(InputDevice):
         try:
             super().close()
         except RuntimeError:
-            pass
+            try:
+                os.close(self.fd)
+            except OSError:
+                pass
+                
         #this is necessary because in evdev_version 1.3.0, close will
         # automatically use some of the async stuff, which we don't want!
 
