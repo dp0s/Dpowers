@@ -29,8 +29,8 @@ class TriggerManager(TimedObject, HookAdaptor.coupled_class()):
     
     adaptor = HookAdaptor(group="triggerman", _primary=True)
     
-    def __init__(self, hook_adaptor=None, timeout=60, hook_mouse=False,
-            buffer=2):
+    def __init__(self, hook_adaptor=None, timeout=60, hook_buttons=False,
+            buffer=2, **custom_key_kwargs):
         super().__init__(timeout=timeout)
         self.eventdict = dict()
         self.blocked_hks = []
@@ -40,11 +40,12 @@ class TriggerManager(TimedObject, HookAdaptor.coupled_class()):
         self.hm= None
         self.recent_events = collections.deque()
         self.buffer = buffer
-        self.hook_mouse = hook_mouse
-        if hook_mouse:
+        self.hook_buttons = hook_buttons
+        if hook_buttons:
             self.stringevent_analyzer = StringAnalyzer(NamedKey, NamedButton)
         else:
             self.stringevent_analyzer = NamedKey.Event
+        self.key_kwargs = custom_key_kwargs
        
     def _start_action(self):
         timeout = self.timeout + 5 if self.timeout else None
@@ -53,8 +54,8 @@ class TriggerManager(TimedObject, HookAdaptor.coupled_class()):
         else:
             reinject_func = None
         self.hm = self.adaptor.keys(self.event, timeout=timeout,
-                reinject_func=reinject_func)
-        if self.hook_mouse:
+                reinject_func=reinject_func, **self.key_kwargs)
+        if self.hook_buttons:
             self.hm += self.adaptor.buttons(self.event, timeout=timeout)
         return self.hm.start()
     

@@ -169,6 +169,7 @@ class StringEvent(Event, StringEventUtilitites, str):
     def __new__(cls, name="", *, only_defined_names=False):
         given_name = name
         named_instance = None
+        if isinstance(name,int): name = str(name)
         if name != "":
             if cls.NamedClass:
                 try:
@@ -185,7 +186,7 @@ class StringEvent(Event, StringEventUtilitites, str):
                     if cls.allowed_names and only_defined_names:
                         raise NameError(f"name '{name}' not allowed for "
                         f"{cls}")
-                    name = f"[{name}]"
+                    if name.isnumeric(): name = f"[{name}]"
         self = str.__new__(cls, name)
         self.name = name
         self.named_instance = named_instance

@@ -20,7 +20,7 @@
 from evdev.ecodes import (EV_KEY, EV_ABS, EV_SYN, EV_MSC, KEY, BTN,
     EV_LED, EV_REL, ABS_MT_POSITION_X, ABS_MT_POSITION_Y, ABS_X, ABS_Y,
     REL_X, REL_Y, bytype)
-from evdev_prepared import uinput, dev_updater
+from evdev_prepared import uinput, device_control
 
 from .baseclasses import (InputEventHandler, KeyhookBase, ButtonhookBase,
     CursorhookBase, CustomhookBase, PressReleaseHook)
@@ -30,69 +30,25 @@ from abc import abstractmethod
 
 
 
-class EvdevHandler(dev_updater.EvdevDeviceSelector, InputEventHandler):
+class EvdevHandler(device_control.DeviceStarter, InputEventHandler):
     
-    devupdater = dev_updater.EvdevDeviceUpdater(activate_looper=True)
+    devupdater = device_control.DeviceUpdater(activate_looper=True)
     # this class will also use the CollactableInputDevice class and the
     # EvdevInputLooper class in the background
     uinput = uinput.global_uinput
     uinput.start()
     
-    def __init__(self, hook_cls=None, *, category=None, name=None, path=None,
-            selection_func=None):
+    def __init__(self, hook_cls=None, **selection_kwargs):
         InputEventHandler.__init__(self,hook_cls)
-        dev_updater.EvdevDeviceSelector.__init__(self,category, name, path,
-                selection_func, dev_updater=self.devupdater)
-
-    def dev_change_action(self, found_new, lost_devs):
-        # this way, the EvdevHandler will automatically register newly
-        # appearing devs and release disappearing devs
-        if not self.active: return
-        for dev in lost_devs:
-            if dev in self.matched_devs:
-                self.stop_dev(dev)
-                self.matched_devs.remove(dev)
-        for dev in found_new:
-            if self.dev_is_selected(dev):
-                self.start_dev(dev)
-                self.matched_devs.append(dev)
-    
-    def run(self):
-        self.matched_devs = self.matching_devs()
-        #print(self.matched_devs)
-        for dev in self.matched_devs: self.start_dev(dev)
-            
-    
-    def terminate(self):
-        for dev in self.matched_devs: self.stop_dev(dev)
-        self.matched_devs = []
-        
-    @abstractmethod
-    def start_dev(self, dev):
-        pass
-    
-    @abstractmethod
-    def stop_dev(self, dev):
-        pass
+        device_control.DeviceStarter.__init__(self,devupdater= self.devupdater,
+            **selection_kwargs)
     
         
-class Capturer(EvdevHandler):
-    
-    def start_dev(self, dev):
-        dev.grab(grabber=self)
-
-    def stop_dev(self, dev):
-        dev.ungrab(grabber=self)
+class Capturer( device_control.CapturerMixin, EvdevHandler):
+    pass
 
 
-
-class Collector(EvdevHandler):
-    
-    def start_dev(self, dev):
-        dev.collect(collector=self)
-
-    def stop_dev(self, dev):
-        dev.uncollect(collector=self)
+class Collector(device_control.CollectorMixin, EvdevHandler):
     
     def process_event(self, ty, co ,val, dev):
         if ty == EV_SYN: return
@@ -114,6 +70,7 @@ class KeyCollector(Collector):
         name_dict[a] = b
             
     def process_event(self,ty,co,val, dev):
+        #_print(ty,co,val,dev)
         if ty == EV_KEY:
             press = bool(val != 0)  # val==0 means that it was released, val==1 or
             # val==2 means it is pressed
@@ -121,6 +78,8 @@ class KeyCollector(Collector):
                 self.uinput.write(ty, co, val)
         elif ty not in (EV_SYN, EV_MSC, EV_LED):
             raise TypeError("Wrong event type: ", ty, co , val)
+        
+        
 
 class ButtonCollector(Collector):
     
@@ -235,15 +194,31 @@ class CursorCollector(Collector):
 
 class EvdevhookMixin:
     
-    def process_custom_kwargs(self,  **kwargs):
-        new = Collector(self.__class__, **kwargs)
-        old = self.collector
-        if not old or old != new:
-            self.collector = new
-        new = Capturer(self.__class__, **kwargs)
+    def process_custom_kwargs(self,  **selection_kwargs):
+        # create a new collector or capturer instance with updated
+        # selection_kwargs
         old = self.capturer
-        if not old or old != new:
-            self.capturer = new
+        cls = Capturer if not old else old.__class__
+        new = cls(self.__class__, **selection_kwargs)
+        if old != new: self.capturer = new
+        
+        old = self.collector
+        cls = Collector if not old else old.__class__
+        new = cls(self.__class__, **selection_kwargs)
+        if old != new: self.collector = new
+        
+        
+    def _handler(self):
+        try:
+            return self.collector
+        except AttributeError:
+            return self.capturer
+            
+    def matching_devs(self):
+        return self._handler().matching_devs()
+    
+    def matched_devs(self):
+        return self._handler().matched_devs()
 
 
 class Keyhook(EvdevhookMixin, KeyhookBase):

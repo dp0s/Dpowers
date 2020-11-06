@@ -17,13 +17,13 @@
 #
 #
 from evdev_prepared.uinput import global_uinput
-from evdev_prepared.dev_updater import EvdevDeviceSelector
+from evdev_prepared.device_control import DeviceSelector
     
 global_uinput.start()
 names = {}
 
 def select_device(**device_kwargs):
-    selector = EvdevDeviceSelector(**device_kwargs)
+    selector = DeviceSelector(**device_kwargs)
     devs = selector.matching_devs()
     global_uinput.update_from_devices(*devs)
     for name, nums in iterator(devs):

@@ -22,4 +22,4 @@ __version__ = "0.2c1"
 try:
     import evdev
 except:
-    raise
+    raise Exception("Please install evdev using (sudo) pip install evdev")

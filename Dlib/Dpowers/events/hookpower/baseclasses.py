@@ -400,7 +400,7 @@ class PressReleaseHook(CallbackHook):
         if isinstance(effective, cls.NamedClass):
             event_obj = effective.get_event(press, **kwargs)
         else:
-            event_obj = cls.NamedClass.Event(name, press=press,
+            event_obj = cls.NamedClass.Event(effective, press=press,
                     **kwargs)
         #print(event_obj, event_obj.named_instance, event_obj.press)
         if not event_obj.named_instance:

@@ -49,6 +49,9 @@ class AdhancedInputDevice(InputDevice):
     
     def __str__(self):
         return super().__str__() + f', fd={self.fd}, category "{self.category}"'
+    
+    def __repr__(self):
+        return super().__repr__()[:-1] + f" with name '{self.name}')"
 
 
 
@@ -59,9 +62,17 @@ class AdhancedInputDevice(InputDevice):
         if keylist is not None:
             # print(dev.capabilities(verbose=True))
             if ecodes.BTN_LEFT in keylist: return "mouse"
-            if len(keylist) > 10: return "keyboard"
+            if len(keylist) > 100:
+                if ecodes.KEY_SPACE in keylist: return "keyboard"
+                return "weired keyboard without SPACE key?"
+            if ecodes.KEY_VOLUMEDOWN in keylist and ecodes.KEY_VOLUMEUP in keylist \
+                    and (ecodes.KEY_PLAY in keylist or ecodes.KEY_PLAYCD in
+                         keylist or ecodes.KEY_PLAYPAUSE in keylist or
+                         ecodes.KEY_PLAYER in keylist):
+                return "headset"
             if ecodes.KEY_POWER in keylist: return "power_button"
             if ecodes.KEY_BRIGHTNESSDOWN in keylist: return "brightness_keys"
+            
         else:
             switchlist=devcaps.get(ecodes.EV_SW)
             if ecodes.SW_LID in switchlist: return "lid_switch"
@@ -95,7 +106,7 @@ class AdhancedInputDevice(InputDevice):
             return True
         finally:
             if ungrab:
-                InputDevice.ungrab(self)
+                self.ungrab()
             else:
                 self.was_grabbed = True
     
@@ -268,3 +279,5 @@ class EvdevInputLooper:
     # dev.queue_cursor(co,val)  #     elif ty not in (EV_SYN, EV_MSC,
     # EV_LED):  #         raise TypeError("Wrong event type: ", event,
     # ty)  #     #print(ty,co,val)  #     #dev.queue_key()
+
+

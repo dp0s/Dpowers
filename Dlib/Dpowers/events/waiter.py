@@ -205,7 +205,7 @@ class KeyWaiter(Waiter):
         if limit_allowed_keys:
             limit_allowed_keys += [i + "_rls" for i in limit_allowed_keys]
         elif endevents == ():
-            endevents = ("Tab", "Return", "Space")
+            endevents = ("Tab", "Return", "Space", "Backspace")
         patterns = tuple(string_dict.keys())
         def checkinp(self, k, k_mapped):
             if limit_allowed_keys:

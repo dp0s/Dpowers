@@ -508,3 +508,12 @@ class FoundWindows(WindowObject):
     
     def __repr__(self):
         return "%s with window ID(s) %s>"%(super().__repr__()[:-1], self.IDs())
+
+
+    def __getitem__(self, item):
+        return self.__class__(self.IDs()[item])
+    
+    def __iter__(self):
+        def iterator():
+            for id in self.IDs(): yield self.__class__(id)
+        return iterator()

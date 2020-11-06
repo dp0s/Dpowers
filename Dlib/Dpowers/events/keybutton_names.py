@@ -194,7 +194,7 @@ class StandardKeyNames:
         wlan = 'wlan'
         volumeup = 'volumeup'
         volumedown = 'volumedown'
-        play = 'play', 'playpause'
+        play = 'play', 'playpause', "playcd", "player"
         stop = 'stop', 'stopcd'
         nextsong = 'nextsong'
         previoussong = 'previoussong'

@@ -80,8 +80,7 @@ my_setup("Dpowers",
     package_data = {"Dpowers.iconpower.icons" : ["*"]},
 
     install_requires=["pynput>=1.6.8", "pystray>=0.15",
-        "Dhelpers==" + Dhelpers.__version__,
-        "evdev_prepared>="+evdev_prepared.__version__],
+        "Dhelpers==" + Dhelpers.__version__],
 
     description="Unified Interface for automatic interaction",
     long_description=long_description,
@@ -99,7 +98,7 @@ my_setup("Dhelpers",
 
 my_setup("evdev_prepared",
     version = evdev_prepared.__version__,
-    install_requires=["evdev>=1.3.0", "setuptools >= 45"],
+    install_requires=["evdev==1.2.0", "setuptools >= 45"],
     description="Useful classes to make usage of python evdev easier"
     )
 

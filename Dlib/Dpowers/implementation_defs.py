@@ -27,7 +27,7 @@ class implementations:
     class HookAdaptor:
         default  = pynput
         keywait = (evdev, pynput)
-        triggerman = ArgSaver(buttons = pynput, keys = evdev)
+        triggerman = ArgSaver(buttons = pynput, keys = evdev, custom=evdev)
         
     class MouseAdaptor:
         default = pynput
