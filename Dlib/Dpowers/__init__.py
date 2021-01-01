@@ -21,7 +21,7 @@
 
 __all__ = ["Dpowers","autoadapt","sleep","launch","ThisScript","Icon","Win",
     "keyb", "mouse","ntfy","dlg","hotkeys","hook","sendwait","nfsendwait",
-    "clip", "Dfuncs","events", "KeyWaiter"]
+    "clip", "Dfuncs","events", "KeyWaiter", "Image"]
 
 import os, sys
 from time import sleep
@@ -100,6 +100,10 @@ try:
     from .iconpower import IconAdaptor, IconHandler
     class Icon(IconHandler):
         adaptor = IconAdaptor(_primary=True)
+        
+    from .imagepower import ImageAdaptor, ImageBase
+    class Image(ImageBase):
+        adaptor = ImageAdaptor(_primary=True)
 
     from . import Dfuncs
     from .Dfuncs import sendwait, nfsendwait
