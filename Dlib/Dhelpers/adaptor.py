@@ -253,7 +253,7 @@ class AdaptorBase(KeepInstanceRefs):
             cls.added_impl_names = {}
             
     
-    def __init__(self, main_info=None, *, group=None, _primary=False,
+    def __init__(self, main_info=None, *, group="default", _primary=False,
             **method_infos):
         
         super().__init__()
@@ -261,8 +261,9 @@ class AdaptorBase(KeepInstanceRefs):
         check_type((str, int), group, allowed=(None,))
         self.primary = False
         self.instance_group = group
+        
         if _primary is True:
-            if group is None: self.instance_group = "default"
+            if group is None: raise ValueError
             prim_inst = self.get_primary_instance()
             if prim_inst:
                 raise ValueError("Primary instance for this instance group "
@@ -278,15 +279,12 @@ class AdaptorBase(KeepInstanceRefs):
             amethod = AdaptionMethod(placeholder, self)
             setattr(self, name, amethod)
         
-        if self.instance_group is None:
-            if main_info or method_infos:
-                self.adapt(main_info, **method_infos)
-            else:
-                self.instance_group = "default"
-        
-        if self.instance_group is not None:
-            if main_info or method_infos: raise ValueError
-            if self.autoadapt_active: self.adapt()
+        if main_info or method_infos:
+            if group not in ("default", None): raise ValueError
+            self.instance_group = None
+            self.adapt(main_info, **method_infos)
+        elif self.autoadapt_active and self.instance_group is not None:
+            self.adapt()
     
     
     
@@ -540,12 +538,20 @@ class CoupledClass:
     @classmethod
     @wrap
     def adapt(cls, *args, **kwargs):
-        cls.adaptor = cls.adaptor_class(group=None)
+        if "adaptor" in cls.__dict__:
+            #in this case, an adaptor instance was explicitely set for this
+            # subclass before
+            check_type(cls.adaptor_class, cls.adaptor)
+        else:
+            # in this case, the adaptor attribute is only inherited -- we
+            # need to redefine it to avoid adapting the base class too
+            group = None if not args and not kwargs else "default"
+            cls.adaptor = cls.adaptor_class(group=group)
         return cls.adaptor.adapt(*args, **kwargs)
         
     @wrap
     def adapt_instance(self, *args, **kwargs):
-        self.adaptor = self.adaptor_class(group=None)
+        self.adaptor = self.adaptor_class()
         return self.adaptor.adapt(*args, **kwargs)
 
 

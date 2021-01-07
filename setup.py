@@ -80,7 +80,7 @@ my_setup("Dpowers",
     package_data = {"Dpowers.iconpower.icons" : ["*"]},
 
     install_requires=["pynput>=1.6.8", "pystray>=0.15",
-        "Dhelpers==" + Dhelpers.__version__],
+        "Dhelpers==" + Dhelpers.__version__, "wand>=0.6.5"],
 
     description="Unified Interface for automatic interaction",
     long_description=long_description,
@@ -92,7 +92,7 @@ my_setup("Dhelpers",
     version = Dhelpers.__version__,
     package_data = {"Dhelpers.KeyboardLayouts.layouts_imported_from_xkb"
     : ["*"]},
-    install_requires=["psutil>=5.4.2"],
+    install_requires=["psutil>=5.4.2", "setuptools >= 45"],
     description="Dhelpers support modules"
     )
 

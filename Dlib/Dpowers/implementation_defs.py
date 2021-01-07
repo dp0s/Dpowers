@@ -55,3 +55,6 @@ class implementations:
         
     class DialogAdaptor:
         default = ArgSaver("zenity_bash",popup="tkinter")
+        
+    class ImageAdaptor:
+        default = "wand"
