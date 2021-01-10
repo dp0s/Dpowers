@@ -28,3 +28,12 @@ def save(obj, destination):
     
 def close(obj):
     obj.destroy()
+    
+
+attr_list = ["compression", "compression_quality", "resolution", "size"]
+
+    
+def set_value(backend_obj, name, value = None):
+    val_before = getattr(backend_obj, name)
+    if value is None: return val_before
+    return setattr(backend_obj, name, value)

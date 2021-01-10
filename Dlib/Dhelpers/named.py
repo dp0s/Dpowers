@@ -248,14 +248,17 @@ class StandardizingDict:
         if not func: func = lambda x: x
         for k,v in new_info.items(): self[k] = func(v)
     
-    def normal_version(self, str_of_inst=False):
+    def normal_version(self, str_of_inst=False, all=False):
         if str_of_inst:
             f = lambda inst: str(inst)
         else:
             f = lambda inst: inst.name
         d = self.other_dict.copy()
-        d.update({f(inst): inst.mappings[self.running_number]
-            for inst in self.registered_instances})
+        if all:
+            d.update(self.registered_names)
+        else:
+            d.update({f(inst): inst.mappings[self.running_number]
+                for inst in self.registered_instances})
         return d
     
     def __repr__(self) -> str:

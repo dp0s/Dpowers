@@ -114,10 +114,10 @@ class StandardKeyNames:
         pass
     class special_text_keys:
         space = 'space', ' '
-        enter = 'Enter', 'Return', 'ret', '\n'
+        enter = 'Enter', 'Return', 'ret'
         backspace = 'Backspace', 'bs', 'Control_h'
         delete = 'Delete', 'del'
-        tab = 'Tab', '\t', 'Control_i'
+        tab = 'Tab','Control_i'
     class numpad_dead:
         p_page_down = 'p_page_down', 'kp_page_down'
         p_page_up = 'p_page_up', 'kp_page_up'
