@@ -80,13 +80,13 @@ class SelectionSaver:
         more code
     """
     
-    def __init__(self, clipboardfuncs, selection=0):
-        self.clipboardfuncs = clipboardfuncs
+    def __init__(self, clipboardadaptor, selection=0):
+        self.clipboardadaptor = clipboardadaptor
         self.selection = selection
     
     def __enter__(self):
-        self.save = self.clipboardfuncs.remove(self.selection)
+        self.save = self.clipboardadaptor.remove(self.selection)
         return self.save
     
     def __exit__(self, *ignore_these_args):
-        self.clipboardfuncs.fill(self.save, self.selection)
+        self.clipboardadaptor.fill(self.save, self.selection)

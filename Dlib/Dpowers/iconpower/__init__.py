@@ -17,7 +17,7 @@
 #
 #
 from Dhelpers.launcher import (launch, terminate_process, get_running_process)
-import os, multiprocessing, functools
+import os, multiprocessing, warnings
 from .. import ntfy, Dfuncs, Adaptor, adaptionmethod
 
 class IconAdaptor(Adaptor):
@@ -63,8 +63,12 @@ class IconHandler(IconAdaptor.coupled_class()):
     #      self.left_click = func
     
     
-    def menuitem(self, name, func=lambda: ntfy("No action defined.")):
+    def menuitem(self, name, func=lambda: warnings.warn("No action defined.")):
         self._items.append((str(name), func))
+        
+    def additem(self,func):
+        self.menuitem(func.__name__.replace("_"," "), func)
+        return func
     
     @property
     def items(self):

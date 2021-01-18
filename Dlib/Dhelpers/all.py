@@ -31,3 +31,4 @@ from .KeyboardLayouts import *
 from .named import *
 from . import *
 from .container import *
+from .crypt import *

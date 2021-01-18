@@ -211,7 +211,6 @@ class TimedObject(ABC):
                                "is already active." % str(self))
         self.active = True
         ret = self._start_action(*args,**kwargs)
-        if ret is None: ret = self
         if self.measure_duration: self.starttime = time.time()
         if self.timeout:
             self._timeout_thread = launch.thread(self._timeout_stop,
@@ -219,6 +218,7 @@ class TimedObject(ABC):
         self.start_flag.set()
         self.start_flag.clear()
         if wait is None and self.wait or wait is True: self.join()
+        if ret is None: ret = self #usually the case
         return ret
         
     def _timeout_stop(self):

@@ -130,18 +130,18 @@ class TriggerManager(TimedObject, HookAdaptor.coupled_class()):
 
     # A decorator
     def triggersequence(self, *strings):
-        def func(decorated_func):
+        def decorator(decorated_func):
             for string in strings: self.add_sequence(string, decorated_func)
             return decorated_func
-        return func
+        return decorator
 
     # A decorator
     def hotkey(self, *strings, rls=False, block=True):
-        def func(decorated_func):
+        def decorator(decorated_func):
             for string in strings:
                 self.add_hotkey(string, decorated_func, rls=rls, block=block)
             return decorated_func
-        return func
+        return decorator
     
     def hotkey_rls(self,*strings, block=True):
         return self.hotkey(*strings,rls=True,block=block)
