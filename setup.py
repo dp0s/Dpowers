@@ -73,15 +73,21 @@ def setup_process(name, **kwargs):
 
 
 
+#DPOWER_EXTRAS_LWM = ["pynput>=1.6.8", "pystray>=0.15", "wand>=0.6.5"]
 
 
 my_setup("Dpowers",
     version = Dpowers.__version__,
     package_data = {"Dpowers.iconpower.icons" : ["*"]},
 
-    install_requires=["pynput>=1.6.8", "pystray>=0.15",
-        "Dhelpers==" + Dhelpers.__version__, "wand>=0.6.5"],
-
+    install_requires=["Dhelpers==" + Dhelpers.__version__, ],
+    
+    # extras_require={
+    #     #':sys_platform == "win32"': ['pyreadline'],
+    #     ':"linux" in sys_platform': ['pyxdg']
+    # }
+    #                 #
+    #
     description="Unified Interface for automatic interaction",
     long_description=long_description,
     long_description_content_type="text/markdown"
@@ -92,7 +98,7 @@ my_setup("Dhelpers",
     version = Dhelpers.__version__,
     package_data = {"Dhelpers.KeyboardLayouts.layouts_imported_from_xkb"
     : ["*"]},
-    install_requires=["psutil>=5.4.2", "setuptools >= 45"],
+    #install_requires=["setuptools >= 45"],  #"psutil>=5.4.2"
     description="Dhelpers support modules"
     )
 
