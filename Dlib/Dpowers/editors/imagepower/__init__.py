@@ -1,4 +1,4 @@
-from .. import Adaptor, adaptionmethod
+from Dpowers import Adaptor, adaptionmethod
 from types import GeneratorType
 from Dhelpers.arghandling import check_type, CollectionWithProps
 from Dhelpers.named import NamedObj

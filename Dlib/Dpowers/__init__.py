@@ -45,8 +45,7 @@ from Dhelpers import __version__  as Dhelpers_version
 if __version__ != Dhelpers_version: raise ValueError
 
 from Dhelpers.all import (always_print_traceback, restore_print_func,
-    launch, ThisScript, AdaptorBase, adaptionmethod, AdaptionError, ArgSaver,
-    Layout)
+    AdaptorBase, adaptionmethod)
 
     
 try:
@@ -101,7 +100,7 @@ try:
     class Icon(IconHandler):
         adaptor = IconAdaptor(_primary=True)
         
-    from .imagepower import ImageAdaptor, ImageBase
+    from Dpowers.editors.imagepower import ImageAdaptor, ImageBase
     class Image(ImageBase):
         adaptor = ImageAdaptor(_primary=True)
 
