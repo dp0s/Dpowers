@@ -17,7 +17,8 @@
 #
 #
 from warnings import warn
-import time, threading, subprocess, psutil, multiprocessing
+import time, threading, subprocess, multiprocessing
+from .psutil_fix import psutil
 from .arghandling import PositiveInt
 
 

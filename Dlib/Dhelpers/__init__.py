@@ -20,4 +20,4 @@
 #we don't want to import anything automatically
 
 
-__version__ = "0.0.3c3"
+__version__ = "0.1.0"
