@@ -16,9 +16,10 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-import os, psutil, __main__, time
-from .external import ExternalDict
-from .launcher import terminate_process, launch
+import os, __main__, time
+from ..external import ExternalDict
+from ..launcher import terminate_process, launch
+from ..psutil_fix import psutil
 
 path = os.path
 

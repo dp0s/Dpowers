@@ -17,12 +17,11 @@
 #
 #
 import os, warnings
-import os.path as p
 
 
 
 
-Dhelperspath = p.split(p.realpath(__file__))[0]
+Dhelperspath = os.path.split(os.path.realpath(__file__))[0]
 
 
 def import_all(folder, globals, raise_error=False):
@@ -36,7 +35,7 @@ def import_all(folder, globals, raise_error=False):
             if raise_error: raise
             warnings.warn(f"Module {modname} not loaded because of error: {e}")
     for modname in folders:
-        dir = p.join(folder,modname)
+        dir = os.path.join(folder,modname)
         if "__init__.py" not in os.listdir(dir): continue
         try:
             yield modname, __import__(modname, globals=globals, level=1)
@@ -44,14 +43,18 @@ def import_all(folder, globals, raise_error=False):
             if raise_error: raise
             warnings.warn(f"Subpackage {modname} not loaded because of error: {e}")
 
+def extract_all(mod, globals):
+    try:
+        all_names = mod.__all__
+    except AttributeError:
+        for _name, _value in mod.__dict__.items():
+            if _name.startswith("__") or _name in globals: continue
+            globals[_name] = _value
+    else:
+        for _name in all_names: globals[_name] = getattr(mod, _name)
 
-for modname,mod in import_all(Dhelperspath, globals()):
-    g = globals()
-    for name,value in mod.__dict__.items():
-        if name in g:
-            #warnings.warn(f"Name {name} already defined: {g[name]}")
-            continue
-        g[name] = value
-        #print(name, " from ", mod)
 
-del g, mod, name, value, p
+
+for _,_mod in import_all(Dhelperspath, globals()): extract_all(_mod, globals())
+    
+del _,_mod, os, warnings

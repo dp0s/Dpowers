@@ -11,7 +11,6 @@ Start your Script e.g. with the following lines:
 
 from Dpowers import *
 
-ThisScript().terminate_other_instances()  
 Icon().start()
 
 Documentation and/or more examples will be added later.

@@ -19,7 +19,7 @@
 
 
 
-__all__ = ["Dpowers","autoadapt","sleep","launch","ThisScript","Icon","Win",
+__all__ = ["Dpowers","autoadapt","sleep","launch","Icon","Win",
     "keyb", "mouse","ntfy","dlg","hotkeys","hook","sendwait","nfsendwait",
     "clip", "Dfuncs","events", "KeyWaiter", "Image"]
 
@@ -39,14 +39,13 @@ except ModuleNotFoundError:
     import Dhelpers
 
 
-__version__ = "0.0.3c3"
+__version__ = "0.1.0"
 from Dhelpers import __version__  as Dhelpers_version
 #Dpowers and Dhelpers share version number
 if __version__ != Dhelpers_version: raise ValueError
 
 from Dhelpers.all import (always_print_traceback, restore_print_func,
-    launch, ThisScript, AdaptorBase, adaptionmethod, AdaptionError, ArgSaver,
-    Layout)
+    launch, AdaptorBase, adaptionmethod, AdaptionError, ArgSaver, Layout)
 
     
 try:
