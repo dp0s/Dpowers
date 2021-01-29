@@ -24,7 +24,8 @@ import multiprocessing, os, subprocess, warnings, shutil, sys
 
 dirname = os.path.dirname(os.path.realpath(__file__))
 os.chdir(dirname)
-
+shutil.rmtree("build", ignore_errors=True)
+shutil.rmtree("dist", ignore_errors=True)
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -39,12 +40,13 @@ except FileNotFoundError as e:
 module_folder = os.path.join(dirname,"Dlib")
 sys.path.insert(0, module_folder)
 #this way we will import from this folder not from pip
-import Dpowers, Dhelpers, evdev_prepared
+import Dpowers, Dhelpers
+
+
 
 def my_setup(name, **kwargs):
     if "version" not in kwargs: raise ValueError
     shutil.rmtree(f"Dlib/{name}.egg-info", ignore_errors=True)
-    shutil.rmtree("build", ignore_errors=True)
     print()
     print()
     print(f"------------------------  Package {name} ----------------------------")
@@ -102,11 +104,6 @@ my_setup("Dhelpers",
     description="Dhelpers support modules"
     )
 
-my_setup("evdev_prepared",
-    version = evdev_prepared.__version__,
-    install_requires=["evdev==1.2.0", "setuptools >= 45"],
-    description="Useful classes to make usage of python evdev easier"
-    )
 
 
 print()
