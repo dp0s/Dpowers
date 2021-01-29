@@ -39,7 +39,7 @@ except FileNotFoundError as e:
 module_folder = os.path.join(dirname,"Dlib")
 sys.path.insert(0, module_folder)
 #this way we will import from this folder not from pip
-import Dpowers, Dhelpers, evdev_prepared
+import Dpowers, Dhelpers
 
 def my_setup(name, **kwargs):
     if "version" not in kwargs: raise ValueError
