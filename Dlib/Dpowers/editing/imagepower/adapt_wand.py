@@ -1,6 +1,6 @@
 from wand.image import Image
 
-image_class = Image
+obj_class = Image
 
 
 def load(file, **kwargs):
@@ -28,11 +28,23 @@ def save(obj, destination):
     
 def close(obj):
     obj.destroy()
-    
 
-attr_list = ["compression", "compression_quality", "resolution", "size"]
+def compression(obj, value):
+    if value is None: return obj.compression
+    obj.compression = value
 
+def compr_quality(obj, value):
+    if value is None: return obj.compression_quality
+    obj.compression_quality = value
     
+def resolution(obj, value):
+    if value is None: return obj.resolution
+    obj.resolution = value
+
+def size(obj, value):
+    if value is None: return obj.size
+    obj.size = value
+
 def set_value(backend_obj, name, value = None):
     val_before = getattr(backend_obj, name)
     if value is None: return val_before

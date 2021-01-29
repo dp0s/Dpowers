@@ -58,3 +58,6 @@ class implementations:
         
     class ImageAdaptor:
         default = "wand"
+        
+    class mp3tagAdaptor:
+        default ="eyed3"

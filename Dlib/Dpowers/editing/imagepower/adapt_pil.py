@@ -1,6 +1,6 @@
 from PIL import Image
 
-image_class = Image.Image
+obj_class = Image.Image
 
 def load(file):
     return Image.open(file)

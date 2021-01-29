@@ -21,7 +21,7 @@
 
 __all__ = ["Dpowers","autoadapt","sleep","launch","Icon","Win",
     "keyb", "mouse","ntfy","dlg","hotkeys","hook","sendwait","nfsendwait",
-    "clip", "Dfuncs","events", "KeyWaiter", "Image"]
+    "clip", "Dfuncs","events", "KeyWaiter", "Image", "mp3tag"]
 
 import os, sys
 from time import sleep
@@ -39,7 +39,7 @@ except ModuleNotFoundError:
     import Dhelpers
 
 
-__version__ = "0.1.0"
+__version__ = "0.1.0rc1"
 from Dhelpers import __version__  as Dhelpers_version
 #Dpowers and Dhelpers share version number
 if __version__ != Dhelpers_version: raise ValueError
@@ -100,10 +100,9 @@ try:
     from .iconpower import IconAdaptor, IconHandler
     class Icon(IconHandler):
         adaptor = IconAdaptor(_primary=True)
-        
-    from Dpowers.editors.imagepower import ImageAdaptor, ImageBase
-    class Image(ImageBase):
-        adaptor = ImageAdaptor(_primary=True)
+    
+    from . import editing
+    from .editing import Image, ImageAdaptor, mp3tag, mp3tagAdaptor
 
     from . import Dfuncs
     from .Dfuncs import sendwait, nfsendwait
