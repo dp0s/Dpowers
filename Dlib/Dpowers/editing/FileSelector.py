@@ -20,10 +20,58 @@ import os, warnings
 from . import mp3tag
 
 
+
+
+class BooleanFunction:
+    @classmethod
+    def getfunc(cls, func):
+        if hasattr(func, 'func'):
+            if isinstance(func.func, cls):
+                return func.func.func
+            elif isinstance(func, cls):
+                return func.func
+        assert callable(func)
+        return func
+    def __init__(self, func):
+        self.func = self.getfunc(func)
+    def __call__(self, *args, **kwargs):
+        return bool(self.func(*args, **kwargs))
+    def negate(self):
+        return self.__class__(
+                func=lambda *args, **kwargs: not self.func(*args, **kwargs))
+    def __and__(self, other):
+        otherfunc = self.getfunc(other)
+        return self.__class__(func=lambda *args, **kwargs: bool(
+                self.func(*args, **kwargs)) & bool(
+                otherfunc(*args, **kwargs)))
+    def __or__(self, other):
+        otherfunc = self.getfunc(other)
+        return self.__class__(func=lambda *args, **kwargs: bool(
+                self.func(*args, **kwargs)) | bool(
+                otherfunc(*args, **kwargs)))
+
+class Filelist(BooleanFunction):
+    creator = None
+    def __init__(self, name=None, func=None, add=True, **kwargs):
+        self.name = name
+        if name is None: add = False
+        if not func:
+            if not kwargs: raise ValueError
+            func = lambda obj: self.creator.default_selection_func(obj,
+                    **kwargs)
+        BooleanFunction.__init__(self, func)
+        if add: self.creator.add(name, func)
+
+
 class FileSelector:
     editor_class = None
+    file_extension = ""
+    file_start = ""
     
     def __init__(self, basepath, destpath=None):
+        filelist_cls = type(f"Filelist", (Filelist,), {})
+        filelist_cls.creator = self
+        self.Filelist = filelist_cls
         self.basepath = basepath
         self.destpath = destpath if destpath else os.path.join(basepath,
                 "__playlists")#
@@ -32,14 +80,6 @@ class FileSelector:
     
     def add(self, name, func=None, **kwargs):
         self.playlists[name] = (func, kwargs)
-    
-    def playlist(self, name):
-        def decorator(func):
-            self.add(name, func=func)
-            return func
-        return decorator
-    
-    __call__ = playlist
     
     @staticmethod
     def default_selection_func(obj, kwargs):
@@ -79,8 +119,9 @@ class FileSelector:
         lists = self.assemble_lists(*names, **kwargs)
         print("Creating playlists:")
         for name, list in lists.items():
-            fpath = os.path.join(self.destpath,name+".m3u")
+            fpath = os.path.join(self.destpath,name+self.file_extension)
             with open(fpath,"w") as new:
+                new.write(self.file_start+"\n")
                 for file in list: new.write(file+"\n")
             print(f"{name}: {len(list)} songs in {fpath}")
 
@@ -89,6 +130,8 @@ class FileSelector:
 class playlist_creator(FileSelector):
     
     editor_class = mp3tag
+    file_extension = ".m3u"
+    file_start = "#EXTM3U"
     
     @staticmethod
     def default_selection_func(obj,genre=None):

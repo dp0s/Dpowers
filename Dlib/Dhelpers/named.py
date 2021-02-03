@@ -85,40 +85,40 @@ class NamedObj(KeepInstanceRefs):
             try:
                 existing_obj = self.instance(name)  # this uses make_comparable
             except KeyError:
-                continue
-            # if name was already used:
-            if name in existing_obj.names:  # this does not use make_comparable
-                raise NameError("Name " + name + " already assigned.")
+                pass
             else:
-                # this happens if e.g. agrave and Agrave are entered
-                self.names_with_important_capital_letters.update({name.lower()})
-        self.names += names
-        self.calculate_refs()  # it is important that calculate_refs is run
-            # each time so that names_with_important_capital_letters stays up
-            # tp date
+                # if name was already used:
+                if name in existing_obj.names:  # this does not use make_comparable
+                    raise NameError("Name " + name + " already assigned.")
+                else:
+                    # this happens if e.g. agrave and Agrave are entered
+                    self.names_with_important_capital_letters.update({name.lower()})
+            self.names.append(name)
+            name2 = self.make_comparable(name)
+            self.defined_objects[name2] = self
+            self.name_to_stnd_name[name2] = self.name
+        
         
     @classmethod
-    def calculate_refs(cls, ignore=None):
+    def re_calculate_refs(cls, ignore=None):
         cls.defined_objects = {}
         cls.name_to_stnd_name = {}
-        for keyobj in cls.get_instances():
-            if keyobj is ignore:
+        for inst in cls.get_instances():
+            if inst is ignore:
                 continue  # this possibilitx is intended for the __del__ method
-            for name in keyobj.names_comparable:
-                if name in cls.defined_objects:
-                    print(keyobj, keyobj.names,keyobj.names_comparable)
-                    raise NameError("Key name " + str(
-                            name) + " exists more than 1 time.")
-                cls.defined_objects[name] = keyobj
-                cls.name_to_stnd_name[name] = keyobj.name
-            for group_name in keyobj.groups:
-                members = cls.defined_groups[group_name]
-                if keyobj not in members: members.append(keyobj)
-        # for group in cls.defined_groups:
-        #     group = cls.make_comparable(group)
-        #     if group in cls.defined_objects:
-        #         raise NameError(f"{group} defined multiple times for {cls}")
-                
+            inst._register_instance()
+    
+    def _register_instance(self):
+        for name in self.names_comparable:
+            if name in self.defined_objects:
+                print(self, self.names, self.names_comparable)
+                raise NameError(
+                        "Key name " + str(name) + " exists more than 1 time.")
+            self.defined_objects[name] = self
+            self.name_to_stnd_name[name] = self.name
+        for group_name in self.groups:
+            members = self.defined_groups[group_name]
+            if self not in members: members.append(self)
     
     @property
     def name(self):
@@ -140,7 +140,7 @@ class NamedObj(KeepInstanceRefs):
             # usually return the lower case version.
             # but if the name exists in different cases,
             # return the name unchanged.
-        return str(name)
+        return name
     
     @property
     def stnd_name_comparable(self):
@@ -195,7 +195,7 @@ class NamedObj(KeepInstanceRefs):
         #  so we need to explicitely tell the calculate ref function to
         # ignore this instance
         #raise RuntimeError
-        self.calculate_refs(ignore=self)
+        self.re_calculate_refs(ignore=self)
     
     
     def __eq__(self, other):
@@ -418,9 +418,13 @@ class NameContainer:
                     # this will avoid the special __getattr__ from below
                 except AttributeError:
                     inst = self.NamedClass(*names)
+                else:
+                    for name in names:
+                        n = self.NamedClass.make_comparable(name)
+                        if n not in inst.names_comparable:
+                            
+                            raise NameError(f"multiple defined attribute {attr}")
                 setattr(self, attr, inst)
-                if inst.names != names:
-                    raise NameError(f"multiple defined attribute {attr}")
                 if group_name: inst.add_to_group(group_name)
         for bcls in cls.__bases__:
             self._iter_class(bcls, group_name=group_name, excluded=excluded)
