@@ -139,13 +139,9 @@ class RememberInstanceCreationInfo:
         return r[:-1] + " with creation_name '%s'>" %self.creation_name
 
 
-# the following is better than a staticmethod, because it allows using the
-# the __init__ method of RememberInstanceCreationInfo without subclassing it
 def check_existence_after_creation(obj, frame):
-    while frame.f_lineno == obj.creation_line:
-        time.sleep(0.01)
-    # this is executed as soon as the line number changes
-    # now we can be sure the instance was actually created
+    time.sleep(0.1)
+    #while frame.f_lineno == obj.creation_line:
     error = InstanceCreationError(
             "\nCreation name not found in creation frame.\n"
             "creation_file: %s \ncreation_line: %s \n"

@@ -19,10 +19,7 @@
 import os, warnings
 
 
-
-
 Dhelperspath = os.path.split(os.path.realpath(__file__))[0]
-
 
 def import_all(folder, globals, raise_error=False):
     _, folders, files = os.walk(folder).__next__()
@@ -43,18 +40,19 @@ def import_all(folder, globals, raise_error=False):
             if raise_error: raise
             warnings.warn(f"Subpackage {modname} not loaded because of error: {e}")
 
-def extract_all(mod, globals):
+def extract_all(mod, globals, all):
     try:
-        all_names = mod.__all__
+        names = mod.__all__
     except AttributeError:
-        for _name, _value in mod.__dict__.items():
-            if _name.startswith("__") or _name in globals: continue
-            globals[_name] = _value
-    else:
-        for _name in all_names: globals[_name] = getattr(mod, _name)
+        names = tuple(name for name in mod.__dict__ if not name.startswith(
+                "__"))
+    for name in names:
+        if name in globals: continue
+        globals[name] = getattr(mod, name)
+        all.append(name)
 
-
-
-for _,_mod in import_all(Dhelperspath, globals()): extract_all(_mod, globals())
+__all__ = []
+for _,_mod in import_all(Dhelperspath, globals()):
+    extract_all(_mod, globals(), __all__)
     
 del _,_mod, os, warnings
