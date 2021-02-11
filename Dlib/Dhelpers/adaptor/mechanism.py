@@ -20,8 +20,8 @@
 
 import importlib, inspect, functools, types, os, pkgutil, sys, logging, \
     traceback, warnings, operator
-from .baseclasses import RememberInstanceCreationInfo, KeepInstanceRefs
-from .arghandling import (check_type, remove_first_arg, ArgSaver)
+from ..baseclasses import RememberInstanceCreationInfo, KeepInstanceRefs
+from ..arghandling import (check_type, remove_first_arg, ArgSaver)
 
 
 
@@ -49,6 +49,7 @@ def adaptionmethod(target_name=None, require=False):
 class AdaptionFuncPlaceholder:
     def __init__(self, cls_func, target_name, require_target):
         self.cls_func = cls_func
+        #self.__doc__ = cls_func.__doc__
         self.__name__ = cls_func.__name__
         self.target_name = self.__name__ if target_name is None else target_name
         self.target_modifier_func = None

@@ -21,16 +21,23 @@ import time
 
 
 class ClipboardAdaptor(Adaptor):
+    """test doc"""
     selection_names = {
         0: "clipboard", 1: "primary selection", 2: "secondary selection"
         }
     
     @adaptionmethod
     def get(self, selection=0) -> str:
+        """Retrieves the content
+        
+        :param selection: The selection to be retrieved. Defaults to 0,
+        i.e. the standard clipboard.
+        :return str: retrieved content
+        """
         return self.get.target_with_args()
     
     @adaptionmethod
-    def fill(self, content, selection=0, notify=False):
+    def fill(self, content:str, selection=0, notify=False):
         content=str(content)
         self.fill.target(content,selection)
         # now we check that the content was successfully pasted into the

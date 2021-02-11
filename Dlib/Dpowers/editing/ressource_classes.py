@@ -116,6 +116,7 @@ class ResourceBase:
         self.close()
     
     def close(self):
+        """Close the ressource"""
         if self.backend_obj: self.adaptor.close(self.backend_obj)
         self.backend_obj = ClosedResource
     
