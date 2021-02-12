@@ -1,6 +1,6 @@
 #
 #
-# Copyright (c) 2020 DPS, dps@my.mail.de
+# Copyright (c) 2021 DPS, dps@my.mail.de
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,34 +22,38 @@ import importlib, inspect, functools, types, os, pkgutil, sys, logging, \
     traceback, warnings, operator
 from ..baseclasses import RememberInstanceCreationInfo, KeepInstanceRefs
 from ..arghandling import (check_type, remove_first_arg, ArgSaver)
-
+from types import FunctionType
 
 
 class AdaptionError(Exception):
     pass
 
 
+
 def adaptionmethod(target_name=None, require=False):
     """this is a decorator to turn methods into adaptionmethods"""
-    if callable(target_name):
+    if isinstance(target_name, FunctionType):
+        assert require is False
+        func = target_name
         # if target_name is callable that means that @adaptionmethod was used
         #  without argument. in this case, target_name is actually the
         # decorated method, and we directly return the result of decoration
-        return AdaptionFuncPlaceholder(cls_func=target_name, target_name=None,
-                require_target=require)
+        func._placeholder = AdaptionFuncPlaceholder(cls_func=func)
+        return func
     elif target_name is None or isinstance(target_name, str):
-        # in this case we want to return another decorator to apply to the
-        # cls_func:
-        return functools.partial(AdaptionFuncPlaceholder,
-                target_name=target_name, require_target=require)
+        def decorator(func):
+            placeholder = AdaptionFuncPlaceholder(func, target_name, require)
+            func._placeholder = placeholder
+            return func
+        return decorator
     raise TypeError
 
 
 
 class AdaptionFuncPlaceholder:
-    def __init__(self, cls_func, target_name, require_target):
+    def __init__(self, cls_func, target_name=None, require_target=False):
+        cls_func.target_modifier = self.target_modifier
         self.cls_func = cls_func
-        #self.__doc__ = cls_func.__doc__
         self.__name__ = cls_func.__name__
         self.target_name = self.__name__ if target_name is None else target_name
         self.target_modifier_func = None
@@ -219,16 +223,14 @@ class AdaptionMethod:
 
 def _get_AdaptionFuncPlaceholders(cls):
     for name, obj in vars(cls).items():
-        if isinstance(obj, AdaptionFuncPlaceholder):
-            yield name
+        if hasattr(obj,"_placeholder"): yield name
     for basecls in cls.__bases__:
         for name in _get_AdaptionFuncPlaceholders(basecls):
             try:
                 obj = getattr(cls, name)
             except AttributeError:
                 continue
-            if isinstance(obj, AdaptionFuncPlaceholder):
-                yield name
+            if hasattr(obj,"_placeholder"): yield name
                 
 
 class AdaptorBase(KeepInstanceRefs):
@@ -267,8 +269,11 @@ class AdaptorBase(KeepInstanceRefs):
             if group is None: raise ValueError
             prim_inst = self.get_primary_instance()
             if prim_inst:
-                raise ValueError("Primary instance for this instance group "
-                                 "already set:\n" + str(prim_inst))
+                raise ValueError(f"Primary instance for this instance group "
+                                 "already set:\n{prim_inst}")
+            if group == "default":
+                self.__doc__ = f"Default instance of " \
+                               f"{self.__class__.__name__} class."
             # the following is a way of conditionally subclassing:
             RememberInstanceCreationInfo.__init__(self)
             self.primary = True  # self.adapt_on_first_use = True #overrides
@@ -276,7 +281,7 @@ class AdaptorBase(KeepInstanceRefs):
         self.implementation = None
         
         for name in self.adaptionmethod_names:
-            placeholder = getattr(self.__class__, name)
+            placeholder = getattr(self.__class__, name)._placeholder
             amethod = AdaptionMethod(placeholder, self)
             setattr(self, name, amethod)
         
@@ -296,7 +301,15 @@ class AdaptorBase(KeepInstanceRefs):
     
     def adapt(self, main_info=None, *, warn=True, raise_error=True,
             check_adapted=True, **method_infos):
-        """main_info can be string, Implementation or ArgSaver object."""
+        """
+        
+        :param main_info:
+        :param warn:
+        :param raise_error:
+        :param check_adapted:
+        :param method_infos:
+        :return:
+        """
         try:
             if isinstance(main_info, Implementation):
                 impl = main_info
@@ -524,7 +537,7 @@ class AdaptorBase(KeepInstanceRefs):
             
     @classmethod
     def coupled_class(cls):
-        """Immediately creates a baseclass to be used"""
+        #Immediately creates a baseclass to be used
         return type(cls.__name__ + ".CoupledClass", (CoupledClass,),
                 dict(adaptor_class = cls))
 

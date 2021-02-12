@@ -1,8 +1,21 @@
-# Configuration file for the Sphinx documentation builder.
 #
-# This file only contains a selection of the most common options. For a full
-# list see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+#
+# Copyright (c) 2021 DPS, dps@my.mail.de
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+#
 
 # -- Path setup --------------------------------------------------------------
 
@@ -14,11 +27,15 @@ import os.path as path
 import sys
 sys.path.insert(0, path.join(path.abspath('..'),"Dlib"))
 
+import Dpowers
+
 # -- Project information -----------------------------------------------------
 
 project = 'Dpowers'
 copyright = '2021, dp0s'
 author = 'dp0s'
+version = Dpowers.__version__
+
 
 
 # -- General configuration ---------------------------------------------------
@@ -26,10 +43,11 @@ author = 'dp0s'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc'
+extensions = ['sphinx.ext.autodoc', "sphinx.ext.autosummary"
 ]
 
-autodoc_default_options = {'inherited-members':True}
+autodoc_default_options = {'inherited-members':True,
+    'autoclass-content': True, 'member-order':"bysource", "members":True}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

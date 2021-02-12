@@ -1,6 +1,6 @@
 #
 #
-# Copyright (c) 2020 DPS, dps@my.mail.de
+# Copyright (c) 2021 DPS, dps@my.mail.de
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@ import time
 
 
 class ClipboardAdaptor(Adaptor):
-    """test doc"""
     selection_names = {
         0: "clipboard", 1: "primary selection", 2: "secondary selection"
         }
@@ -31,8 +30,8 @@ class ClipboardAdaptor(Adaptor):
         """Retrieves the content
         
         :param selection: The selection to be retrieved. Defaults to 0,
-        i.e. the standard clipboard.
-        :return str: retrieved content
+            i.e. the standard clipboard.
+        :returns str: retrieved content
         """
         return self.get.target_with_args()
     

@@ -6,6 +6,8 @@
 Welcome to Dpowers's documentation!
 ===================================
 
+:Version: |version|
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
@@ -19,12 +21,27 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
+.. data:: Dpowers.Adaptor
 
+|
 
-test2
+.. autodata:: Dpowers.mouse
+    :no-value:
+.. autoclass:: Dpowers.MouseAdaptor
 
+|
+
+.. autodata:: Dpowers.clip
+    :no-value:
 .. autoclass:: Dpowers.ClipboardAdaptor
-    :members:
 
-.. autoclass:: Dpowers.Image
-    :members:
+|
+.. autodata:: Dpowers.ntfy
+    :no-value:
+.. autoclass:: Dpowers.NotificationAdaptor
+
+|
+.. autodata:: Dpowers.keyb
+    :no-value:
+.. autoclass:: Dpowers.KeyboardAdaptor
+
