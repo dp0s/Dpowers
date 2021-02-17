@@ -148,7 +148,7 @@ class Resource(ResourceBase):
    
 
     def __init_subclass__(cls):
-        Sequence = type(cls.__name__+".Sequence", (ResourceSequence,), {})
+        Sequence = type("Sequence", (ResourceSequence,), {})
         Sequence.__module__ = cls.__module__
         Sequence.SingleClass = cls
         cls.SingleClass = cls

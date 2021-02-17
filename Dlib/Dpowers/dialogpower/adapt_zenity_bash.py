@@ -16,11 +16,16 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from Dhelpers.all import launch, check_bash_cmd
+from Dhelpers.all import launch
 from .. import Win
 import os
 
-check_bash_cmd("zenity")
+
+
+from Dhelpers.adaptor import DependencyManager
+
+tester = DependencyManager(__name__)
+tester.test_shellcommand("zenity")
 
 def run_zenity(arg1, *args, allow_retCodes=(0, 1), check_err=False):
     cmd = ("zenity", "--" + arg1, *args)

@@ -16,7 +16,12 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from evdev_prepared.uinput import global_uinput
+from Dhelpers.adaptor import DependencyManager
+
+tester = DependencyManager(__name__)
+uinput = tester.import_module("evdev_prepared.uinput")
+
+global_uinput = uinput.global_uinput
 
 from evdev.ecodes import BTN, EV_KEY
 

@@ -3,14 +3,27 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Dpowers's documentation!
+Welcome to Dpowers' documentation!
 ===================================
 
-:Version: |version|
+Source code:
+`<https://github.com/dp0s/Dpowers>`_
+
+Introduction
+**************
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Quick Start
+
+   quickstart
+
+.. toctree::
+   :maxdepth: 2
+   :glob:
+   :caption: Reference
+
+   reference/*
 
 
 
@@ -21,27 +34,4 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-.. data:: Dpowers.Adaptor
-
-|
-
-.. autodata:: Dpowers.mouse
-    :no-value:
-.. autoclass:: Dpowers.MouseAdaptor
-
-|
-
-.. autodata:: Dpowers.clip
-    :no-value:
-.. autoclass:: Dpowers.ClipboardAdaptor
-
-|
-.. autodata:: Dpowers.ntfy
-    :no-value:
-.. autoclass:: Dpowers.NotificationAdaptor
-
-|
-.. autodata:: Dpowers.keyb
-    :no-value:
-.. autoclass:: Dpowers.KeyboardAdaptor
 

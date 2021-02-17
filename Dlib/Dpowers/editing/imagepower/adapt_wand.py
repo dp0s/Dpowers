@@ -16,7 +16,12 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from wand.image import Image
+from Dhelpers.adaptor import DependencyManager
+
+tester = DependencyManager(__name__)
+im_mod = tester.import_module("wand.image")
+
+Image = im_mod.Image
 
 obj_class = Image
 

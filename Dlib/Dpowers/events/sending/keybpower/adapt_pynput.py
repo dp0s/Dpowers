@@ -16,7 +16,10 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-import pynput
+from Dhelpers.adaptor import DependencyManager
+
+tester = DependencyManager(__name__)
+pynput = tester.import_module("pynput")
 
 keyboard = pynput.keyboard.Controller()
 DefinedKeys = pynput.keyboard.Key

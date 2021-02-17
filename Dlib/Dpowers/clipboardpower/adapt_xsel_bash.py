@@ -16,9 +16,11 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from Dhelpers.all import launch, check_bash_cmd
+from Dhelpers.all import launch
+from Dhelpers.adaptor import DependencyManager
 
-check_bash_cmd("xsel")
+tester = DependencyManager(__name__)
+tester.test_shellcommand("xsel")
 
 xsel_names = {0:"b",1:"p",2:"s"}
 

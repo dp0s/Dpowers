@@ -23,7 +23,7 @@ import importlib, inspect, functools, types, os, pkgutil, sys, logging, \
 from ..baseclasses import RememberInstanceCreationInfo, KeepInstanceRefs
 from ..arghandling import (check_type, remove_first_arg, ArgSaver)
 from types import FunctionType
-
+from .dependency_testing import BackendDependencyError, DependencyManager
 
 class AdaptionError(Exception):
     pass
@@ -310,6 +310,7 @@ class AdaptorBase(KeepInstanceRefs):
         :param method_infos:
         :return:
         """
+        raise_error = True
         try:
             if isinstance(main_info, Implementation):
                 impl = main_info
@@ -516,15 +517,15 @@ class AdaptorBase(KeepInstanceRefs):
                 # mod=sys.modules[subclass.__module__+"."+name]
                 try:
                     mod = importlib.import_module(full_name)
-                except NotImplementedError:
-                    print("-- NotImplementedError")
-                    continue
+                except BackendDependencyError as e:
+                    e.handle()
                 try:
-                    dfl = mod.dependency_full_name
-                except AttributeError:
-                    dfl = None
+                    tester = DependencyManager.instances[full_name]
+                except KeyError:
+                    warnings.warn(f"No DependencyManager found for module "
+                                  f"{full_name}.")
                 else:
-                    print("dependency module:", dfl)
+                    print(tester)
             for i in subclass.get_instances():
                 print("")
                 print("instance: ", i)
@@ -695,8 +696,11 @@ class Implementation:
                 sys.path.insert(0, self.dependency_folder)
                 # this makes sure that packages inside the dependency folder
                 # are found first. Unless the module has already been imported.
+            DependencyManager.raise_errors = BackendDependencyError
             try:
                 ret = importlib.import_module(module_full_name)
+            except BackendDependencyError as e:
+                e.handle()
             except Exception as e:
                 raise AdaptionError from e
             if self.dependency_folder: sys.path.pop(0)

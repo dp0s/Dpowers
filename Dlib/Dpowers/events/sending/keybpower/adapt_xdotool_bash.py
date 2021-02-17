@@ -16,9 +16,12 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from Dhelpers.all import launch, check_bash_cmd
+from Dhelpers.all import launch
 
-check_bash_cmd("xdotool")
+from Dhelpers.adaptor import DependencyManager
+
+tester = DependencyManager(__name__)
+tester.test_shellcommand("xdotool")
 
 names = (
     'BackSpace', 'Tab', 'Linefeed', 'Escape', 'space', 'exclam', 'quotedbl',

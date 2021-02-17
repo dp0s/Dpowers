@@ -16,9 +16,13 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-import tkinter as tk
 import functools
 
+
+from Dhelpers.adaptor import DependencyManager
+
+tester = DependencyManager(__name__)
+tk = tester.import_module("tkinter")
 
 def popup(*buttons, xpos: int, ypos: int, x_rel_mouse: bool,y_rel_mouse: bool):
     """

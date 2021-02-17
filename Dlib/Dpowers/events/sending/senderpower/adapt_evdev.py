@@ -16,8 +16,14 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from evdev_prepared.uinput import global_uinput
-from evdev_prepared.device_control import DeviceSelector
+from Dhelpers.adaptor import DependencyManager
+
+tester = DependencyManager(__name__)
+uinput = tester.import_module("evdev_prepared.uinput")
+device_control = tester.import_module("evdev_prepared.device_control")
+
+global_uinput = uinput.global_uinput
+DeviceSelector = device_control.DeviceSelector
     
 global_uinput.start()
 names = {}

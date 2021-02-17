@@ -47,9 +47,8 @@ class ImageBase(Resource, ImageAdaptor.coupled_class()):
     
     def __init_subclass__(cls):
         super().__init_subclass__()
-        multi = type(cls.__name__+".multipage", (multipage, cls.Sequence),{})
-        multi.__module__ = cls.__module__
-        cls.multipage = multi
+        cls.multipage = type("multipage", (multipage, cls.Sequence),{})
+        cls.multipage.__module__ = cls.__module__
         
     # def compression(self, value=None):
     #     return self.adaptor.compression(self.backend_obj, value)

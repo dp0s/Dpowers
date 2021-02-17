@@ -16,10 +16,17 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-import multiprocessing, functools
-from PIL import Image
 
-import pystray
+from Dhelpers.adaptor import DependencyManager
+
+tester = DependencyManager(__name__)
+pystray = tester.import_module("pystray", install_tuple=("pip install",
+            "pystray"))
+Image = tester.import_module("PIL.Image")
+
+
+
+import multiprocessing
 
 def start(IconObject):
     IconObject.queue = multiprocessing.Queue()

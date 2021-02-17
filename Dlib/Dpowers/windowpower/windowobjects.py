@@ -399,7 +399,7 @@ class FoundWindows(WindowObject):
 
     def __init_subclass__(cls):
         winsearch = type("WindowSearch", (WindowSearch,), {})
-        winsearch.__module__ = WindowSearch.__module__
+        winsearch.__module__ = __name__
         winsearch._FoundWinClass = cls
         winsearch._WinSearchClass = winsearch
         cls._FoundWinClass = cls

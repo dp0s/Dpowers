@@ -16,7 +16,10 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from PIL import Image
+from Dhelpers.adaptor import DependencyManager
+
+tester = DependencyManager(__name__)
+Image = tester.import_module("PIL.Image")
 
 obj_class = Image.Image
 

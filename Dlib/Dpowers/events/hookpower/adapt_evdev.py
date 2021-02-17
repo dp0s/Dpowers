@@ -20,13 +20,15 @@
 from evdev.ecodes import (EV_KEY, EV_ABS, EV_SYN, EV_MSC, KEY, BTN,
     EV_LED, EV_REL, ABS_MT_POSITION_X, ABS_MT_POSITION_Y, ABS_X, ABS_Y,
     REL_X, REL_Y, bytype)
-from evdev_prepared import uinput, device_control
 
 from .baseclasses import (InputEventHandler, KeyhookBase, ButtonhookBase,
     CursorhookBase, CustomhookBase, PressReleaseHook)
-from abc import abstractmethod
 
+from Dhelpers.adaptor import DependencyManager
 
+tester = DependencyManager(__name__)
+device_control = tester.import_module("evdev_prepared.device_control")
+uinput = tester.import_module("evdev_prepared.uinput")
 
 
 

@@ -21,7 +21,7 @@
 
 __all__ = ["Dpowers","autoadapt","sleep","launch","Icon","Win",
     "keyb", "mouse","ntfy","dlg","hotkeys","hook","sendwait","nfsendwait",
-    "clip", "Dfuncs","events", "KeyWaiter", "Image", "mp3tag"]
+    "clip", "Dfuncs","events", "KeyWaiter", "Image", "mp3tag", "Dhelpers"]
 
 import os, sys
 from time import sleep
@@ -85,6 +85,7 @@ try:
     class Win(WindowHandler):
         adaptor = WindowAdaptor(_primary=True)
 
+    
     from .dialogpower import DialogAdaptor
     dlg = DialogAdaptor(_primary=True)
 
@@ -103,6 +104,7 @@ try:
     
     from . import editing
     from .editing import Image, ImageAdaptor, mp3tag, mp3tagAdaptor
+    
 
     from . import Dfuncs
     from .Dfuncs import sendwait, nfsendwait

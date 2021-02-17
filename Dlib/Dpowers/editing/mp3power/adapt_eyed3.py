@@ -16,10 +16,13 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-import eyed3.mp3
+from Dhelpers.adaptor import DependencyManager
 
+tester = DependencyManager(__name__)
+mp3 = tester.import_module("eyed3.mp3")
+import eyed3 #this is already imported and will just place the name here again
 
-obj_class = eyed3.mp3.Mp3AudioFile
+obj_class = mp3.Mp3AudioFile
 eyed3.log.setLevel("ERROR")
 
 def load(file, **kwargs):
