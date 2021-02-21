@@ -17,5 +17,7 @@
 #
 #
 
-from .mechanism import *
+from .adaptor_classes import *
 from .dependency_testing import *
+from .backend_class import *
+from .platform import *

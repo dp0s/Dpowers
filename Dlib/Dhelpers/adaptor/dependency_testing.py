@@ -26,14 +26,16 @@ def import_adapt_module(mod_full_name, dependency_folder=None):
     return mod
 
 
-def get_module_dependencies(*args,**kwargs):
+def get_module_dependencies(*args,perform_check=False,**kwargs):
     DependencyManager.exit_module = True
+    DependencyManager.check_dependency  =perform_check
     try:
-        import_adapt_module(*args,**kwargs)
+        mod = import_adapt_module(*args,**kwargs)
     except ReturnFromModule as e:
         pass
     DependencyManager.exit_module = False
-    return e
+    DependencyManager.check_dependency = True
+    return mod
     
     
     
@@ -54,8 +56,9 @@ class BackendDependencyError(Exception):
             
             
 class DependencyManager:
-    raise_errors = True
+    raise_errors = True  #this is import in Dependency class, method raise_
     exit_module = False
+    check_dependency = True
     dependency_folder = None
     instances = {}
     
@@ -103,7 +106,6 @@ class DependencyManager:
 
 
 
-
 class Dependency:
     
     def __init__(self, name, install_tuple=None, install_instruction=None,
@@ -112,15 +114,18 @@ class Dependency:
         self.manager = None
         self.install_tuple_dict = defaultdict(list)
         self.install_instruction_dict = defaultdict(list)
-        if install_tuple: self.install_tuple(*install_tuple, system=system)
-        if install_instruction: self.install_instruction(install_instruction,
+        if install_tuple: self.add_install_tuple(*install_tuple, system=system)
+        if install_instruction: self.add_install_instruction(install_instruction,
                 system=system)
         
-        
-    def install_tuple(self,command,package,system=""):
+    @property
+    def check_dependency(self):
+        return self.manager.check_dependency
+    
+    def add_install_tuple(self,command,package,system=""):
         self.install_tuple_dict[system].append((command, package))
     
-    def install_instruction(self, instr, system=""):
+    def add_install_instruction(self, instr, system=""):
         self.install_instruction_dict[system].append(instr)
         
     def raise_BackendDependencyError(self, caused_by=None):
@@ -138,6 +143,7 @@ class PythonDependency(Dependency):
         self.module_name = module_name
         
     def imprt(self):
+        if not self.check_dependency: return
         if self.manager.dependency_folder:
             sys.path.insert(0, self.manager.dependency_folder)
             # this makes sure that packages
@@ -150,6 +156,8 @@ class PythonDependency(Dependency):
             mod = NotImplemented
         if self.manager.dependency_folder: sys.path.pop(0)
         return mod
+    
+    
     
 command_exists_cmd = "command -v "
 
@@ -164,6 +172,7 @@ class ShellDependency(Dependency):
         
         
     def test(self):
+        if not self.check_dependency: return
         try:
             launch.get(command_exists_cmd + self.cmd)
         except launch.CalledProcessError:

@@ -52,11 +52,11 @@ from Dhelpers.all import (always_print_traceback, restore_print_func,
 try:
     always_print_traceback()
 
-    from .implementation_defs import implementations
+    from .default_backends import backends
 
     class Adaptor(AdaptorBase):
         #dependency_folder = dependency_folder
-        implementation_source = implementations
+        backend_defaults = backends
         NamedKeyClass = None  #set later
         NamedButtonClass = None  #set later
 
@@ -65,16 +65,6 @@ try:
     adapt_all = Adaptor.adapt_all
     deactivate_autoadapt = Adaptor.deactivate_autoadapt
     check_adapted = Adaptor.check_adapted
-
-        #def autoadapt(self):
-            #"""this method allows to automatically choose the platform's standard
-            #implementation for a single Adaptor instance"""
-            #return self.lookup(impl_dict=default_impl_dict)
-
-    # def apply_autoadapt():
-    #     Adaptor.apply_implementation_dict(default_impl_dict)
-    #     if Adaptor.implementation_dict != default_impl_dict: raise ValueError
-    #     return Adaptor.implementation_dict
 
 
     from .notificationpower import NotificationAdaptor
@@ -114,4 +104,4 @@ finally:
 
 #clean up this namespace
 del os, AdaptorBase, adaptionmethod, always_print_traceback, \
-    restore_print_func, implementations
+    restore_print_func, backends

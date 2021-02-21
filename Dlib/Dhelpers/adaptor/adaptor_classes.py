@@ -22,8 +22,6 @@ import importlib, inspect, functools, types, os, pkgutil, sys, logging, warnings
 from ..baseclasses import RememberInstanceCreationInfo, KeepInstanceRefs
 from ..arghandling import (check_type, remove_first_arg, ArgSaver)
 from types import FunctionType
-from .dependency_testing import BackendDependencyError, DependencyManager, \
-    import_adapt_module
 
 class AdaptionError(Exception):
     pass
@@ -94,7 +92,7 @@ class AdaptionMethod:
         # this will copy __doc__, __name__ and __module__, as well as signature
         self.Adaptor_instance = Adaptor_instance
         self.__self__ = Adaptor_instance
-        self.impl_info = None
+        self.backend_info = None
         self.target_space = None
         self.dependency_dict = None
         self.target = None
@@ -113,10 +111,10 @@ class AdaptionMethod:
     
     
     
-    def adapt(self, impl_info):
-        impl = self.Adaptor_instance.implementation
+    def adapt(self, backend_info):
+        backend = self.Adaptor_instance.backend
         name = self.__name__
-        impl.update_target_spaces(method_infos={name: impl_info})
+        backend.update_target_spaces(method_infos={name: backend_info})
         self.set_target()
         return self.target_space
     
@@ -130,7 +128,7 @@ class AdaptionMethod:
         if not self.Adaptor_instance.is_adapted:
             # this will automatically adapt the Adaptor_instance if
             # adapt_on_first_use is True
-            raise AdaptionError("No implementation chosen for "
+            raise AdaptionError("No backend chosen for "
                                 "following adaptor:\n%s"%self.Adaptor_instance)
         try:
             ret = self.cls_func(self.Adaptor_instance, *args, **kwargs)
@@ -163,13 +161,13 @@ class AdaptionMethod:
     
     
     def set_target(self):
-        impl = self.Adaptor_instance.implementation
+        backend = self.Adaptor_instance.backend
         name = self.__name__
-        target_space = impl.method_target_spaces.get(name)
+        target_space = backend.method_target_spaces.get(name)
         if target_space is None:
             self.target = None
             self.target_space = None
-            self.impl_info = None
+            self.backend_info = None
             return
         try:
             target = getattr(target_space, self.target_name)
@@ -177,10 +175,10 @@ class AdaptionMethod:
             if self.require_target:
                 raise AdaptionError(f"Required function '{self.__name__}' "
                 f"was not found.\ntartget namespace: "
-                f" {target_space}\nimplementation: {impl}")
+                f" {target_space}\nbackend: {backend}")
             target = NotImplemented
         self.target_space = target_space
-        self.impl_info = impl.method_infos.get(name, impl.main_info)
+        self.backend_info = backend.method_infos.get(name, backend.main_info)
         obj, ty = target, type(target)
         if ty is types.MethodType:
             def turn_to_func(method):
@@ -234,7 +232,7 @@ def _get_AdaptionFuncPlaceholders(cls):
                 
 
 class AdaptorBase(KeepInstanceRefs):
-    implementation_source = None  # set in first level subclass
+    backend_defaults = None  # set in first level subclass
     # adapt_on_first_use = False
     autoadapt_active = False
     dependency_folder = None  # set in first level subclass
@@ -252,8 +250,8 @@ class AdaptorBase(KeepInstanceRefs):
                                   "not allowed to have adaptionmethods.")
             cls.adaptionmethod_names = set(l)
                 #this will inherit names already defined
-            cls.implementation_classes = None
-            cls.added_impl_names = {}
+            cls.backend_classes = None
+            cls.added_backend_names = {}
             
     
     def __init__(self, main_info=None, *, group="default", _primary=False,
@@ -278,7 +276,7 @@ class AdaptorBase(KeepInstanceRefs):
             RememberInstanceCreationInfo.__init__(self)
             self.primary = True  # self.adapt_on_first_use = True #overrides
             # class default
-        self.implementation = None
+        self.backend = None
         
         for name in self.adaptionmethod_names:
             placeholder = getattr(self.__class__, name)._placeholder
@@ -312,13 +310,13 @@ class AdaptorBase(KeepInstanceRefs):
         """
         raise_error = True
         try:
-            if isinstance(main_info, Implementation):
-                impl = main_info
-                if method_infos: impl.update_target_spaces(None, method_infos)
+            if isinstance(main_info, Backend):
+                backend = main_info
+                if method_infos: backend.update_target_spaces(None, method_infos)
             else:
                 if main_info is None and not method_infos:
-                    main_info = self.get_from_impl_dict()
-                impl = Implementation(self.__class__, main_info, method_infos)
+                    main_info = self.get_from_backend_source()
+                backend = Backend(self.__class__, main_info, method_infos)
         except AdaptionError as e:
             if raise_error: raise
             if warn:
@@ -331,13 +329,13 @@ class AdaptorBase(KeepInstanceRefs):
                     text += "caused by\n"
                 warnings.warn(text)
             return False
-        if impl.main_info is None and not impl.method_infos:
+        if backend.main_info is None and not backend.method_infos:
             if check_adapted:
-                raise AdaptionError("Given implementation information not "
-                            "valid and none found in default implementations")
-        self.implementation = impl
+                raise AdaptionError("Given backend information not "
+                            "valid and none found in default backends.")
+        self.backend = backend
         for amethod in self.adaptionmethods(): amethod.set_target()
-        return impl.show_target_spaces()
+        return backend.show_target_spaces()
     
     
     
@@ -347,14 +345,14 @@ class AdaptorBase(KeepInstanceRefs):
                 :-1] + ", primary instance of group '"
         else:
             r = super().__repr__()[:-1] + ", instance group: '"
-        r += str(self.instance_group) + "', implementation: " + str(
-                self.implementation) + ">"
+        r += str(self.instance_group) + "', backend: " + str(
+                self.backend) + ">"
         return r
     
     
     @property
     def is_adapted(self):
-        return self.implementation is not None
+        return self.backend is not None
     
     @classmethod
     def deactivate_autoadapt(cls):
@@ -367,11 +365,12 @@ class AdaptorBase(KeepInstanceRefs):
     
     @classmethod
     def _adapt_all(cls, omit_adapted_inst=False, raise_error=True, warn=True,
-            impl_source=None):
+            backend_source=None):
         for inst in cls.get_instances():
             if inst.is_adapted and omit_adapted_inst: continue
-            impl_info = inst.get_from_impl_dict(impl_source=impl_source)
-            inst.adapt(impl_info, raise_error=raise_error, warn=warn,
+            bakcend_info = inst.get_from_backend_source(
+                    backend_source=backend_source)
+            inst.adapt(bakcend_info, raise_error=raise_error, warn=warn,
                     check_adapted=False)
     
     @classmethod
@@ -394,36 +393,19 @@ class AdaptorBase(KeepInstanceRefs):
     
     
     
-    # @property
-    # def implementation(self):
-    #     if self._implementation is None and self.adapt_on_first_use and not \
-    #             self.autoadapt_active:
-    #         try:
-    #             self.adapt()
-    #         except AdaptionError:
-    #             self.adapt_on_first_use = False
-    #     return self._implementation
+    
     
     @classmethod
-    def update_group_implementation(cls, apply=True, **new_group_infos):
+    def update_group_backend(cls, apply=True, **new_group_infos):
         if not hasattr(cls, "adaptionmethod_names"): raise SyntaxError
-        for group, impl_info in new_group_infos.items():
-            x = getattr(cls.implementation_source, cls.__name__)
-            setattr(x, group, impl_info)
+        for group, backend_info in new_group_infos.items():
+            x = getattr(cls.backend_defaults, cls.__name__)
+            setattr(x, group, backend_info)
             if apply:
                 for inst in cls._get_group_instances(group): inst.adapt()
     
     
-    # @classmethod
-    # def implementation_class(cls, impl_class):
-    #     """a class decorator"""
-    #     check_type(type, impl_class)
-    #     cls.added_impl_names[impl_class.__name__] = impl_class
-    #     if cls.implementation_classes is None: cls.implementation_classes =
-    #     set()
-    #     cls.implementation_classes |= {impl_class}
-    #     return impl_class
-    
+  
     @classmethod
     def _get_group_instances(cls, group_or_instance="default"):
         group = group_or_instance.instance_group if isinstance(
@@ -439,9 +421,9 @@ class AdaptorBase(KeepInstanceRefs):
         return None
     
     @classmethod
-    def _get_from_impl_dict(cls, group_or_instance="default",
-            Adaptor_class_or_name=None, impl_source=None):
-        if impl_source is None: impl_source = cls.implementation_source
+    def _get_from_backend_source(cls, group_or_instance="default",
+            Adaptor_class_or_name=None, backend_source=None):
+        if backend_source is None: backend_source = cls.backend_defaults
         
         if Adaptor_class_or_name is None:
             Adaptor_subclass_name = cls.__name__
@@ -452,7 +434,7 @@ class AdaptorBase(KeepInstanceRefs):
         check_type(str, Adaptor_subclass_name)
         
         try:
-            subclass_info_class = getattr(impl_source, Adaptor_subclass_name)
+            subclass_info_class = getattr(backend_source, Adaptor_subclass_name)
         except AttributeError:
             return
         
@@ -468,7 +450,7 @@ class AdaptorBase(KeepInstanceRefs):
             main_info = getattr(subclass_info_class, group)
         except AttributeError:
             return  # it's ok to return main_info as None
-        check_type((str, tuple, list, Implementation, ArgSaver), main_info)
+        check_type((str, tuple, list, Backend, ArgSaver), main_info)
         return main_info
     
     def get_group_instances(self):
@@ -477,9 +459,9 @@ class AdaptorBase(KeepInstanceRefs):
     def get_primary_instance(self):
         return self._get_primary_instance(self.instance_group)
     
-    def get_from_impl_dict(self, impl_source=None):
-        return self._get_from_impl_dict(self.instance_group,
-                impl_source=impl_source)
+    def get_from_backend_source(self, backend_source=None):
+        return self._get_from_backend_source(self.instance_group,
+                backend_source=backend_source)
     
     # @classmethod
     # def import_dependency(cls, dependency_name):
@@ -512,7 +494,7 @@ class AdaptorBase(KeepInstanceRefs):
                 name = submodule[1]
                 if not name.startswith("adapt_"):
                     continue
-                print("implementation:", name[6:])
+                print("backend:", name[6:])
                 full_name = subclass.__module__ + "." + name
                 # mod=sys.modules[subclass.__module__+"."+name]
                 try:
@@ -568,151 +550,8 @@ class CoupledClass:
     def adapt_instance(self, *args, **kwargs):
         self.adaptor = self.adaptor_class()
         return self.adaptor.adapt(*args, **kwargs)
+    
 
 
-
-class Implementation:
-    
-    def __repr__(self):
-        s = f"<Implementation('{self.main_info}'"
-        if self.method_infos:
-            s += f", {self.method_infos})"
-        s += f") for {self.adaptorcls.__name__}>"
-        return s
-    
-    def __str__(self):
-        s = str(self.main_info)
-        if self.method_infos:
-            s += f", {self.method_infos}"
-        return s
-    
-    def __info__(self):
-        return self.adaptorcls, self.main_target_space, \
-            self.method_target_spaces
-    
-    def __eq__(self, other):
-        if isinstance(other,self.__class__):
-            return self.__info__() == other.__info__()
-        return NotImplemented
-    
-    def __hash__(self):
-        return hash(str(self.__info__()))
-
-    def show_target_spaces(self):
-        if self.method_infos: return self.method_target_spaces
-        return self.main_target_space
-    
-    
-    def __init__(self, adaptorclass=None, main_info=None, method_infos={}):
-        if not issubclass(adaptorclass, AdaptorBase): raise TypeError
-        self.adaptorcls = adaptorclass
-        self.dependency_folder = adaptorclass.dependency_folder
-        self.main_target_space = None
-        self.method_target_spaces = {}
-        self.main_info = None  # will be set in update method
-        self.method_infos = {}  # will be set in update method
-        self.update_target_spaces(main_info, method_infos)
-    
-    def update_target_spaces(self, main_info=None, method_infos={}):
-        main_info, method_infos = self._resolve_arguments(main_info,
-                method_infos)
-        for name in method_infos:
-            if name not in self.adaptorcls.adaptionmethod_names:
-                raise NameError(f"Non-valid name for adaptionmethod of class "
-                f"{self.adaptorcls}: {name}.")
-            check_type((str, list, tuple), method_infos[name])
-        if main_info is not None:
-            check_type((str, list, tuple), main_info)
-            self.main_target_space, self.main_info = self.get_targetspace(
-                    main_info)
-        for name in self.adaptorcls.adaptionmethod_names:
-            if name in method_infos:
-                m = method_infos[name]
-                r1, r2 = self.get_targetspace(m)
-                self.method_target_spaces[name] = r1
-                self.method_infos[name] = r2
-            elif self.main_target_space is not None:
-                self.method_target_spaces[
-                    name] = self.main_target_space
-    # note: after using update_target_space (giving info arguments), the
-    # self.method_target_spaces will contain all method names. while the
-    # self.method_infos dict will only contain those infos explicitly  given.
-    # This is why you should use  exactly the following expressions to query:
-    # self_or_cls.method_target_spaces.get(name) and
-    # self_or_cls.method_infos.get(name,self_or_cls.main_info)
-    
-    
-    def refresh_target_spaces(self):
-        return self.update_target_spaces(self.main_info, **self.method_infos)
-    
-    
-    def _resolve_arguments(self, main_info, method_infos):
-        old1, old2 = main_info, method_infos
-        for _ in range(50):
-            new1, new2 = self._find_arguments(old1, old2)
-            if new1 == old1 and new2 == old2: break
-            old1, old2 = new1, new2
-        else:
-            raise RecursionError
-        return new1, new2
-    
-    def _find_arguments(self, main_info, method_infos):
-        # returns the resolved main_info, method_infos pair
-        if isinstance(main_info, self.__class__):
-            new1, new2 = main_info.main_info, main_info.method_infos
-        elif isinstance(main_info, ArgSaver):
-            if len(main_info.args) == 1:
-                new1 = main_info.args[0]
-            elif len(main_info.args) == 0:
-                new1 = None
-            else:
-                raise ValueError("Argsaver object has too many postional args.")
-            new2 = main_info.kwargs
-        else:
-            return self._resolve_name(main_info), {k: self._resolve_name(v) for
-                k, v in method_infos.items()}
-        ret2 = new2.copy()
-        ret2.update(method_infos)
-        return new1, ret2
-    
-    def _resolve_name(self, obj):
-        if isinstance(obj, (list, tuple)): return obj
-        for _ in range(50):
-            try:
-                obj = self.adaptorcls.added_impl_names[obj]
-            except KeyError:
-                break
-        else:
-            raise RecursionError
-        return obj
-    
-    def get_targetspace(self, info):
-        if isinstance(info, str):
-            # TODO: add option to give full path of module instead
-            module_name = ".adapt_" + info
-            module_location = self.adaptorcls.__module__
-            module_full_name = module_location + module_name
-            try:
-                mod = import_adapt_module(module_full_name,
-                        self.dependency_folder)
-            except Exception as e:
-                raise AdaptionError from e
-            return mod, info
-        elif isinstance(info, (list, tuple)):
-            last_error = None
-            for subinfo in info:
-                try:
-                    ret_tuple = self.get_targetspace(subinfo)
-                except AdaptionError as e:
-                    this_error = e.__cause__
-                    if last_error: this_error.__cause__ = last_error
-                    last_error = this_error
-                    continue
-                else:
-                    return ret_tuple
-            raise AdaptionError from last_error
-        # this way, all the errors that lead here, will be visible.
-        else:
-            raise TypeError(
-                    f"Require string, but got {info}.")  # TODO: Add option
-            # for implementation classes
+from .backend_class import Backend
+from .dependency_testing import BackendDependencyError, DependencyManager

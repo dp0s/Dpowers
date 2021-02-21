@@ -45,7 +45,7 @@ version = Dpowers.__version__
 extensions = ['sphinx.ext.autodoc', "sphinx.ext.autosummary", 'sphinx_rtd_theme'
 ]
 
-autodoc_default_options = {'inherited-members':True,
+autodoc_default_options = {'inherited-members':False,
     'autoclass-content': True, 'member-order':"bysource", "members":True}
 
 # Add any paths that contain templates here, relative to this directory.
