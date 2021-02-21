@@ -18,12 +18,12 @@
 #
 
 
-import importlib, inspect, functools, types, os, pkgutil, sys, logging, \
-    traceback, warnings, operator
+import importlib, inspect, functools, types, os, pkgutil, sys, logging, warnings
 from ..baseclasses import RememberInstanceCreationInfo, KeepInstanceRefs
 from ..arghandling import (check_type, remove_first_arg, ArgSaver)
 from types import FunctionType
-from .dependency_testing import BackendDependencyError, DependencyManager
+from .dependency_testing import BackendDependencyError, DependencyManager, \
+    import_adapt_module
 
 class AdaptionError(Exception):
     pass
@@ -692,19 +692,12 @@ class Implementation:
             module_name = ".adapt_" + info
             module_location = self.adaptorcls.__module__
             module_full_name = module_location + module_name
-            if self.dependency_folder:
-                sys.path.insert(0, self.dependency_folder)
-                # this makes sure that packages inside the dependency folder
-                # are found first. Unless the module has already been imported.
-            DependencyManager.raise_errors = BackendDependencyError
             try:
-                ret = importlib.import_module(module_full_name)
-            except BackendDependencyError as e:
-                e.handle()
+                mod = import_adapt_module(module_full_name,
+                        self.dependency_folder)
             except Exception as e:
                 raise AdaptionError from e
-            if self.dependency_folder: sys.path.pop(0)
-            return ret, info
+            return mod, info
         elif isinstance(info, (list, tuple)):
             last_error = None
             for subinfo in info:

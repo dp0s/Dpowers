@@ -2,6 +2,44 @@ import importlib, sys
 from collections import defaultdict
 from ..launcher import launch
 
+
+class ReturnFromModule(Exception):
+    #the whole prupose of this class is to be able to return from a module
+    # without executing it completely. Must be caught by parent module.
+    def __init__(self, module_name=None):
+        self.module_name = module_name
+        
+
+def import_adapt_module(mod_full_name, dependency_folder=None):
+    if dependency_folder:
+        sys.path.insert(0, dependency_folder)
+        # this makes sure that packages inside the dependency folder are
+        # found first. Unless the module has already been imported.
+    save = DependencyManager.raise_errors
+    DependencyManager.raise_errors = BackendDependencyError
+    try:
+        mod = importlib.import_module(mod_full_name)
+    except BackendDependencyError as e:
+        e.handle()
+    DependencyManager.raise_errors = save
+    if dependency_folder: sys.path.pop(0)
+    return mod
+
+
+def get_module_dependencies(*args,**kwargs):
+    DependencyManager.exit_module = True
+    try:
+        import_adapt_module(*args,**kwargs)
+    except ReturnFromModule as e:
+        pass
+    DependencyManager.exit_module = False
+    return e
+    
+    
+    
+
+
+
 class BackendDependencyError(Exception):
     
     def __init__(self, dependency_object, caused_by=None):
@@ -17,6 +55,7 @@ class BackendDependencyError(Exception):
             
 class DependencyManager:
     raise_errors = True
+    exit_module = False
     dependency_folder = None
     instances = {}
     
@@ -29,6 +68,15 @@ class DependencyManager:
         self.pydependencies = []
         self.shelldependencies = []
         self.systems = []
+        
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is None: self.exit()
+
+    def exit(self):
+        if self.exit_module: raise ReturnFromModule(self.module)
     
     def add_systems(self,*systems):
         self.systems += systems
@@ -36,7 +84,7 @@ class DependencyManager:
     def pydependency(self, *args, **kwargs):
         dep = PythonDependency(*args, **kwargs)
         self.pydependencies.append(dep)
-        dep.tester = self
+        dep.manager = self
         return dep
     
     def import_module(self, *args, **kwargs):
@@ -46,7 +94,7 @@ class DependencyManager:
     def shelldependency(self, *args, **kwargs):
         dep = ShellDependency(*args, **kwargs)
         self.shelldependencies.append(dep)
-        dep.tester = self
+        dep.manager = self
         return dep
     
     def test_shellcommand(self, *args,**kwargs):
@@ -61,7 +109,7 @@ class Dependency:
     def __init__(self, name, install_tuple=None, install_instruction=None,
             system=""):
         self.name = name
-        self.tester = None
+        self.manager = None
         self.install_tuple_dict = defaultdict(list)
         self.install_instruction_dict = defaultdict(list)
         if install_tuple: self.install_tuple(*install_tuple, system=system)
@@ -76,8 +124,8 @@ class Dependency:
         self.install_instruction_dict[system].append(instr)
         
     def raise_BackendDependencyError(self, caused_by=None):
-        re = self.tester.raise_errors
-        if not re: return False
+        re = self.manager.raise_errors
+        if re is False: return False
         if re is True and isinstance(caused_by, Exception): raise caused_by
         raise BackendDependencyError(self, caused_by)
         
@@ -90,8 +138,8 @@ class PythonDependency(Dependency):
         self.module_name = module_name
         
     def imprt(self):
-        if self.tester.dependency_folder:
-            sys.path.insert(0, self.tester.dependency_folder)
+        if self.manager.dependency_folder:
+            sys.path.insert(0, self.manager.dependency_folder)
             # this makes sure that packages
             # inside the dependency folder are  # found first. Unless the
             # module has already been imported.
@@ -100,7 +148,7 @@ class PythonDependency(Dependency):
         except Exception as e:
             self.raise_BackendDependencyError(e)
             mod = NotImplemented
-        if self.tester.dependency_folder: sys.path.pop(0)
+        if self.manager.dependency_folder: sys.path.pop(0)
         return mod
     
 command_exists_cmd = "command -v "

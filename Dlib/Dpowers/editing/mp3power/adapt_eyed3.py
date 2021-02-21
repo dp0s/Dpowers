@@ -18,8 +18,9 @@
 #
 from Dhelpers.adaptor import DependencyManager
 
-tester = DependencyManager(__name__)
-mp3 = tester.import_module("eyed3.mp3")
+with DependencyManager(__name__) as tester:
+    mp3 = tester.import_module("eyed3.mp3")
+
 import eyed3 #this is already imported and will just place the name here again
 
 obj_class = mp3.Mp3AudioFile

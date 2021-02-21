@@ -141,10 +141,11 @@ class PressReleaseSender(Sender):
         return PressedContext(self, *names, delay=delay)
 
     @hotkeys.add_pause_option(True)
-    def tap(self, *keynames, delay=None, duration=0.01):
-        for k in keynames:
-            with self.pressed(k, delay=delay):
-                time.sleep(duration)
+    def tap(self, *keynames, delay=None, duration=0.01, repeat = 1):
+        for _ in range(repeat):
+            for k in keynames:
+                with self.pressed(k, delay=delay):
+                    time.sleep(duration)
             
             
     @hotkeys.add_pause_option(True)

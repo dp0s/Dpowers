@@ -19,8 +19,8 @@
 from Dhelpers.all import launch
 from Dhelpers.adaptor import DependencyManager
 
-tester = DependencyManager(__name__)
-tester.test_shellcommand("xclip")
+with DependencyManager(__name__) as tester:
+    tester.test_shellcommand("xclip")
 
 xclip_names = {0: "c", 1: "p", 2: "s"}
 

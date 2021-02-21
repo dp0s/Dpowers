@@ -18,8 +18,8 @@
 #
 from Dhelpers.adaptor import DependencyManager
 
-tester = DependencyManager(__name__)
-pynput = tester.import_module("pynput")
+with DependencyManager(__name__) as tester:
+    pynput = tester.import_module("pynput")
 
 from .baseclasses import (InputEventHandler, KeyhookBase, ButtonhookBase,
     CursorhookBase)

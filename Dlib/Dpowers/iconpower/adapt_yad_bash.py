@@ -20,8 +20,8 @@ from Dhelpers.launcher import launch
 from Dhelpers.adaptor import DependencyManager
 
 
-tester = DependencyManager(__name__)
-tester.test_shellcommand("yad")
+with DependencyManager(__name__) as tester:
+    tester.test_shellcommand("yad")
 
 
 

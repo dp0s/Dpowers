@@ -26,9 +26,9 @@ from .baseclasses import (InputEventHandler, KeyhookBase, ButtonhookBase,
 
 from Dhelpers.adaptor import DependencyManager
 
-tester = DependencyManager(__name__)
-device_control = tester.import_module("evdev_prepared.device_control")
-uinput = tester.import_module("evdev_prepared.uinput")
+with DependencyManager(__name__) as tester:
+    device_control = tester.import_module("evdev_prepared.device_control")
+    uinput = tester.import_module("evdev_prepared.uinput")
 
 
 

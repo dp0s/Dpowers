@@ -21,8 +21,8 @@ import functools
 
 from Dhelpers.adaptor import DependencyManager
 
-tester = DependencyManager(__name__)
-tk = tester.import_module("tkinter")
+with DependencyManager(__name__) as tester:
+    tk = tester.import_module("tkinter")
 
 def popup(*buttons, xpos: int, ypos: int, x_rel_mouse: bool,y_rel_mouse: bool):
     """

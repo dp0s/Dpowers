@@ -18,8 +18,8 @@
 #
 from Dhelpers.adaptor import DependencyManager
 
-tester = DependencyManager(__name__)
-im_mod = tester.import_module("wand.image")
+with DependencyManager(__name__) as tester:
+    im_mod = tester.import_module("wand.image")
 
 Image = im_mod.Image
 
