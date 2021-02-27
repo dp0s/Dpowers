@@ -25,9 +25,10 @@
 #
 import os.path as path
 import sys
-sys.path.insert(0, path.join(path.abspath('..'),"Dlib"))
+sys.path.insert(0, path.join(path.realpath('..'),"Dlib"))
 
-import Dpowers
+import Dpowers, Dhelpers
+
 # -- Project information -----------------------------------------------------
 
 project = 'Dpowers'
@@ -35,18 +36,16 @@ copyright = '2021, dp0s'
 author = 'dp0s'
 version = Dpowers.__version__
 
-
-
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc', "sphinx.ext.autosummary", 'sphinx_rtd_theme'
-]
+extensions = ['sphinx.ext.autodoc', "sphinx.ext.autosummary",
+    'sphinx_rtd_theme']
 
-autodoc_default_options = {'inherited-members':False,
-    'autoclass-content': True, 'member-order':"bysource", "members":True}
+autodoc_default_options = {'member-order':"bysource", "members":True}
+#autoclass_content = "both"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -70,3 +69,21 @@ html_theme = "sphinx_rtd_theme"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+
+def my_skip_member(app, what, name, obj, skip, options):
+    if what == "class":
+        if name == "adaptor" and isinstance(obj, Dpowers.Adaptor): return True
+            
+
+
+from Dhelpers.sphinx import ExecDirective, ImprovedExecDirective, ActiveCode
+
+ExecDirective.get_globals(globals())
+ImprovedExecDirective.get_globals(globals())
+
+
+def setup(app):
+    app.connect('autodoc-skip-member', my_skip_member)
+    app.add_directive('exec', ExecDirective)
+    app.add_directive('activecode', ActiveCode)

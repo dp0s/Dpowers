@@ -19,8 +19,9 @@
 from Dhelpers.adaptor import DependencyManager
 
 with DependencyManager(__name__) as tester:
-    uinput = tester.import_module("evdev_prepared.uinput")
-    device_control = tester.import_module("evdev_prepared.device_control")
+    uinput = tester.import_module("evdev_prepared.uinput",pkg="evdev_prepared")
+    device_control = tester.import_module("evdev_prepared.device_control",
+            pkg="evdev_prepared")
 
 global_uinput = uinput.global_uinput
 DeviceSelector = device_control.DeviceSelector

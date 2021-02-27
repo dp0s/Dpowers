@@ -1,7 +1,25 @@
+#
+#
+# Copyright (c) 2021 DPS, dps@my.mail.de
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+#
 from .adaptor_classes import AdaptorBase, AdaptionError
 from ..arghandling import check_type, ArgSaver
-from .dependency_testing import BackendDependencyError, import_adapt_module
-
+from .dependency_testing import BackendDependencyError, import_adapt_module, DependencyManager
+import warnings
 
 class Backend:
     
@@ -43,6 +61,7 @@ class Backend:
         self.method_target_spaces = {}
         self.main_info = None  # will be set in update method
         self.method_infos = {}  # will be set in update method
+        self.manager = None #set as soon as module was imported
         self.update_target_spaces(main_info, method_infos)
     
     def update_target_spaces(self, main_info=None, method_infos={}):
@@ -116,6 +135,21 @@ class Backend:
             raise RecursionError
         return obj
     
+    @property
+    def pydependencies(self):
+        if self.manager is None: return
+        return self.manager.pydependencies
+
+    @property
+    def shelldependencies(self):
+        if self.manager is None: return
+        return self.manager.shelldependencies
+    
+    @property
+    def dependencies(self):
+        if self.manager is None: return
+        return self.manager.dependencies
+    
     def get_targetspace(self, info):
         if isinstance(info, str):
             # TODO: add option to give full path of module instead
@@ -123,12 +157,16 @@ class Backend:
             module_location = self.adaptorcls.__module__
             module_full_name = module_location + module_name
             try:
-                mod = import_adapt_module(module_full_name,
+                mod, manager = import_adapt_module(module_full_name,
                         self.dependency_folder)
             except Exception as e:
+                if isinstance(e, BackendDependencyError): raise
                 raise AdaptionError from e
+            self.manager = manager
             return mod, info
         elif isinstance(info, (list, tuple)):
+            # this is usueful to give a list of possible backends. If one
+            # fails to import, the next one is tried.
             last_error = None
             for subinfo in info:
                 try:
@@ -143,6 +181,4 @@ class Backend:
             raise AdaptionError from last_error
         # this way, all the errors that lead here, will be visible.
         else:
-            raise TypeError(
-                    f"Require string, but got {info}.")
-        # TODO: Add option for backend class
+            raise TypeError(f"Require string, but got {info}.")

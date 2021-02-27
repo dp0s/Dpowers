@@ -20,7 +20,7 @@
 from Dhelpers.adaptor import DependencyManager
 
 with DependencyManager(__name__) as tester:
-    uinput = tester.import_module("evdev_prepared.uinput")
+    uinput = tester.import_module("evdev_prepared.uinput",pkg="evdev_prepared")
 
 global_uinput = uinput.global_uinput
 

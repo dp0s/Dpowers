@@ -192,6 +192,7 @@ class PressedContext:
 
 
 class AdaptiveMixin(Adaptor):
+    baseclass = True
     NamedClass = None
     #stand_dicts = defaultdict(lambda : defaultdict(lambda : list()))
     
@@ -293,7 +294,7 @@ class AdaptiveMixin(Adaptor):
 
 
 class AdaptiveSender(AdaptiveMixin, Sender):
-    pass
+    baseclass = True
 
 
 #we don't inherit from AdaptiveSender directly
@@ -301,6 +302,7 @@ class AdaptiveSender(AdaptiveMixin, Sender):
 @AdaptiveSender.register
 class AdaptivePressReleaseSender(AdaptiveMixin, PressReleaseSender,
         EventObjectSender):
+    baseclass = True
     
     @adaptionmethod("rls", require=True)
     def _rls(self, name, apply_map=True):
@@ -353,6 +355,7 @@ class AdaptivePressReleaseSender(AdaptiveMixin, PressReleaseSender,
 
 class CombinedSender(AdditionContainer, PressReleaseSender,
         EventObjectSender, basic_class=Sender):
+    
     
     _methods_to_include = {"_press": NameError, "_rls":NameError,
         "_send_event": TypeError, "_text": NotImplementedError}

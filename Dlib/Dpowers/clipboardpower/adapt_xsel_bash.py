@@ -20,7 +20,7 @@ from Dhelpers.all import launch
 from Dhelpers.adaptor import DependencyManager
 
 with DependencyManager(__name__) as tester:
-    tester.test_shellcommand("xsel")
+    tester.test_shellcommand("xsel", pkg="xsel")
 
 xsel_names = {0:"b",1:"p",2:"s"}
 

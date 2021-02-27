@@ -43,7 +43,7 @@ class ImageAdaptor(EditorAdaptor):
 
 
 
-class ImageBase(Resource, ImageAdaptor.coupled_class()):
+class ImageBase(Resource, ImageAdaptor.AdaptiveClass):
     
     def __init_subclass__(cls):
         super().__init_subclass__()

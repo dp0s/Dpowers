@@ -20,7 +20,7 @@ from Dhelpers.all import launch
 from Dhelpers.adaptor import DependencyManager
 
 with DependencyManager(__name__) as tester:
-    tester.test_shellcommand("xclip")
+    tester.test_shellcommand("xclip", pkg="xclip")
 
 xclip_names = {0: "c", 1: "p", 2: "s"}
 

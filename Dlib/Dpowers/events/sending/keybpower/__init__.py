@@ -17,7 +17,6 @@
 #
 #
 
-import time
 from ... import adaptionmethod, hotkeys, NamedKey
 from ..event_sender import AdaptivePressReleaseSender
 

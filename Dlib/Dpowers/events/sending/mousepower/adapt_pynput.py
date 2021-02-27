@@ -19,7 +19,7 @@
 from Dhelpers.adaptor import DependencyManager
 
 with DependencyManager(__name__) as tester:
-    pynput = tester.import_module("pynput")
+    pynput = tester.import_module("pynput", pkg="pynput")
 
 mouse = pynput.mouse.Controller()
 

@@ -27,7 +27,7 @@ class mp3tagAdaptor(EditorAdaptor):
     
     
     
-class mp3tagBase(Resource, mp3tagAdaptor.coupled_class()):
+class mp3tagBase(Resource, mp3tagAdaptor.AdaptiveClass):
     allowed_file_extensions = [".mp3"]
 
 

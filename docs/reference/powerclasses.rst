@@ -1,6 +1,9 @@
 Adaptive Classes
 *****************
 
+.. autoclass:: Dpowers.AdaptiveClass
+
+
 
 Win / Win.Search
 ----------------

@@ -21,7 +21,7 @@ from Dhelpers.all import launch
 from Dhelpers.adaptor import DependencyManager
 
 with DependencyManager(__name__) as tester:
-    tester.test_shellcommand("xdotool")
+    tester.test_shellcommand("xdotool", pkg="xdotool")
 
 names = (
     'BackSpace', 'Tab', 'Linefeed', 'Escape', 'space', 'exclam', 'quotedbl',

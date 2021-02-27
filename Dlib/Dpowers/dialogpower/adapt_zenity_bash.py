@@ -25,7 +25,7 @@ import os
 from Dhelpers.adaptor import DependencyManager
 
 with DependencyManager(__name__) as tester:
-    tester.test_shellcommand("zenity")
+    tester.test_shellcommand("zenity", pkg="zenity")
 
 def run_zenity(arg1, *args, allow_retCodes=(0, 1), check_err=False):
     cmd = ("zenity", "--" + arg1, *args)

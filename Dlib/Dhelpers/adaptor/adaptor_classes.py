@@ -18,10 +18,11 @@
 #
 
 
-import importlib, inspect, functools, types, os, pkgutil, sys, logging, warnings
+import inspect, functools, types, os, pkgutil, sys, logging, warnings
 from ..baseclasses import RememberInstanceCreationInfo, KeepInstanceRefs
 from ..arghandling import (check_type, remove_first_arg, ArgSaver)
 from types import FunctionType
+from collections import defaultdict
 
 class AdaptionError(Exception):
     pass
@@ -59,13 +60,13 @@ class AdaptionFuncPlaceholder:
         self.modifier_argnum = None
         self.__signature__ = inspect.signature(cls_func)
     
-    def __call__(self, adaptioninstance, *args, **kwargs):
-        """ Usage example: HookAdaptor.keyb(instance,*args,**kwargs) instead
-        of instance.keyb(*args,**kwargs)"""
-        check_type(AdaptorBase, adaptioninstance)
-        amethod = getattr(adaptioninstance, self.__name__)
-        check_type(AdaptionMethod, amethod)
-        return amethod(*args, **kwargs)
+    # def __call__(self, adaptioninstance, *args, **kwargs):
+    #     """ Usage example: HookAdaptor.keyb(instance,*args,**kwargs) instead
+    #     of instance.keyb(*args,**kwargs)"""
+    #     check_type(AdaptorBase, adaptioninstance)
+    #     amethod = getattr(adaptioninstance, self.__name__)
+    #     check_type(AdaptionMethod, amethod)
+    #     return amethod(*args, **kwargs)
     
     def target_modifier(self, func):
         """This is a decorator to specify a function as target_modifer."""
@@ -237,7 +238,11 @@ class AdaptorBase(KeepInstanceRefs):
     autoadapt_active = False
     dependency_folder = None  # set in first level subclass
     _subclass_level = 0
+    _first_level_subclass = None
     adaptionmethod_names = set()
+    baseclass = True
+    AdaptiveClass = None
+    _primary_instances = dict()
     
     
     def __init_subclass__(cls):
@@ -250,12 +255,32 @@ class AdaptorBase(KeepInstanceRefs):
                                   "not allowed to have adaptionmethods.")
             cls.adaptionmethod_names = set(l)
                 #this will inherit names already defined
-            cls.backend_classes = None
+            #cls.backend_classes = None
             cls.added_backend_names = {}
+            if "baseclass" not in vars(cls):
+                cls.baseclass = False
+                cls.AdaptiveClass = type("AdaptiveClass",
+                        (AdaptiveClass,), dict(adaptor_class=cls))
+                c = cls._first_level_subclass
+                add = f"Subclass of :class:`{c.__module__}.{c.__name__}`.\n"
+                doc = cls.__doc__ if cls.__doc__ else ""
+                cls.__doc__ = add + doc
+        elif cls._subclass_level == 1:
+            cls._first_level_subclass = cls
+            initdoc = cls.__init__.__doc__
+            if initdoc: cls.__doc__ += "\n" + initdoc
+                
             
     
     def __init__(self, main_info=None, *, group="default", _primary=False,
             **method_infos):
+        """
+        
+        :param main_info:
+        :param group:
+        :param _primary:
+        :param method_infos:
+        """
         
         super().__init__()
         
@@ -274,8 +299,8 @@ class AdaptorBase(KeepInstanceRefs):
                                f"{self.__class__.__name__} class."
             # the following is a way of conditionally subclassing:
             RememberInstanceCreationInfo.__init__(self)
-            self.primary = True  # self.adapt_on_first_use = True #overrides
-            # class default
+            self.primary = True
+            self._primary_instances[self.creation_name]=self
         self.backend = None
         
         for name in self.adaptionmethod_names:
@@ -463,31 +488,51 @@ class AdaptorBase(KeepInstanceRefs):
         return self._get_from_backend_source(self.instance_group,
                 backend_source=backend_source)
     
-    # @classmethod
-    # def import_dependency(cls, dependency_name):
-    #     check_type(str, dependency_name)
-    #     check_type(dict, cls.dependency_dict)
-    #     # the following tries to find a user defined dependency module in the
-    #     #  dependency dict:
-    #     dependency_module = cls.dependency_dict.get(dependency_name)
-    #     if not dependency_module:
-    #         # otherweise look up the dependency in the default dependency
-    #         folder
-    #         try:
-    #             dependency_package = cls.default_dependency_folder
-    #         except AttributeError as e:
-    #             raise AttributeError(
-    #                     "Could not find default dependency package location. "
-    #                     "This should be set by the {"
-    #                     "cls}.default_dependency_package"
-    #                     " class attribute.".format_map(locals())) from e
-    #         dependency_module = importlib.import_module(
-    #                 dependency_package + "." + dependency_name)
-    #     return dependency_module
+    @classmethod
+    def _iter_subclasses(cls):
+        yield cls
+        for subclass in cls.__subclasses__():
+            for subcls in subclass._iter_subclasses(): yield subcls
     
     @classmethod
-    def print_all_infos(cls):
-        for subclass in cls.__subclasses__():
+    def iter_subclasses(cls, ignore_baseclasses=True):
+        for subcls in cls._iter_subclasses():
+            if not (ignore_baseclasses and subcls.baseclass): yield subcls
+    
+    @classmethod
+    def find_modules(cls):
+        if cls.baseclass: raise TypeError
+        path = os.path.dirname(inspect.getfile(cls))
+        for submodule in pkgutil.iter_modules([path]):
+            #print(submodule)
+            name = submodule[1]
+            if not name.startswith("adapt_"):
+                continue
+            yield cls.__module__ + "." + name
+            
+    @classmethod
+    def backend_dict(cls, check=True):
+        dependency_dict = defaultdict(list)
+        for subclass in cls.iter_subclasses():
+            for module_name in subclass.find_modules():
+                manager = get_module_dependencies(module_name, check)
+                dependency_dict[subclass].append(manager)
+        return dependency_dict
+    
+    @classmethod
+    def install_instructions(cls):
+        global_instructions = InstallInstruction()
+        for subcls, managerlist in cls.backend_dict(check=False).items():
+            for m in managerlist:
+                for d in m.dependencies:
+                    global_instructions.update(d.install_instructions[''])
+        return global_instructions
+    
+    @classmethod
+    def print_all_infos(cls, check=True):
+        global_instructions = InstallInstruction()
+        for subclass in cls.iter_subclasses():
+            print("___________________________________________")
             print("subclass:", subclass)
             path = os.path.dirname(inspect.getfile(subclass))
             for submodule in pkgutil.iter_modules([path]):
@@ -497,46 +542,88 @@ class AdaptorBase(KeepInstanceRefs):
                 print("backend:", name[6:])
                 full_name = subclass.__module__ + "." + name
                 # mod=sys.modules[subclass.__module__+"."+name]
-                try:
-                    mod = importlib.import_module(full_name)
-                except BackendDependencyError as e:
-                    e.handle()
-                try:
-                    tester = DependencyManager.instances[full_name]
-                except KeyError:
-                    warnings.warn(f"No DependencyManager found for module "
-                                  f"{full_name}.")
-                else:
-                    print(tester)
+                manager = get_module_dependencies(full_name,
+                        perform_check=check)
+                for d in manager.dependencies:
+                    print(d)
+                    if check:
+                        error = d.error
+                        if not error: continue
+                        print("error:",d.error)
+                    global_instructions.update(d.install_instructions[''])
             for i in subclass.get_instances():
                 print("")
                 print("instance: ", i)
-                print("defined in:", i.creation_module)
-                print("on line:", i.creation_line)
+                if i.primary:
+                    print("defined in:", i.creation_module)
+                    print("on line:", i.creation_line)
             print("")
             print("")
-            
-            
-            
+        if global_instructions: print(global_instructions)
+
     @classmethod
-    def coupled_class(cls):
-        #Immediately creates a baseclass to be used
-        return type(cls.__name__ + ".CoupledClass", (CoupledClass,),
-                dict(adaptor_class = cls))
+    def _print_sphinx_docs(cls,*names):
+        for name in names:
+            if isinstance(name, str):
+                inst = cls._primary_instances[name]
+                assert name == inst.creation_name
+                subcls = inst.__class__
+                heading = name + f" ({subcls.__name__})"
+                assert issubclass(subcls, cls)
+            elif issubclass(name, cls):
+                inst = None
+                subcls = name
+                heading = subcls.__name__
+            else:
+                raise TypeError
+            subcls.adapt.__doc__ = "See :func:`Adaptor.adapt`"
+            subcls.AdaptiveClass = None
+            print(heading)
+            print("_"*len(heading))
+            if inst:
+                print(".. autodata:: Dpowers." + name)
+                print("\t:no-value:")
+            print(".. autoclass:: Dpowers." + subcls.__name__)
+            print()
+            print("\t.. automethod:: adapt")
+            print()
+            print(f".. class:: Dpowers.{subcls.__name__}.AdaptiveClass")
+            print()
+            print("\t\tA baseclass to create your own AdaptiveClasses. See :class:`Dpowers.AdaptiveClass`")
+            print()
 
-
-
-wrap = functools.wraps(AdaptorBase.adapt)
-class CoupledClass:
+wrap = functools.wraps(AdaptorBase.adapt, assigned=())
+class AdaptiveClass:
+    
+    def __init_subclass__(cls):
+        add = "Subclass of :class:`Dpowers.AdaptiveClass`.\n"
+        doc = cls.__doc__ if cls.__doc__ else ""
+        cls.__doc__ = add + doc
     
     adaptor_class = None
+    """*Class attribute.* Refers to a subclass of :class:`Dpowers.Adaptor`. It
+    determines the kind of backend this AdaptiveClass is using. Never change
+    this."""
     adaptor = None
+    """*Class attribute.* The current :class:`Dpowers.Adaptor` instance which determines the
+     backend for this AdaptiveClass. Usually you shouldn't touch this. Instead
+     use the  classmethod :func:`AdaptiveClass.adapt`."""
+    
+    @property
+    def backend(self):
+        return self.adaptor.backend
+
 
     @classmethod
     @wrap
     def adapt(cls, *args, **kwargs):
+        """Changes the backend for all instances of this AdaptiveClass,
+        including already created instances (unless
+        :func:`~AdaptiveClass.adapt_instance` was used.).
+        
+        Uses the same parameters as :func:`Dpowers.Adaptor.adapt`."""
         if "adaptor" in cls.__dict__:
-            #in this case, an adaptor instance was explicitely set for this
+            #in this case, an adaptor instance was explicitly set for this
             # subclass before
             check_type(cls.adaptor_class, cls.adaptor)
         else:
@@ -548,10 +635,15 @@ class CoupledClass:
         
     @wrap
     def adapt_instance(self, *args, **kwargs):
+        """Changes the backend for this instance only.
+        
+        Uses the same
+        parameters as :func:`Dpowers.Adaptor.adapt`."""
         self.adaptor = self.adaptor_class()
         return self.adaptor.adapt(*args, **kwargs)
     
 
 
 from .backend_class import Backend
-from .dependency_testing import BackendDependencyError, DependencyManager
+from .dependency_testing import BackendDependencyError, DependencyManager, \
+    get_module_dependencies, InstallInstruction

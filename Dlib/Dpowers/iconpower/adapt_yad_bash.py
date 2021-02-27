@@ -21,7 +21,7 @@ from Dhelpers.adaptor import DependencyManager
 
 
 with DependencyManager(__name__) as tester:
-    tester.test_shellcommand("yad")
+    tester.test_shellcommand("yad", pkg="yad")
 
 
 

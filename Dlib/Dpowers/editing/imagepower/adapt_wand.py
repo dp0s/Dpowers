@@ -19,7 +19,7 @@
 from Dhelpers.adaptor import DependencyManager
 
 with DependencyManager(__name__) as tester:
-    im_mod = tester.import_module("wand.image")
+    im_mod = tester.import_module("wand.image", pkg="wand")
 
 Image = im_mod.Image
 

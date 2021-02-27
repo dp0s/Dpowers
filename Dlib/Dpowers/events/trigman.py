@@ -25,7 +25,7 @@ from Dhelpers.all import launch, TimedObject, dpress, check_type
 import collections
 
 
-class TriggerManager(TimedObject, HookAdaptor.coupled_class()):
+class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
     
     adaptor = HookAdaptor(group="triggerman", _primary=True)
     

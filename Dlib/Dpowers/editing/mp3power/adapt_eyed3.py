@@ -19,7 +19,7 @@
 from Dhelpers.adaptor import DependencyManager
 
 with DependencyManager(__name__) as tester:
-    mp3 = tester.import_module("eyed3.mp3")
+    mp3 = tester.import_module("eyed3.mp3", pkg="eyed3")
 
 import eyed3 #this is already imported and will just place the name here again
 

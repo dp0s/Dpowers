@@ -21,6 +21,7 @@ from Dhelpers.adaptor import DependencyManager
 
 with DependencyManager(__name__) as tester:
     tester.test_shellcommand("notify-send")
+    
 
 def post_notification(title,timeout,text):
     text = text.replace("<", "&lt;").replace(">","&gt;")

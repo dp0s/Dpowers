@@ -20,9 +20,8 @@
 from Dhelpers.adaptor import DependencyManager
 
 with DependencyManager(__name__) as tester:
-    pystray = tester.import_module("pystray", install_tuple=("pip install",
-                "pystray"))
-    Image = tester.import_module("PIL.Image")
+    pystray = tester.import_module("pystray", pkg="pystray")
+    Image = tester.import_module("PIL.Image", pkg="pillow")
 
 
 

@@ -34,7 +34,7 @@ edit_tag = "__edit"
 
 
 class EditorAdaptor(Adaptor):
-    
+    baseclass = True
     save_in_place = False
     
     @adaptionmethod

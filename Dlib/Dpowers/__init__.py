@@ -37,7 +37,7 @@ except ModuleNotFoundError:
     sys.path.append(os.path.dirname(dpowers_folder))
     import Dpowers
     import Dhelpers
-
+    
 
 __version__ = "0.1.0rc3"
 from Dhelpers import __version__  as Dhelpers_version
@@ -46,7 +46,7 @@ if __version__ != Dhelpers_version: raise ValueError
 
 from Dhelpers.all import (always_print_traceback, restore_print_func,
     launch, AdaptorBase, adaptionmethod, AdaptionError, ArgSaver, Layout,
-    AdaptorBase, adaptionmethod)
+    AdaptorBase, adaptionmethod, AdaptiveClass)
 
     
 try:
@@ -55,11 +55,12 @@ try:
     from .default_backends import backends
 
     class Adaptor(AdaptorBase):
+        """Abstract baseclass for all of Dpower's Adaption classes."""
         #dependency_folder = dependency_folder
         backend_defaults = backends
         NamedKeyClass = None  #set later
         NamedButtonClass = None  #set later
-
+    
 
     activate_autoadapt = Adaptor.activate_autoadapt
     adapt_all = Adaptor.adapt_all
@@ -82,7 +83,7 @@ try:
 
     from . import events
     from .events import keyb,mouse,hotkeys,hook, KeyWaiter, \
-        KeyboardAdaptor, MouseAdaptor, HookAdaptor
+        KeyboardAdaptor, MouseAdaptor, HookAdaptor, SenderAdaptor
 
     from .clipboardpower import ClipboardAdaptor
     clip = ClipboardAdaptor(_primary=True)
