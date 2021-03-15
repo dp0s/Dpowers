@@ -27,5 +27,6 @@ try:
   import psutil
 except ModuleNotFoundError as e:
   warnings.warn(str(e))
+  psutil = None
 finally:
   sys.stderr = sys.__stderr__
