@@ -73,7 +73,11 @@ html_static_path = ['_static']
 
 def my_skip_member(app, what, name, obj, skip, options):
     if what == "class":
-        if name == "adaptor" and isinstance(obj, Dpowers.Adaptor): return True
+        if name == "adaptor" and isinstance(obj, Dpowers.Adaptor):
+            return True
+        if name == "ContainerClass": return True
+        if name == "SingleClass" and issubclass(obj,Dpowers.editing.ResourceBase):
+            return True
             
 
 

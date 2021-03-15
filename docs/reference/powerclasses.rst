@@ -31,3 +31,11 @@ Image / Image.Sequence / Image.multipage
 
 .. autoclass:: Dpowers.Image.multipage
     :no-inherited-members:
+
+
+
+KeyWaiter
+-------------------
+
+
+.. autoclass:: Dpowers.KeyWaiter

@@ -596,18 +596,15 @@ wrap = functools.wraps(AdaptorBase.adapt, assigned=())
 class AdaptiveClass:
     
     def __init_subclass__(cls):
-        add = "Subclass of :class:`Dpowers.AdaptiveClass`.\n"
+        add = f"Subclass of :class:`Dpowers.AdaptiveClass`.\n"
         doc = cls.__doc__ if cls.__doc__ else ""
         cls.__doc__ = add + doc
     
     adaptor_class = None
-    """*Class attribute.* Refers to a subclass of :class:`Dpowers.Adaptor`. It
-    determines the kind of backend this AdaptiveClass is using. Never change
-    this."""
     adaptor = None
     """*Class attribute.* The current :class:`Dpowers.Adaptor` instance which determines the
-     backend for this AdaptiveClass. Usually you shouldn't touch this. Instead
-     use the  classmethod :func:`AdaptiveClass.adapt`."""
+     backend for this AdaptiveClass. You shouldn't change this directly. Instead
+     use the  classmethod :func:`~AdaptiveClass.adapt`."""
     
     @property
     def backend(self):
@@ -619,9 +616,9 @@ class AdaptiveClass:
     def adapt(cls, *args, **kwargs):
         """Changes the backend for all instances of this AdaptiveClass,
         including already created instances (unless
-        :func:`~AdaptiveClass.adapt_instance` was used.).
+        :func:`~AdaptiveClass.adapt_instance` was used).
         
-        Uses the same parameters as :func:`Dpowers.Adaptor.adapt`."""
+        For parameters see :func:`Dpowers.Adaptor.adapt`."""
         if "adaptor" in cls.__dict__:
             #in this case, an adaptor instance was explicitly set for this
             # subclass before
@@ -637,8 +634,7 @@ class AdaptiveClass:
     def adapt_instance(self, *args, **kwargs):
         """Changes the backend for this instance only.
         
-        Uses the same
-        parameters as :func:`Dpowers.Adaptor.adapt`."""
+        For parameters see :func:`Dpowers.Adaptor.adapt`."""
         self.adaptor = self.adaptor_class()
         return self.adaptor.adapt(*args, **kwargs)
     
