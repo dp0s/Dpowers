@@ -16,7 +16,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-import os,sys
+import os,sys, warnings
 
 #this fixes an annoying error message on termux/android where /proc
 # permission is not given
@@ -25,5 +25,7 @@ import os,sys
 sys.stderr = open(os.devnull, "w")
 try:
   import psutil
+except ModuleNotFoundError as e:
+  warnings.warn(str(e))
 finally:
   sys.stderr = sys.__stderr__
