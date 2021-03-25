@@ -39,7 +39,7 @@ except FileNotFoundError as e:
 
 module_folder = os.path.join(dirname,"Dlib")
 sys.path.insert(0, module_folder)
-#this way we will import from this folder not from pip
+#this way we will import from this folder from local version
 import Dpowers, Dhelpers
 
 
@@ -72,10 +72,6 @@ def setup_process(name, **kwargs):
         classifiers=["Programming Language :: Python :: 3",
             "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"],
          )
-
-
-
-#DPOWER_EXTRAS_LWM = ["pynput>=1.6.8", "pystray>=0.15", "wand>=0.6.5"]
 
 
 my_setup("Dpowers",
