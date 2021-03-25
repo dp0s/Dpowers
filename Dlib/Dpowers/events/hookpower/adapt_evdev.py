@@ -17,9 +17,7 @@
 #
 #
 
-from evdev.ecodes import (EV_KEY, EV_ABS, EV_SYN, EV_MSC, KEY, BTN,
-    EV_LED, EV_REL, ABS_MT_POSITION_X, ABS_MT_POSITION_Y, ABS_X, ABS_Y,
-    REL_X, REL_Y, bytype)
+
 
 from .baseclasses import (InputEventHandler, KeyhookBase, ButtonhookBase,
     CursorhookBase, CustomhookBase, PressReleaseHook)
@@ -30,6 +28,14 @@ with DependencyManager(__name__) as tester:
     device_control = tester.import_module("evdev_prepared.device_control",
             pkg="evdev_prepared")
     uinput = tester.import_module("evdev_prepared.uinput", pkg="evdev_prepared")
+
+
+# the following import will not be performed if the DependencyManager is only
+# checking the import capability. if evdev is not installed, an error will
+# be raised when trying to import evdev_prepared already.
+from evdev.ecodes import (EV_KEY, EV_ABS, EV_SYN, EV_MSC, KEY, BTN,
+    EV_LED, EV_REL, ABS_MT_POSITION_X, ABS_MT_POSITION_Y, ABS_X, ABS_Y,
+    REL_X, REL_Y, bytype)
 
 
 

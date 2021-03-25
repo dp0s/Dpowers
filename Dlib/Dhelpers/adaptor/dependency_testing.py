@@ -100,7 +100,7 @@ class BackendDependencyError(Exception):
 
 
 class DependencyManager:
-    raise_errors = True  #this is import in Dependency class, method raise_
+    raise_errors = True  #this is set in Dependency class inside method raise_
     exit_module = False
     check_dependency = True
     instances = {}
@@ -125,9 +125,6 @@ class DependencyManager:
 
     def exit(self):
         if self.exit_module: raise ReturnFromModule(self)
-    
-    def add_systems(self,*systems):
-        self.systems += systems
     
     def pydependency(self, *args, **kwargs):
         dep = PythonDependency(*args, **kwargs)

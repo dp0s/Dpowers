@@ -18,7 +18,10 @@
 #
 
 
-import inspect, functools, types, os, pkgutil, sys, logging, warnings
+
+### TODO: activate_autoadapt and exception handling.
+
+import inspect, functools, types, os, pkgutil, warnings
 from ..baseclasses import RememberInstanceCreationInfo, KeepInstanceRefs
 from ..arghandling import (check_type, remove_first_arg, ArgSaver)
 from types import FunctionType
@@ -512,6 +515,8 @@ class AdaptorBase(KeepInstanceRefs):
             
     @classmethod
     def backend_dict(cls, check=True):
+        # use check=False if you don't need to know if the dependency is
+        # actually available on this system.
         dependency_dict = defaultdict(list)
         for subclass in cls.iter_subclasses():
             for module_name in subclass.find_modules():
@@ -591,6 +596,8 @@ class AdaptorBase(KeepInstanceRefs):
             print()
             print("\t\tA baseclass to create your own AdaptiveClasses. See :class:`Dpowers.AdaptiveClass`")
             print()
+
+
 
 wrap = functools.wraps(AdaptorBase.adapt, assigned=())
 class AdaptiveClass:

@@ -68,9 +68,6 @@ An AdaptiveClass is a subclass of the common baseclass :class:`Dpowers.AdaptiveC
 Importing and Adapting
 ************************
 
-### TODO: activate_autoadapt and exception handling.
-
-
 Step 1: Import
 ------------------------
 
