@@ -170,6 +170,11 @@ def property_from_ID(ID, prop_name):
 def activate(ID):
     return _xdo_get_from_single_id(ID, "windowactivate --sync")
 
+def map(ID):
+    return _xdo_get_from_single_id(ID,"windowmap --sync")
+
+def unmap(ID):
+    return _xdo_get_from_single_id(ID,"windowunmap --sync")
 
 def set_prop(ID, action: str, prop: str, prop2):
     cmd = ["wmctrl", "-i", "-r", ID, "-b", action + "," + prop]

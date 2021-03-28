@@ -45,49 +45,57 @@ class WindowAdaptor(Adaptor):
                 "does not support this window property name:\n{"
                 "func.module}".format_map(locals()))
     
-    @adaptionmethod("IDs_from_property", require=True)
-    def _IDs_from_property(self, prop_name, prop_val):
+    @adaptionmethod(require=True)
+    def IDs_from_property(self, prop_name, prop_val):
         try:
-            i_list = self._IDs_from_property.target_with_args()
+            i_list = self.IDs_from_property.target_with_args()
         except NotImplementedError as e:
-            raise self._error(prop_name,self._IDs_from_property) from e
+            raise self._error(prop_name,self.IDs_from_property) from e
         if not i_list: i_list = set()
         return i_list
     
-    @adaptionmethod("property_from_ID", require=True)
-    def _property_from_ID(self, ID, prop_name):
+    @adaptionmethod(require=True)
+    def property_from_ID(self, ID, prop_name):
         try:
-            val = self._property_from_ID.target_with_args()
+            val = self.property_from_ID.target_with_args()
         except NotImplementedError as e:
-            raise self._error(prop_name,self._property_from_ID) from e
+            raise self._error(prop_name,self.property_from_ID) from e
         if val: return val
     
     def id_exists(self, ID):
-        return bool(self._property_from_ID(ID, "title"))
+        return bool(self.property_from_ID(ID, "title"))
     
-    @adaptionmethod("activate")
-    def _activate(self, ID):
-        return self._activate.target_with_args()
+    @adaptionmethod
+    def activate(self, ID):
+        return self.activate.target_with_args()
     
-    @adaptionmethod("set_prop")
-    def _set_prop(self, ID, action: str, prop: str, prop2: str = False):
-        return self._set_prop.target_with_args()
+    @adaptionmethod
+    def map(self, ID):
+        return self.map.target_with_args()
+
+    @adaptionmethod
+    def unmap(self, ID):
+        return self.unmap.target_with_args()
     
-    @adaptionmethod("move")
-    def _move(self, ID, x=-1, y=-1, width=-1, height=-1):
-        return self._move.target_with_args()
+    @adaptionmethod
+    def set_prop(self, ID, action: str, prop: str, prop2: str = False):
+        return self.set_prop.target_with_args()
     
-    @adaptionmethod("close")
-    def _close(self, ID):
-        return self._close.target_with_args()
+    @adaptionmethod
+    def move(self, ID, x=-1, y=-1, width=-1, height=-1):
+        return self.move.target_with_args()
     
-    @adaptionmethod("kill")
-    def _kill(self, ID):
-        return self._kill.target_with_args()
+    @adaptionmethod
+    def close(self, ID):
+        return self.close.target_with_args()
     
-    @adaptionmethod("minimize")
-    def _minimize(self, ID):
-        return self._minimize.target_with_args()
+    @adaptionmethod
+    def kill(self, ID):
+        return self.kill.target_with_args()
+    
+    @adaptionmethod
+    def minimize(self, ID):
+        return self.minimize.target_with_args()
 
 
     

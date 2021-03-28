@@ -16,8 +16,8 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from Dhelpers.all import (check_type, PositiveInt, CollectionWithProps,
-    NonNegativeInt, AdditionContainer)
+from Dhelpers.baseclasses import (check_type, AdditionContainer)
+from Dhelpers.arghandling import (PositiveInt, CollectionWithProps)
 
 import inspect, time
 from abc import ABC, abstractmethod
@@ -73,7 +73,7 @@ class WindowObject(ABC):
     
     def titles_(self):
         for ID in self.IDs():
-            x = self.adaptor._property_from_ID(ID, "title")
+            x = self.adaptor.property_from_ID(ID, "title")
             check_type(str, x)
             yield x
     def titles(self):
@@ -84,7 +84,7 @@ class WindowObject(ABC):
     
     def wclasses_(self):
         for ID in self.IDs():
-            x = self.adaptor._property_from_ID(ID, "wcls")
+            x = self.adaptor.property_from_ID(ID, "wcls")
             check_type(str, x)
             yield x
     def wclasses(self):
@@ -95,7 +95,7 @@ class WindowObject(ABC):
     
     def pids_(self):
         for ID in self.IDs():
-            x = self.adaptor._property_from_ID(ID, "pid")
+            x = self.adaptor.property_from_ID(ID, "pid")
             check_type(PositiveInt, x)
             yield x
     def pids(self):
@@ -106,7 +106,7 @@ class WindowObject(ABC):
     
     def geometries_(self):
         for ID in self.IDs():
-            x = self.adaptor._property_from_ID(ID, "geometry")
+            x = self.adaptor.property_from_ID(ID, "geometry")
             check_type(CollectionWithProps(int, len=4), x)
             yield x
     def geometries(self):
@@ -140,18 +140,25 @@ class WindowObject(ABC):
 
     def activate(self, all=False):
         if all:
-            for ID in self.IDs(): self.adaptor._activate(ID)
+            for ID in self.IDs(): self.adaptor.activate(ID)
         else:
-            return self.adaptor._activate(self.ID())
+            return self.adaptor.activate(self.ID())
         return self
-        
+    
+    
+    def map(self, all=False):
+        if all:
+            for ID in self.IDs(): self.adaptor.map(ID)
+        else:
+            return self.adaptor.map(self.ID())
+        return self
     
     def set_prop(self, action: str, prop: str, prop2: str = False, all=False):
         if all:
             for ID in self.IDs():
-                self.adaptor._set_prop(ID, action, prop, prop2)
+                self.adaptor.set_prop(ID, action, prop, prop2)
         else:
-            return self.adaptor._set_prop(self.ID(), action, prop, prop2)
+            return self.adaptor.set_prop(self.ID(), action, prop, prop2)
         return self
         
     
@@ -159,33 +166,33 @@ class WindowObject(ABC):
     
     def move(self, x=-1, y=-1, width=-1, height=-1, all=False):
         if all:
-            for ID in self.IDs(): self.adaptor._move(ID, x, y, width, height)
+            for ID in self.IDs(): self.adaptor.move(ID, x, y, width, height)
         else:
-            return self.adaptor._move(self.ID(), x, y, width, height)
+            return self.adaptor.move(self.ID(), x, y, width, height)
         return self
         
     
     def close(self, all=False):
         if all:
-            for ID in self.IDs(): self.adaptor._close(ID)
+            for ID in self.IDs(): self.adaptor.close(ID)
         else:
-            return self.adaptor._close(self.ID())
+            return self.adaptor.close(self.ID())
         return self
         
     
     def kill(self, all=False):
         if all:
-            for ID in self.IDs(): self.adaptor._kill(ID)
+            for ID in self.IDs(): self.adaptor.kill(ID)
         else:
-            return self.adaptor._kill(self.ID())
+            return self.adaptor.kill(self.ID())
         return self
         
     
     def minimize(self, all=False):
         if all:
-            for ID in self.IDs(): self.adaptor._minimize(ID)
+            for ID in self.IDs(): self.adaptor.minimize(ID)
         else:
-            return self.adaptor._minimize(self.ID())
+            return self.adaptor.minimize(self.ID())
         return self
         
     def maximize(self, all=False):
@@ -237,7 +244,7 @@ class WindowObject(ABC):
             min_wincount=1, max_wincount=None):
         """
         waits until number of matching windows is between min_wincount and
-        max_wincount. Returns the IDs of matching windows.
+        max_wincount. Returns the Win object of matching windows.
         """
         waited = 0
         while waited <= timeout:
@@ -269,34 +276,9 @@ class WindowObject(ABC):
             found_win.activate()
             found_win.wait_active()
             return found_win
-    
-    
-    def __eq__(self, other):
-        if isinstance(other, WindowObject):
-            return set(self.IDs()) == set(other.IDs())
-        if isinstance(other, PositiveInt):
-            return other == self.ID()
-        if isinstance(other, str):
-            return self.title() == other
-        return NotImplemented
-    
-    def __hash__(self):
-        if self.num == 0: return 0
-        return max(self.IDs())
-    
-    def __contains__(self, item):
-        if isinstance(item, PositiveInt):
-            return item in self.IDs()
-        if isinstance(item, WindowObject):
-            return item.ID() in self.IDs()
-        if isinstance(item, str):
-            for t in self.titles_():
-                if item in t: return True
-            return False
-        return NotImplemented
         
 
-
+import functools
 
 class WindowSearch(AdditionContainer.Addend, WindowObject):
     
@@ -315,11 +297,6 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
         new_kwargs.update(kwargs)
         return self.__class__(*self.creation_args, **new_kwargs)
     
-    def __init__(self, *winargs, **winkwargs):
-        self.creation_args = winargs
-        self.creation_kwargs = winkwargs
-        self.process_args(*winargs, **winkwargs)
-    
     def process_args(self, title_or_ID=None,*, loc=None, limit=None, **properties):
         check_type(PositiveInt, limit, allowed=(None,))
         self.location = loc
@@ -336,6 +313,9 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
                 self.fixed_IDs = tuple(title_or_ID)
             elif isinstance(title_or_ID, str):
                 properties["title"] = title_or_ID
+            elif isinstance(title_or_ID, CollectionWithProps(str, len=2)):
+                # in this case, assume a (title, class) wininfo pair
+                properties["title"], properties["wcls"] = title_or_ID
             elif not title_or_ID:
                 if not properties:
                     self.location = "active"
@@ -344,7 +324,12 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
                 raise TypeError("First parameter title_od_ID: %s\nhas wrong "
                                 "type: %s"%(title_or_ID, type(title_or_ID)))
             self._properties = properties
-    
+
+    @functools.wraps(process_args)
+    def __init__(self, *winargs, **winkwargs):
+        self.creation_args = winargs
+        self.creation_kwargs = winkwargs
+        self.process_args(*winargs, **winkwargs)
     
     def IDs(self):
         if self.location and not self.fixed_IDs:
@@ -356,13 +341,13 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
                 self.adaptor.id_exists(ID))
         
         for prop, prop_val in self._properties.items():
-            matching_ids = set(self.adaptor._IDs_from_property(prop, prop_val))
+            matching_ids = set(self.adaptor.IDs_from_property(prop, prop_val))
             if winlist is None:
                 winlist = matching_ids
             else:
                 winlist &= matching_ids  # make intersection
             if winlist is set(): break
-        out = tuple(winlist) if winlist else tuple()
+        out = sorted(tuple(winlist) if winlist else tuple())
         if self.limit: out = out[:self.limit]
         return out
     
@@ -517,3 +502,26 @@ class FoundWindows(WindowObject):
         def iterator():
             for id in self.IDs(): yield self.__class__(id)
         return iterator()
+
+
+    def __eq__(self, other):
+        if isinstance(other, WindowObject):
+            return set(self.IDs()) == set(other.IDs())
+        if isinstance(other, PositiveInt): return other == self.ID()
+        if isinstance(other, str): return self.title() == other
+        return NotImplemented
+
+    def __hash__(self):
+        if self.num == 0: return 0
+        return max(self.IDs())
+
+    def __contains__(self, item):
+        if isinstance(item, PositiveInt):
+            return item in self.IDs()
+        if isinstance(item, WindowObject):
+            return item.ID() in self.IDs()
+        if isinstance(item, str):
+            for t in self.titles_():
+                if item in t: return True
+            return False
+        return NotImplemented
