@@ -18,7 +18,9 @@
 #
 from . import HookAdaptor, CallbackHook, hotkeys, KeyboardAdaptor, \
     MouseAdaptor
-from Dhelpers.all import check_type, launch, TimedObject
+from Dhelpers.arghandling import check_type
+from Dhelpers.baseclasses import TimedObject
+from Dhelpers.launcher import launch
 import time
 from .. import NotificationAdaptor
 

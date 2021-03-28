@@ -17,12 +17,14 @@
 #
 #
 import time, os, sys, threading, traceback, warnings, functools
-from Dhelpers.all import container, launch, execute_after_print, PositiveInt,\
+from Dhelpers.container import container
+from Dhelpers.customprint import execute_after_print,\
     restore_print_func, always_print_traceback
-    #the last two print functions can be imported via the Dfuncs module
-    
+#the last two print functions should be imported via the Dfuncs module
+from Dhelpers.arghandling import PositiveInt
+
 from .events import KeyboardAdaptor, MouseAdaptor, KeyWaiter, HookAdaptor, CombinedSender
-from . import dlg, ntfy, clip, Win
+from . import dlg, ntfy, clip, Win, launch
 from .windowpower import WindowObject
 
 # =======================================================================

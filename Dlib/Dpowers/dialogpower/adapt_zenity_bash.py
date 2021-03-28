@@ -16,16 +16,13 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from Dhelpers.all import launch
-from .. import Win
+
+from .. import Win, launch, DependencyManager
 import os
 
 
-
-from Dhelpers.adaptor import DependencyManager
-
-with DependencyManager(__name__) as tester:
-    tester.test_shellcommand("zenity", pkg="zenity")
+with DependencyManager(__name__) as manager:
+    manager.test_shellcommand("zenity", pkg="zenity")
 
 def run_zenity(arg1, *args, allow_retCodes=(0, 1), check_err=False):
     cmd = ("zenity", "--" + arg1, *args)

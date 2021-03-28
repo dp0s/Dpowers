@@ -16,8 +16,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from Dhelpers.all import launch
-from Dhelpers.adaptor import DependencyManager
+from .. import DependencyManager, launch
 
 with DependencyManager(__name__) as tester:
     tester.test_shellcommand("notify-send")

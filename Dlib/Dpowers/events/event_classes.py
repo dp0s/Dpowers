@@ -16,7 +16,8 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from Dhelpers.all import AdditionContainer, NamedObj
+from Dhelpers.baseclasses import AdditionContainer
+from Dhelpers.named import NamedObj
 from . import hotkeys
 from abc import ABC, abstractmethod
 from time import sleep

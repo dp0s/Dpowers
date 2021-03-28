@@ -16,7 +16,18 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
+"""This module is intended as a single namespace where all of Dhelpers' objects
+can be found.
+Usage: from Dhelpers.all import ...
+
+Do NOT use this kind of import if you want to distribute your code
+ -- in this case explicitely state the module you want to import from.
+"""
+
+
 import os, warnings
+
+
 
 from .importtools import import_all, extract_all
 

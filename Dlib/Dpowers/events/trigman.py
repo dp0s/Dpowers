@@ -21,7 +21,10 @@ from . import NamedKey, keyb, NamedButton
 from .event_classes import StringAnalyzer, EventCombination, EventSequence, \
     StringEvent
 from .hookpower import HookAdaptor
-from Dhelpers.all import launch, TimedObject, dpress, check_type
+from Dhelpers.launcher import launch
+from Dhelpers.baseclasses import TimedObject
+from Dhelpers.arghandling import check_type
+from Dhelpers.counting import dpress
 import collections
 
 

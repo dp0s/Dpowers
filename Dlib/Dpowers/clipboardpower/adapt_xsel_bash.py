@@ -16,11 +16,10 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from Dhelpers.all import launch
-from Dhelpers.adaptor import DependencyManager
+from .. import launch, DependencyManager
 
-with DependencyManager(__name__) as tester:
-    tester.test_shellcommand("xsel", pkg="xsel")
+with DependencyManager(__name__) as manager:
+    manager.test_shellcommand("xsel", pkg="xsel")
 
 xsel_names = {0:"b",1:"p",2:"s"}
 

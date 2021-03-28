@@ -17,9 +17,10 @@
 #
 #
 from abc import ABC, abstractmethod
-from Dhelpers.all import AdditionContainer, AdaptionError, check_type
+from Dhelpers.baseclasses import AdditionContainer
+from Dhelpers.arghandling import check_type
 from ..event_classes import StringEvent, EventObjectSender
-from .. import hotkeys, Adaptor, adaptionmethod
+from .. import hotkeys, Adaptor, adaptionmethod, AdaptionError
 import time, functools
 
 

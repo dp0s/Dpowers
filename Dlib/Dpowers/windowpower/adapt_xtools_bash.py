@@ -17,18 +17,18 @@
 #
 #
 import shlex, re
-from Dhelpers.all import (CollectionWithProps, NonNegativeInt, launch)
+from Dhelpers.arghandling import CollectionWithProps, NonNegativeInt
 
-from Dhelpers.adaptor import DependencyManager
+from .. import DependencyManager, launch
 
-with DependencyManager(__name__) as tester:
-    current_id = tester.test_shellcommand("xdotool",test_cmd = "xdotool "
+with DependencyManager(__name__) as manager:
+    current_id = manager.test_shellcommand("xdotool",test_cmd ="xdotool "
                                    "getactivewindow", pkg="xdotool")
     #checks if xdotool is installed and if getactivewindow works
 
-    tester.test_shellcommand("wmctrl", pkg="wmctrl")
+    manager.test_shellcommand("wmctrl", pkg="wmctrl")
 
-    tester.test_shellcommand("xprop",f"xprop -id {current_id} WM_CLASS")
+    manager.test_shellcommand("xprop", f"xprop -id {current_id} WM_CLASS")
     # checks if xprop is installed and if it gets the current window's class
 
 

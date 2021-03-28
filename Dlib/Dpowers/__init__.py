@@ -39,14 +39,17 @@ except ModuleNotFoundError:
     import Dhelpers
     
 
-__version__ = "0.1.0"
+__version__ = "0.1.0a1"
 from Dhelpers import __version__  as Dhelpers_version
 #Dpowers and Dhelpers share version number
 if __version__ != Dhelpers_version: raise ValueError
 
-from Dhelpers.all import (always_print_traceback, restore_print_func,
-    launch, AdaptorBase, adaptionmethod, AdaptionError, ArgSaver, Layout,
-    AdaptorBase, adaptionmethod, AdaptiveClass)
+from Dhelpers.adaptor import (AdaptorBase, adaptionmethod, AdaptionError,
+    AdaptorBase, adaptionmethod, AdaptiveClass, DependencyManager)
+from Dhelpers.launcher import launch
+from Dhelpers.customprint import always_print_traceback, restore_print_func
+from Dhelpers.arghandling import ArgSaver
+from Dhelpers.KeyboardLayouts import Layout
 
     
 try:

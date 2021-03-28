@@ -17,7 +17,9 @@
 #
 #
 from warnings import warn
-from Dhelpers.all import container, AdditionContainer, check_type, TimedObject
+from Dhelpers.baseclasses import AdditionContainer, TimedObject
+from Dhelpers.container import container
+from Dhelpers.arghandling import check_type
 from abc import ABC, abstractmethod
 import threading, queue, logging, inspect, functools, traceback
 from ..event_classes import MouseMoveEvent
