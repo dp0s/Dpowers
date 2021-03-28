@@ -126,8 +126,10 @@ class Layout(LayoutBase):
     
     
 class Layout_from_klfc(LayoutBase):
+    #klfc command line tool needs to be installed
+    #this way, json layout tables can be created.
     
-    klfc_option = "from-???"
+    klfc_option = None #to be set in subclass (see below)
     
     def get_keydict(self):
         json_str = launch.get(
