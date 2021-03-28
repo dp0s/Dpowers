@@ -65,7 +65,9 @@ import sphinx_rtd_theme
 html_theme = "sphinx_rtd_theme"
 #html_theme = "python_docs_theme"
 
-html_logo = "../Dlib/Dpowers/iconpower/icons/Dicon.svg"
+html_logo = "../Dlib/Dpowers/iconpower/icons/Dicon.png"
+
+html_favicon = "../Dlib/Dpowers/iconpower/icons/Dicon.png"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
