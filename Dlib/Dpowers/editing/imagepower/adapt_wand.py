@@ -33,7 +33,7 @@ def load(file, **kwargs):
         if len(s) == 1: return im.clone()
         raise ValueError(f"More than one image in file {file}.")
     
-def load_multipage(file, **kwargs):
+def load_multi(file, **kwargs):
     with Image(filename=file, **kwargs) as im:
         s = im.sequence
         if len(s) == 0: raise ValueError
@@ -67,8 +67,12 @@ def resolution(obj, value):
 def size(obj, value):
     if value is None: return obj.size
     obj.size = value
+    
+def colortype(obj, value):
+    if value is None: return obj.type
+    obj.type = value
 
-def set_value(backend_obj, name, value = None):
-    val_before = getattr(backend_obj, name)
-    if value is None: return val_before
-    return setattr(backend_obj, name, value)
+# def set_value(backend_obj, name, value = None):
+#     val_before = getattr(backend_obj, name)
+#     if value is None: return val_before
+#     return setattr(backend_obj, name, value)

@@ -37,7 +37,7 @@ class EditorAdaptor(Adaptor):
     baseclass = True
     save_in_place = False
     
-    @adaptionmethod
+    @adaptionmethod(require=True)
     def obj_class(self):
         return self.obj_class.target
     
@@ -266,15 +266,6 @@ class ResourceSequence(ResourceBase):
     
     def construct_backend_obj(self):
         return self.adaptor.construct_multi(self.backend_objs())
-    
-    
-    def set_value(self, name, value=None):
-        val = None
-        if self.backend_obj: val = super().set_value(name, value)
-        vals = []
-        for im in self.sequence:
-            vals.append(im.set_value(name, value))
-        return val, vals
     
     
     
