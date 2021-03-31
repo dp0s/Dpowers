@@ -28,7 +28,6 @@ class Sender(AdditionContainer.Addend,ABC):
     
     #only_defined_names = False
     default_delay = None  # must be set in subclass
-    default_duration = None
     custom_text_method = True
     
     @abstractmethod
@@ -58,20 +57,25 @@ class Sender(AdditionContainer.Addend,ABC):
     def _text(self, character, **kwargs):
         raise NotImplementedError
     
-    def send_eventstring(self, string, include_rls=True, delay=None):
+    def tap(self, character, delay=None, duration=None):
+        # defined for compatability
+        # duration attribute is ignored because no rls defined
+        self.press(character, delay=delay)
+    
+    def send_eventstring(self, string, auto_rls=True, delay=None):
+        #auto_rls attribute is ignored because no rls defined
         for entry in StringEvent.split_str(string):
             if isinstance(entry, str):
                 self.press(entry, delay=delay)
             else:
                 raise TypeError
         
-    
-    
     _starting_symbol = "<"
     _ending_symbol = ">"
     
     
     def send(self, s, auto_rls=True, delay=None, **text_kwargs):
+        text_kwargs["delay"] = delay
         _combination = self._ending_symbol + self._starting_symbol
         while True:
             s0, s1, s2 = s.partition(self._starting_symbol)
@@ -86,17 +90,18 @@ class Sender(AdditionContainer.Addend,ABC):
                 t0, t1, t2 = s2.partition(self._ending_symbol)
                 if t1 == "":
                     # this happens if ">" was not found so that < is not closed.
-                    self.text(self._starting_symbol + t0,**text_kwargs)
+                    self.text(self._starting_symbol + t0, **text_kwargs)
                     break
                 elif t0 != "":
-                    self.send_eventstring(t0, include_rls=auto_rls,
-                            delay=delay)
+                    self.send_eventstring(t0, auto_rls=auto_rls, delay=delay)
                 if t2 == "": break
                 s = t2
 
 
 
 class PressReleaseSender(Sender):
+    
+    default_duration = None
 
     @abstractmethod
     def _rls(self, name):
@@ -133,8 +138,7 @@ class PressReleaseSender(Sender):
         if duration is None: duration = self.default_duration
         for _ in range(repeat):
             for k in keynames:
-                with self.pressed(k, delay=delay):
-                    time.sleep(duration/1000)
+                with self.pressed(k, delay=delay): time.sleep(duration/1000)
             
             
     @hotkeys.add_pause_option(True)
@@ -334,21 +338,36 @@ class CombinedSender(AdditionContainer, PressReleaseSender,
         EventObjectSender, basic_class=Sender):
     
     
-    _methods_to_include = {"_press": NameError, "_rls":NameError,
-        "_send_event": TypeError, "_text": NotImplementedError}
+    
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.default_delay = self._members[0].default_delay
+        self.default_duration = self._members[0].default_duration
         
+    @AdditionContainer.create_combined_method(NameError)
+    def _press(self, name):
+        pass
+
+    @AdditionContainer.create_combined_method(NameError)
+    def _rls(self, name):
+        pass
+    
+    @AdditionContainer.create_combined_method(TypeError)
+    def _send_event(self, event, **kwargs):
+        pass
+    
+    @AdditionContainer.create_combined_method(NotImplementedError)
+    def _text(self, character, **kwargs):
+        pass
         
     def __call__(self, *args, **kwargs):
         return self.send(*args,**kwargs)
-    
-    def text(self, text, delay=None, avoid_error=False, **kwargs):
-        return super().text(text, delay, avoid_error, **kwargs)
 
     # useful methods:
     # -- send_event: This will call EventObjectSender.send_event and then
     # iterate over all members' _send_event methods until no TypeError is raised
     # -- press and rls will iterate over _press and _rls
-    # -- text will call super().text which will iterate over _text.
+    # -- text will call super().text which will iterate over _text
     # -- send. This will automatically call prs, rls, text and thus iterate
     #       as well
     

@@ -32,12 +32,12 @@ class KeyboardAdaptor(AdaptivePressReleaseSender):
     def _text(self, character, **kwargs):
         self._text.target(character, **kwargs)
     
-    default_delay = 10
+    default_delay = 0
     """*Class attribute.* Default time (in milliseconds) to wait between sending
         events if a sequence of keys is given. You can set a custom value to
         this attribute for the whole class or for a single instance only."""
 
-    default_duration = 10
+    default_duration = 1
     """*Class attribute.* Default time (in milliseconds) to wait between sending
         the press and the release event of the same key. You can set a custom
         value to this attribute for the whole class or for a single instance only."""

@@ -23,6 +23,12 @@ from ..event_sender import AdaptiveSender, AdaptivePressReleaseSender
 
 class SenderAdaptorMixin:
     
+    
+    default_delay = 0
+    """*Class attribute.* Default time (in milliseconds) to wait between sending
+        events if a sequence of keys is given. You can set a custom value to
+        this attribute for the whole class or for a single instance only."""
+    
     def __init__(self, *args,**kwargs):
         super().__init__(*args, **kwargs)
         self.selected_devs = []
@@ -39,7 +45,12 @@ class SenderAdaptor(SenderAdaptorMixin, AdaptiveSender):
     # inherits adaptionmethod _press
     pass
 
-
 class PressReleaseSenderAdaptor(SenderAdaptorMixin, AdaptivePressReleaseSender):
+    
     # inherits adaptionmethods _press and _rls
-    pass
+    
+    default_duration = 1
+    """*Class attribute.* Default time (in milliseconds) to wait between sending
+        the press and the release event of the same key. You can set a custom
+        value to this attribute for the whole class or for a single instance
+        only."""

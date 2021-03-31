@@ -23,6 +23,17 @@ from time import sleep
 class MouseAdaptor(AdaptivePressReleaseSender):
     
     # inherits adaptionmethods _press and _rls
+
+    default_delay = 0
+    """*Class attribute.* Default time (in milliseconds) to wait between sending
+        events if a sequence of keys is given. You can set a custom value to
+        this attribute for the whole class or for a single instance only."""
+
+    default_duration = 1
+    """*Class attribute.* Default time (in milliseconds) to wait between sending
+        the press and the release event of the same key. You can set a custom
+        value to this attribute for the whole class or for a single instance
+        only."""
     
     @property
     def NamedClass(self):

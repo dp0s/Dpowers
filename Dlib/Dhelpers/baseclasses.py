@@ -17,7 +17,7 @@
 #
 #
 
-import collections, traceback, threading, time, weakref
+import collections, traceback, threading, time, weakref, functools
 
 from .arghandling import check_type
 from Dhelpers.launcher import launch
@@ -305,7 +305,6 @@ class AdditionContainer:
     
     # must be set in the subclass:
     basic_class = None
-    _methods_to_include = {}
     Addend = AdditionContainerAddend
     
     @property
@@ -319,11 +318,6 @@ class AdditionContainer:
         cls.basic_class = basic_class
         cls.ordered=ordered
         basic_class.ContainerClass = cls
-        for method_name, error_type in cls._methods_to_include.items():
-            if not issubclass(error_type,Exception): raise TypeError
-            setattr(cls, method_name, cls._create_combined_method(
-                    method_name, error_type))
-    
     
     def __init__(self, *args):
         self._members = []
@@ -366,17 +360,23 @@ class AdditionContainer:
 
         
     @staticmethod
-    def _create_combined_method(method_name, error_type):
-        def combined_method(self, *args, **kwargs):
-            for member in self._members:
-                try:
-                    method = getattr(member,method_name)
-                except AttributeError:
-                    continue
-                try:
-                    return method(*args, **kwargs)
-                except error_type:
-                    continue
-            raise error_type(f"Arguments {args, kwargs} not allowed for "
-                    f"method {method_name} of AdditionObject {self}")
-        return combined_method
+    def create_combined_method(error_type):
+        """A decorator to automatically create combination methods."""
+        if not issubclass(error_type, Exception): raise TypeError
+        def decorator(func):
+            name = func.__name__
+            @functools.wraps(func)
+            def combined_method(self, *args, **kwargs):
+                for member in self._members:
+                    try:
+                        method = getattr(member,name)
+                    except AttributeError:
+                        continue
+                    try:
+                        return method(*args, **kwargs)
+                    except error_type:
+                        continue
+                raise error_type(f"Arguments {args, kwargs} not allowed for "
+                        f"method {name} of AdditionObject {self}.")
+            return combined_method
+        return decorator
