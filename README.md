@@ -1,4 +1,4 @@
-Documentation see https://dpowers.readthedocs.io/en/latest/.
+Documentation see https://dpowers.readthedocs.io.
 
 This package has not been tested properly, but is running well on my PC 
 (Linux Mint). There are probably a lot of bugs still.

@@ -27,39 +27,38 @@ import time, functools
 class Sender(AdditionContainer.Addend,ABC):
     
     #only_defined_names = False
-    default_delay = None
+    default_delay = None  # must be set in subclass
+    default_duration = None
+    custom_text_method = True
     
     @abstractmethod
     def _press(self, name):
         raise NotImplementedError
 
-    @hotkeys.add_pause_option(True)
     def press(self, *names, delay=None):
-        delay = self.default_delay if delay is None else delay
+        if delay is None: delay = self.default_delay
         for k in names:
             self._press(k)
             if delay: time.sleep(delay/1000)
 
-    @hotkeys.add_pause_option(True)
-    def text(self, string, delay = None, avoid_error = True, **kwargs):
-        delay = self.default_delay if delay is None else delay
-        for character in string:
-            try:
-                self._text(character, **kwargs)
-            except NotImplementedError:
-                if avoid_error:
-                    self.send_eventstring(string, delay=delay,
-                            hotkey=True, **kwargs)
-                    break
-                raise
-            if delay: time.sleep(delay/1000)
-        
-        
+    def text(self, text, delay=None, custom=None, **kwargs):
+        if delay is None: delay = self.default_delay
+        if custom is None: custom = self.custom_text_method
+        for character in text:
+            if custom:
+                try:
+                    self._text(character, **kwargs)
+                    if delay: time.sleep(delay/1000)
+                except NotImplementedError:
+                    custom = False
+            if not custom:
+                self.tap(character, delay=delay, duration=10)
+                
+
     def _text(self, character, **kwargs):
         raise NotImplementedError
-
     
-    def send_eventstring(self, string, hotkey=False, delay=None):
+    def send_eventstring(self, string, include_rls=True, delay=None):
         for entry in StringEvent.split_str(string):
             if isinstance(entry, str):
                 self.press(entry, delay=delay)
@@ -70,45 +69,34 @@ class Sender(AdditionContainer.Addend,ABC):
     
     _starting_symbol = "<"
     _ending_symbol = ">"
-    _combination = _ending_symbol + _starting_symbol
     
-    @hotkeys.add_pause_option(True)
-    def send(self, s, hotkey=None, **kwargs):
-        """
-        Send a chain of characters or keys.
-        Use <key> to denote special keys or <key1+key2> for combinations.
-        If not paired, < and > are interpreted normally.
-        Use <><something> to send literal <something>
-        <key  press> and <key rls> will only send _press/release events.
-        <key1+key2 _press/rls> is also possible.
-        <key x> will send the key x times.
-        Example: keyb.send(<ctrl+v> or keyb.send(<ctrl  press>v<ctrl rls>))
-        """
+    
+    def send(self, s, auto_rls=True, delay=None, **text_kwargs):
+        _combination = self._ending_symbol + self._starting_symbol
         while True:
             s0, s1, s2 = s.partition(self._starting_symbol)
-            if s0 != "": self.text(s0, **kwargs)
+            if s0 != "": self.text(s0, **text_kwargs)
             if s2 == "": break
-            if s2.startswith(self._combination):
+            if s2.startswith(_combination):
                 # if <>< is typed, send a single < and search if any more <
                 # are present
-                self.text(self._starting_symbol,**kwargs)
+                self.text(self._starting_symbol,**text_kwargs)
                 s = s2[2:]
             else:
                 t0, t1, t2 = s2.partition(self._ending_symbol)
                 if t1 == "":
                     # this happens if ">" was not found so that < is not closed.
-                    self.text(self._starting_symbol + t0,**kwargs)
+                    self.text(self._starting_symbol + t0,**text_kwargs)
                     break
                 elif t0 != "":
-                    self.send_eventstring(t0, hotkey=hotkey, **kwargs)
+                    self.send_eventstring(t0, include_rls=auto_rls,
+                            delay=delay)
                 if t2 == "": break
                 s = t2
 
 
 
 class PressReleaseSender(Sender):
-    
-    hotkey_enabled_default = True
 
     @abstractmethod
     def _rls(self, name):
@@ -116,24 +104,23 @@ class PressReleaseSender(Sender):
 
     @hotkeys.add_pause_option(True)
     def rls(self, *names, delay=None):
-        delay = self.default_delay if delay is None else delay
+        if delay is None: delay = self.default_delay
         for k in reversed(names):
             self._rls(k)
             if delay: time.sleep(delay/1000)
     
-    def send_eventstring(self, string, hotkey=True, delay=None):
-        if hotkey is None: hotkey=self.hotkey_enabled_default
+    def send_eventstring(self, string, auto_rls=True, delay=None):
         for entry in StringEvent.split_str(string):
             if isinstance(entry, str):
                 if entry.endswith("_rls"):
-                    if hotkey: raise ValueError
+                    if auto_rls: raise ValueError
                     self.rls(entry[:-4],delay=delay)
-                elif hotkey:
-                    self.tap(entry,delay=delay)
+                elif auto_rls:
+                    self.tap(entry, delay=delay)
                 else:
                     self.press(entry,delay=delay)
             elif isinstance(entry, (list,tuple)):
-                self.comb(*entry,delay=delay)
+                self.comb(*entry, delay=delay)
             else:
                 raise TypeError(entry)
             
@@ -141,18 +128,21 @@ class PressReleaseSender(Sender):
     def pressed(self, *names, delay=None):
         return PressedContext(self, *names, delay=delay)
 
-    @hotkeys.add_pause_option(True)
-    def tap(self, *keynames, delay=None, duration=0.01, repeat = 1):
+    def tap(self, *keynames, delay=None, duration=None, repeat=1):
+        if delay is None: delay = self.default_delay
+        if duration is None: duration = self.default_duration
         for _ in range(repeat):
             for k in keynames:
                 with self.pressed(k, delay=delay):
-                    time.sleep(duration)
+                    time.sleep(duration/1000)
             
             
     @hotkeys.add_pause_option(True)
-    def comb(self, *keynames, delay=None, duration=0.01):
+    def comb(self, *keynames, delay=None, duration=None):
+        if delay is None: delay = self.default_delay
+        if duration is None: duration = self.default_duration
         with self.pressed(*keynames, delay=delay):
-            time.sleep(duration)
+            time.sleep(duration/1000)
 
 
 
@@ -168,27 +158,13 @@ class PressedContext:
         return self.sender_instance
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type == AdaptionError: return  # just raise this error directly
+        #if exc_type == AdaptionError: return  # just raise this error directly
         try:
-            self.sender_instance.rls(*self.names, delay=self.delay)  # try to rls the keys
+            self.sender_instance.rls(*self.names, delay=self.delay)
+            # try to rls the keys
         except Exception as e:
             if exc_type == type(e): return  # only reraise press error
             raise
-        
-
-# class PressedContex_mapped(PressedContext):
-#
-#     def __init__(self, sender_instance, *names, delay=None, map_names=True):
-#         if map_names:
-#             d = sender_instance._press_rls_standdict
-#             if d:
-#                 names = tuple(d.apply(name) for name in names)
-#                 map_names = False  # this way, we only  perform it ones for
-#                 # press and release
-#         super().__init__(sender_instance, *names, delay=delay)
-#         self.map_names = map_names
-
-
 
 
 
@@ -365,8 +341,8 @@ class CombinedSender(AdditionContainer, PressReleaseSender,
     def __call__(self, *args, **kwargs):
         return self.send(*args,**kwargs)
     
-    def text(self, string, delay=None, avoid_error=False, **kwargs):
-        return super().text(string, delay, avoid_error, **kwargs)
+    def text(self, text, delay=None, avoid_error=False, **kwargs):
+        return super().text(text, delay, avoid_error, **kwargs)
 
     # useful methods:
     # -- send_event: This will call EventObjectSender.send_event and then

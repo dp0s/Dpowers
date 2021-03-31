@@ -28,6 +28,7 @@ import sys
 sys.path.insert(0, path.join(path.realpath('..'),"Dlib"))
 
 import Dpowers, Dhelpers
+from Dpowers import keyb
 
 # -- Project information -----------------------------------------------------
 
@@ -43,6 +44,8 @@ version = Dpowers.__version__
 # ones.
 extensions = ['sphinx.ext.autodoc', "sphinx.ext.autosummary",
     'sphinx_rtd_theme']
+
+#napoleon_use_param = True
 
 autodoc_default_options = {'member-order':"bysource", "members":True}
 #autoclass_content = "both"

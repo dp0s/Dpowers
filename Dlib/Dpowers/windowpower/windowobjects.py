@@ -222,12 +222,12 @@ class WindowObject(ABC):
             reverse=False):
         waited = 0
         while waited <= timeout:
-            awin = self._WinSearchClass()
+            awin = self._FoundWinClass()
             # this WindowSearch Object is refreshed everytime
-            if awin in self.IDs():
+            if awin.ID() in self.IDs():
                 if not reverse:
                     time.sleep(pause_when_found)
-                    return awin.find()
+                    return awin
             elif reverse:
                 return True
             if timeout == 0:

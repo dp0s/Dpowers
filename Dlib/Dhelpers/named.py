@@ -199,8 +199,7 @@ class NamedObj(KeepInstanceRefs):
     
     
     def __eq__(self, other):
-        if isinstance(other,int): other=f"[{other}]"
-        if isinstance(other, str):
+        if isinstance(other, (int,str)):
             return self.make_comparable(other) in self.names_comparable
         else:
             return super().__eq__(other)

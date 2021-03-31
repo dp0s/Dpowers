@@ -30,8 +30,8 @@ class hotkeys:
                     with cls.paused(timeout): return func(*args, **kwargs)
                 else:
                     return func(*args, **kwargs)
-            function_with_hotkey_pause.__signature__ = add_kw_only_arg(func,
-                    "pause_hotkeys", default=default_pause_value)
+            #function_with_hotkey_pause.__signature__ = add_kw_only_arg(func,
+             #       "pause_hotkeys", default=default_pause_value)
             return function_with_hotkey_pause
         return wrapper_function
     

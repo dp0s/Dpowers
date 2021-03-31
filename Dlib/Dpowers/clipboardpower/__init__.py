@@ -72,7 +72,7 @@ class ClipboardAdaptor(Adaptor):
     def paste(self, string):
         with self.saved():
             self.fill(string)
-            keyb.comb("ctrl","v")
+            keyb.comb("ctrl", "v")
 
 
 

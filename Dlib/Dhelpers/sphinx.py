@@ -19,8 +19,7 @@
 import sys
 
 
-#### source of the following:
-### https://stackoverflow.com/questions/7250659
+
 
 
 import sys
@@ -38,6 +37,7 @@ from docutils import nodes, statemachine
 class ExecDirective(Directive):
     """Execute the specified python code and insert the output into the
     document"""
+    #### source: https://stackoverflow.com/questions/7250659
     has_content = True
     
     def run(self):
@@ -66,6 +66,7 @@ class ExecDirective(Directive):
     @classmethod
     def get_globals(cls, globals):
         cls.globals_ = globals
+
 
 
 
@@ -99,14 +100,23 @@ class ActiveCode(ImprovedExecDirective):
         local = {}
         for line in self.content:
             assert isinstance(line, str)
-            if line.startswith(">>>"):
-                append = line
+            if line.startswith(">"):
+                if line.startswith(">>>>"):
+                    raise SyntaxError
+                elif line.startswith(">>>"):
+                    line = line[3:]
+                elif line.startswith(">>"):
+                    line = line[2:]
+                else:
+                    line = line[1:]
+                if not line.startswith(" "): line = " " + line
+                append = ">>>" + line
             else:
                 try:
                     exec("__ret__ = " + line, self.globals_, local)
                 except SyntaxError:
                     exec(line, self.globals_, local)
-                    #important becuase it keeps the locals up to date
+                    #important because it keeps the locals up to date
                     continue
                 append = str(local["__ret__"])
             if isinstance(append, str):
@@ -114,7 +124,6 @@ class ActiveCode(ImprovedExecDirective):
             else:
                 append_lines = (append,)
             #print("append_lines", append_lines)
-            for line in append_lines:
-                text += "\t" + line + "\n"
+            for line in append_lines: text += "\t" + line + "\n"
         return text
         

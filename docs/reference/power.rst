@@ -8,5 +8,5 @@ Adaptors
 
 .. exec::
 
-    Dpowers.Adaptor._print_sphinx_docs("clip", "ntfy", "dlg", "hook", "keyb",
-        "mouse", Dpowers.SenderAdaptor)
+    Dpowers.Adaptor._print_sphinx_docs("keyb","mouse","clip", "ntfy", "dlg",
+    "hook")

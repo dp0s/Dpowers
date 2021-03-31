@@ -139,8 +139,8 @@ class AdaptionMethod:
         except TypeError as e:
             if str(e).endswith("object is not callable") and self.target in (
                     None, NotImplemented):
-                raise AdaptionError("target of adaptionmethod %s is "
-                                    "%s."%(self.__name__, self.target)) from e
+                raise NotImplementedError("target of adaptionmethod %s is "
+                                    "%s."%(self.__name__, self.target))
             else:
                 raise
         self._called_args = None
@@ -265,9 +265,9 @@ class AdaptorBase(KeepInstanceRefs):
                 cls.AdaptiveClass = type("AdaptiveClass",
                         (AdaptiveClass,), dict(adaptor_class=cls))
                 c = cls._first_level_subclass
-                add = f"Subclass of :class:`{c.__module__}.{c.__name__}`.\n"
+                add = f"Subclass of :class:`{c.__module__}.{c.__name__}`."
                 doc = cls.__doc__ if cls.__doc__ else ""
-                cls.__doc__ = add + doc
+                cls.__doc__ = doc + "\n\n" + add
         elif cls._subclass_level == 1:
             cls._first_level_subclass = cls
             initdoc = cls.__init__.__doc__
@@ -581,7 +581,7 @@ class AdaptorBase(KeepInstanceRefs):
                 heading = subcls.__name__
             else:
                 raise TypeError
-            subcls.adapt.__doc__ = "See :func:`Adaptor.adapt`"
+            subcls.adapt.__doc__ = "Choose the backend for this instance. See :func:`Adaptor.adapt`."
             subcls.AdaptiveClass = None
             print(heading)
             print("_"*len(heading))
@@ -594,16 +594,16 @@ class AdaptorBase(KeepInstanceRefs):
             print()
             print(f".. class:: Dpowers.{subcls.__name__}.AdaptiveClass")
             print()
-            print("\t\tA baseclass to create your own AdaptiveClasses. See :class:`Dpowers.AdaptiveClass`")
+            print("\t\tA baseclass to create your own AdaptiveClasses. See \
+                :class:`Dpowers.AdaptiveClass`.")
             print()
-
 
 
 wrap = functools.wraps(AdaptorBase.adapt, assigned=())
 class AdaptiveClass:
     
     def __init_subclass__(cls):
-        add = f"Subclass of :class:`Dpowers.AdaptiveClass`.\n"
+        add = f"Subclass of :class:`Dpowers.AdaptiveClass`.\n\n"
         doc = cls.__doc__ if cls.__doc__ else ""
         cls.__doc__ = add + doc
     
