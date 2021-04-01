@@ -20,6 +20,7 @@
 from ... import adaptionmethod, hotkeys, NamedKey
 from ..event_sender import AdaptivePressReleaseSender
 
+
 class KeyboardAdaptor(AdaptivePressReleaseSender):
     """Send key events to the system via the chosen backend."""
     
@@ -33,14 +34,18 @@ class KeyboardAdaptor(AdaptivePressReleaseSender):
         self._text.target(character, **kwargs)
     
     default_delay = 0
-    """*Class attribute.* Default time (in milliseconds) to wait between sending
-        events if a sequence of keys is given. You can set a custom value to
-        this attribute for the whole class or for a single instance only."""
+    """
+    .. exec::
+
+        event_sender.default_delay_doc("keys")
+    """
 
     default_duration = 1
-    """*Class attribute.* Default time (in milliseconds) to wait between sending
-        the press and the release event of the same key. You can set a custom
-        value to this attribute for the whole class or for a single instance only."""
+    """
+    .. exec::
+
+        event_sender.default_duration_doc("key")
+    """
     
 
     @property

@@ -29,6 +29,7 @@ sys.path.insert(0, path.join(path.realpath('..'),"Dlib"))
 
 import Dpowers, Dhelpers
 from Dpowers import keyb
+from Dpowers.events.sending import event_sender
 
 # -- Project information -----------------------------------------------------
 

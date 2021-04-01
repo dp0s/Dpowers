@@ -25,15 +25,18 @@ class MouseAdaptor(AdaptivePressReleaseSender):
     # inherits adaptionmethods _press and _rls
 
     default_delay = 0
-    """*Class attribute.* Default time (in milliseconds) to wait between sending
-        events if a sequence of keys is given. You can set a custom value to
-        this attribute for the whole class or for a single instance only."""
+    """
+    .. exec::
+
+        event_sender.default_delay_doc("buttons")
+    """
 
     default_duration = 1
-    """*Class attribute.* Default time (in milliseconds) to wait between sending
-        the press and the release event of the same key. You can set a custom
-        value to this attribute for the whole class or for a single instance
-        only."""
+    """
+    .. exec::
+
+        event_sender.default_duration_doc("button")
+    """
     
     @property
     def NamedClass(self):

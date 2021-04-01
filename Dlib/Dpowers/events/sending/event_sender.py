@@ -23,6 +23,16 @@ from ..event_classes import StringEvent, EventObjectSender
 from .. import hotkeys, Adaptor, adaptionmethod, AdaptionError
 import time, functools
 
+def _doc(middle):
+    return "*Class attribute.* Default time (in milliseconds) to wait between" \
+           f" sending {middle}. You can set a custom value to this attribute"\
+            " for the whole class or for a single instance."
+
+def default_delay_doc(obj_name):
+    print(_doc(f"several {obj_name} in a row"))
+
+def default_duration_doc(obj_name):
+    print(_doc(f"press and release event of the same {obj_name}"))
 
 class Sender(AdditionContainer.Addend,ABC):
     
