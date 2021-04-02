@@ -37,9 +37,12 @@ from evdev.ecodes import (EV_KEY, EV_ABS, EV_SYN, EV_MSC, KEY, BTN,
     EV_LED, EV_REL, ABS_MT_POSITION_X, ABS_MT_POSITION_Y, ABS_X, ABS_Y,
     REL_X, REL_Y, bytype)
 
+try:
+    DevHandler = device_control.DeviceHandler
+except AttributeError:
+    DevHandler = device_control.DeviceStarter
 
-
-class EvdevHandler(device_control.DeviceStarter, InputEventHandler):
+class EvdevHandler(DevHandler, InputEventHandler):
     
     devupdater = device_control.DeviceUpdater(activate_looper=True)
     # this class will also use the CollactableInputDevice class and the
@@ -49,8 +52,7 @@ class EvdevHandler(device_control.DeviceStarter, InputEventHandler):
     
     def __init__(self, hook_cls=None, **selection_kwargs):
         InputEventHandler.__init__(self,hook_cls)
-        device_control.DeviceStarter.__init__(self,devupdater= self.devupdater,
-            **selection_kwargs)
+        DevHandler.__init__(self,devupdater= self.devupdater, **selection_kwargs)
     
         
 class Capturer( device_control.CapturerMixin, EvdevHandler):

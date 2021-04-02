@@ -20,7 +20,7 @@
 
 __all__ = ["autoadapt", "keyb", "mouse", "ntfy", "dlg", "hook", "Icon", "Win",
     "sendwait", "nfsendwait", "clip", "Dfuncs", "events", "KeyWaiter", "Image",
-    "mp3tag", "sleep", "launch", "Dpowers", "Dhelpers"]
+    "mp3tag", "sleep", "hotkeys","launch", "Dpowers", "Dhelpers"]
 
 import os, sys
 from time import sleep

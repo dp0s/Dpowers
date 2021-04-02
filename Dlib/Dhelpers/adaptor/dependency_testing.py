@@ -89,14 +89,17 @@ class BackendDependencyError(Exception):
         self.manager_inst = dependency_object.manager
     
     def handle(self):
-        if isinstance(self.caused_by,ModuleNotFoundError):
-            print(self.dependency_obj.install_instructions[""])
-        raise self
+        #if isinstance(self.caused_by,ModuleNotFoundError):
+        #    print(self.dependency_obj.install_instructions[""])
+        raise self from self.caused_by
     
     def __str__(self) -> str:
-        return super().__str__() \
-               + f"\n{self.dependency_obj.install_instructions['']}"
-
+        text = f"{self.dependency_obj}\nCaused by " + \
+               f"{type(self.caused_by).__name__}: {self.caused_by}"
+        if isinstance(self.caused_by, ModuleNotFoundError):
+            text += "\nTry the following solution:\n" + \
+                    str(self.dependency_obj.install_instructions[''])
+        return text
 
 
 class DependencyManager:
