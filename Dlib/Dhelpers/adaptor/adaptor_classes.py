@@ -297,13 +297,24 @@ class AdaptorBase(KeepInstanceRefs):
             if prim_inst:
                 raise ValueError(f"Primary instance for this instance group "
                                  "already set:\n{prim_inst}")
-            if group == "default":
-                self.__doc__ = f"Default instance of " \
-                               f"{self.__class__.__name__} class."
             # the following is a way of conditionally subclassing:
             RememberInstanceCreationInfo.__init__(self)
             self.primary = True
             self._primary_instances[self.creation_name]=self
+            if group == "default":
+                doc= \
+                f"Default instance of {self.__class__.__name__} class.\n\n"\
+                "How to import::\n\n"\
+                f"\tfrom Dpowers import {self.creation_name}"
+                default_backends = self.get_from_backend_source()
+                if default_backends is not None:
+                    doc += "\n\n\t# choose the default backend for your system:"
+                    doc += f"\n\t{self.creation_name}.adapt()"
+                doc += "\n\n\t# alternatively, choose one of the following " \
+                       "backends:"
+                for backend_name in self.backend_names():
+                    doc += f"\n\t{self.creation_name}.adapt('{backend_name}')"
+                self.__doc__ = doc
         self.backend = None
         
         for name in self.adaptionmethod_names:
@@ -452,7 +463,6 @@ class AdaptorBase(KeepInstanceRefs):
     def _get_from_backend_source(cls, group_or_instance="default",
             Adaptor_class_or_name=None, backend_source=None):
         if backend_source is None: backend_source = cls.backend_defaults
-        
         if Adaptor_class_or_name is None:
             Adaptor_subclass_name = cls.__name__
         elif issubclass(Adaptor_class_or_name, cls):
@@ -460,12 +470,10 @@ class AdaptorBase(KeepInstanceRefs):
         else:
             Adaptor_subclass_name = Adaptor_class_or_name
         check_type(str, Adaptor_subclass_name)
-        
         try:
             subclass_info_class = getattr(backend_source, Adaptor_subclass_name)
         except AttributeError:
             return
-        
         if group_or_instance is None:
             raise ValueError
         elif isinstance(group_or_instance, cls):
@@ -503,7 +511,7 @@ class AdaptorBase(KeepInstanceRefs):
             if not (ignore_baseclasses and subcls.baseclass): yield subcls
     
     @classmethod
-    def find_modules(cls):
+    def backend_names(cls):
         if cls.baseclass: raise TypeError
         path = os.path.dirname(inspect.getfile(cls))
         for submodule in pkgutil.iter_modules([path]):
@@ -511,7 +519,13 @@ class AdaptorBase(KeepInstanceRefs):
             name = submodule[1]
             if not name.startswith("adapt_"):
                 continue
-            yield cls.__module__ + "." + name
+            yield name[6:]
+            
+    @classmethod
+    def find_modules(cls):
+        for name in cls.backend_names():
+            yield cls.__module__ + ".adapt_" + name
+        
             
     @classmethod
     def backend_dict(cls, check=True):

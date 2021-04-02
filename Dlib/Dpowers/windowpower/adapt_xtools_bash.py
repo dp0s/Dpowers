@@ -103,8 +103,8 @@ def _xdo_get_from_single_id(ID, add_final):
 # find all window ids matching the given pattern
 
 def _xdo_get_ids(*win_args, **win_kwargs):
-    cmd = _xdo_cmd(*win_args, **win_kwargs,
-            add_final=None)  # add_final=None makes sure that IDs are returned
+    cmd = _xdo_cmd(*win_args,  **win_kwargs, add_final=None)
+        # add_final=None makes sure that IDs are returned
     try:
         x = launch.get(cmd)
     except launch.CalledProcessError:
@@ -134,20 +134,20 @@ def ID_from_location(param):
 
 allowed_properties = "title", "wcls", "pid"
 
-def IDs_from_property(prop_name, prop_val):
+def IDs_from_property(prop_name, prop_val, visible):
     if prop_name == "title":
-        return _xdo_get_ids(title=prop_val)
+        return _xdo_get_ids(title=prop_val, onlyvisible=visible)
     elif prop_name == "wcls":
         wcls = prop_val
         if "." in wcls:
             cl_name, cl = wcls.split(".")
             # cls is a string of pattern "cl_name.cl" usually
-            return tuple(set(_xdo_get_ids(cl=cl)) & set(
-                    _xdo_get_ids(cl_name=cl_name)))
+            return tuple(set(_xdo_get_ids(cl=cl, onlyvisible=visible)) & set(
+                    _xdo_get_ids(cl_name=cl_name, onlyvisible=visible)))
         else:
-            return _xdo_get_ids(cl=wcls)
+            return _xdo_get_ids(cl=wcls, onlyvisible=visible)
     elif prop_name == "pid":
-        return _xdo_get_ids(pid=prop_val)
+        return _xdo_get_ids(pid=prop_val, onlyvisible=visible)
     raise NotImplementedError
 
 
@@ -158,7 +158,9 @@ def property_from_ID(ID, prop_name):
         x = re.split('"', launch.get("xprop", "-id", ID, "WM_CLASS"))
         return x[-4] + '.' + x[-2]
     elif prop_name == "pid":
-        return int(_xdo_get_from_single_id(ID, "getwindowpid"))
+        p = _xdo_get_from_single_id(ID, "getwindowpid")
+        if p is None: return
+        return int(p)
     elif prop_name == "geometry":
         g = _xdo_get_from_single_id(ID, "getwindowgeometry -shell")
         x = re.split("[\n=”]", g)

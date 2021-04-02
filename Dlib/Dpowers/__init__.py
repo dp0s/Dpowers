@@ -18,10 +18,9 @@
 #
 
 
-
-__all__ = ["Dpowers","autoadapt","sleep","launch","Icon","Win",
-    "keyb", "mouse","ntfy","dlg","hotkeys","hook","sendwait","nfsendwait",
-    "clip", "Dfuncs","events", "KeyWaiter", "Image", "mp3tag", "Dhelpers"]
+__all__ = ["autoadapt", "keyb", "mouse", "ntfy", "dlg", "hook", "Icon", "Win",
+    "sendwait", "nfsendwait", "clip", "Dfuncs", "events", "KeyWaiter", "Image",
+    "mp3tag", "sleep", "launch", "Dpowers", "Dhelpers"]
 
 import os, sys
 from time import sleep

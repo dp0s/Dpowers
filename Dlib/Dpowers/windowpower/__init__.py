@@ -46,7 +46,7 @@ class WindowAdaptor(Adaptor):
                 "func.module}".format_map(locals()))
     
     @adaptionmethod(require=True)
-    def IDs_from_property(self, prop_name, prop_val):
+    def IDs_from_property(self, prop_name, prop_val, visible=None):
         try:
             i_list = self.IDs_from_property.target_with_args()
         except NotImplementedError as e:

@@ -96,7 +96,7 @@ class WindowObject(ABC):
     def pids_(self):
         for ID in self.IDs():
             x = self.adaptor.property_from_ID(ID, "pid")
-            check_type(PositiveInt, x)
+            check_type(PositiveInt, x, allowed=(None,))
             yield x
     def pids(self):
         return tuple(self.pids_())
@@ -297,8 +297,10 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
         new_kwargs.update(kwargs)
         return self.__class__(*self.creation_args, **new_kwargs)
     
-    def process_args(self, title_or_ID=None,*, loc=None, limit=None, **properties):
-        check_type(PositiveInt, limit, allowed=(None,))
+    def process_args(self, title_or_ID=None,*, loc=None, limit=None,
+            visible=None, **properties):
+        check_type(int, limit, allowed=(None,))
+        self.visible = visible
         self.location = loc
         self.fixed_IDs = None
         if loc is not None:
@@ -341,14 +343,22 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
                 self.adaptor.id_exists(ID))
         
         for prop, prop_val in self._properties.items():
-            matching_ids = set(self.adaptor.IDs_from_property(prop, prop_val))
+            matching_ids = set(self.adaptor.IDs_from_property(prop, prop_val,
+                    visible=self.visible))
             if winlist is None:
                 winlist = matching_ids
             else:
                 winlist &= matching_ids  # make intersection
             if winlist is set(): break
-        out = sorted(tuple(winlist) if winlist else tuple())
-        if self.limit: out = out[:self.limit]
+        out = tuple(sorted(winlist))
+        l = self.limit
+        if l:
+            if l > 0:
+                out = out[:l]
+            elif l < 0:
+                out = out[l:]
+            else:
+                raise ValueError(self.limit)
         return out
     
     def existing_IDs(self):
