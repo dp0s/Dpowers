@@ -94,8 +94,8 @@ my_setup("Dpowers",
 
 my_setup("Dhelpers",
     version = Dhelpers.__version__,
-    package_data = {"Dhelpers.KeyboardLayouts.layouts_imported_from_xkb"
-    : ["*"]},
+    package_data = {"Dhelpers.KeyboardLayouts.layouts_imported_from_xkb": [
+        "*"], "Dhelpers.KeyboardLayouts.other_layouts": ["*"]},
     install_requires=["setuptools >= 45",  "psutil>=5.4.2", "pyyaml>=3.12"],
     description="Dhelpers support modules"
     )

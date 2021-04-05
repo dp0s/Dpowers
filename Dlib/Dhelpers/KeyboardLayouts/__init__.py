@@ -22,9 +22,11 @@ from Dhelpers.launcher import launch
 path = os.path
 
 parentfolder = path.split(__file__)[0]
-saved_folder = path.join(parentfolder,"layouts_imported_from_xkb")
+xkb_imported_folder = path.join(parentfolder, "layouts_imported_from_xkb")
+other_layout_folder = path.join(parentfolder, "other_layouts")
+
 try:
-    os.makedirs(saved_folder, exist_ok=True)
+    os.makedirs(xkb_imported_folder, exist_ok=True)
 except PermissionError:
     pass
     
@@ -36,12 +38,26 @@ def get_files(folder):
         if path.isfile(fp): yield f, fp
 
 
+class Shifted:
+    
+    def __init__(self, keyname, num=1):
+        self.keyname = keyname
+        assert isinstance(num, int), num >= 1
+        self.num = num
+        
+    def __repr__(self):
+        ret = f"<{self.__class__.__name__}({self.keyname}"
+        if self.num > 1: ret+= f", x{self.num}"
+        ret += ")>"
+        return ret
+        
 class LayoutBase(ABC):
     
-    json_savefolder = saved_folder
+    json_savefolder = None
     folders=[]
     file_ending = ""
     available_layouts = {}
+    default_layout= "us"
     
     def __init__(self, name, folder=None, raise_error=True):
         self.name = name
@@ -96,33 +112,66 @@ class LayoutBase(ABC):
     
     
     def __lt__(self, other):
+        if isinstance(other, str): other = self.__class__(other)
         if not isinstance(other, self.__class__): return NotImplemented
         d = {}
         kd2 = self.key_dict
         kd1 = other.key_dict
-        for key in kd2:
-            right = kd2[key][0]
+        for key, val in kd2.items():
             try:
                 left = kd1[key][0]
             except KeyError:
                 left = key
-            if left is not right: d[left] = right
+            d[left] = val
         return d
     
+    def __gt__(self, other):
+        if isinstance(other, str): other = self.__class__(other)
+        if not isinstance(other, self.__class__): return NotImplemented
+        return other < self
+
+
     
-
-
+    @classmethod
+    def translate(cls, *, source=None, to=None):
+        if source == to: raise ValueError
+        if source is None: source = cls.default_layout
+        if to is None: source = cls.default_layout
+        return cls(source) > cls(to)
+    
+    def receive_map(self, source=None):
+        if source is None: source = self.default_layout
+        return self < source
+        
+    @staticmethod
+    def create_send_map(key_dict):
+        out = {}
+        for key, val in key_dict.items():
+            out[val[0]] = key
+            for i in range(1, len(val)):
+                item = val[i]
+                out[item] = Shifted(key,num=i)
+        return out
+        
+    
+    def send_map(self, to=None):
+        return self.create_send_map(self.receive_map(source=to))
 
 
 class Layout(LayoutBase):
     
-    folders = [saved_folder]
+    
+    
+    folders = [xkb_imported_folder, other_layout_folder]
     file_ending = ".json"
     
     def get_keydict(self):
         with open(self.sourcepath()) as f: return json.load(f)
     
+
+class EvdevTargetLayout(Layout):
     
+    default_layout = "evdev"
     
     
 class Layout_from_klfc(LayoutBase):
@@ -146,6 +195,7 @@ class Layout_from_klfc(LayoutBase):
     
 class XKBLayout(Layout_from_klfc):
     
+    json_savefolder = xkb_imported_folder
     folders = ["/usr/share/X11/xkb/symbols"]
     klfc_option = "from-xkb"
 
