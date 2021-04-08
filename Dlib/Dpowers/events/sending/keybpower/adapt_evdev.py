@@ -27,6 +27,11 @@ global_uinput = uinput.global_uinput
 from evdev.ecodes import KEY, EV_KEY
 
 names = {}
+backend_layout = "evdev"
+layout = "us"
+use_shifted = True
+
+
 
 def iterator(dic):
     for a, b in dic.items():

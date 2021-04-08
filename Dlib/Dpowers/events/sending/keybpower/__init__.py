@@ -17,11 +17,11 @@
 #
 #
 
-from ... import adaptionmethod, hotkeys, NamedKey
-from ..event_sender import AdaptivePressReleaseSender
+from ... import adaptionmethod, hotkeys, NamedKey, Layout
+from ..event_sender import AdaptivePRSenderShifted
 
 
-class KeyboardAdaptor(AdaptivePressReleaseSender):
+class KeyboardAdaptor(AdaptivePRSenderShifted):
     """Send key events to the system via the chosen backend."""
     
     
@@ -30,8 +30,8 @@ class KeyboardAdaptor(AdaptivePressReleaseSender):
     # rls
     
     @adaptionmethod("text")
-    def _text(self, character, **kwargs):
-        self._text.target(character, **kwargs)
+    def _text_action(self, character, **kwargs):
+        self._text_action.target(character, **kwargs)
     
     default_delay = 0
     """
@@ -46,7 +46,6 @@ class KeyboardAdaptor(AdaptivePressReleaseSender):
 
         event_sender.default_duration_doc("key")
     """
-    
 
     @property
     def NamedClass(self):
@@ -55,8 +54,48 @@ class KeyboardAdaptor(AdaptivePressReleaseSender):
     def NamedClass(self, val):
         if not issubclass(val, NamedKey): raise TypeError
         self.NamedKeyClass = val
-        self._update_stand_dicts()
+        self.create_effective_dict()
 
+    _pa = AdaptivePRSenderShifted._press_action
+    backend_layout = _pa.adaptive_property("backend_layout", ty=(Layout,str))
+    layout = _pa.adaptive_property("layout", ty=(Layout,str))
+    
+    
+    def set_layout(self, name, backend_layout=None,
+            use_shifted=None, make_default=False):
+        """Set the layout of your keyboard to manually transfer keynames.
+        
+        :param name: Name of the curret
+        :param make_default:
+        :return:
+        """
+        self.translation_dict = None
+        self.backend_layout = backend_layout
+        self.use_shifted = use_shifted
+        self.layout = name
+        self.create_effective_dict(make_default=make_default)
+       
+    def set_translation_dict(self, dic, make_default=False):
+        self.layout = False
+        self.backend_layout = False
+        super().set_translation_dict(dic, make_default)
+
+
+    def _create_effective_dict(self, ts, enforced_inst=None):
+        if enforced_inst:
+            self.layout = enforced_inst.layout
+            self.backend_layout = enforced_inst.backend_layout
+        if self.layout:
+            if self.backend_layout is None:
+                raise ValueError("Could not determine backend layout for backend"
+                                 f" {ts}. Please set it manually.")
+            L = Layout(self.layout)
+            self.translation_dict = L.send_map(to=self.backend_layout,
+                    shifted=self.use_shifted)
+            enforced_inst = None #this way, we avoid enforcing it twice
+        super()._create_effective_dict(ts, enforced_inst)
+            
+        
 
     @hotkeys.add_pause_option(True)
     def send(self, string, auto_rls=True, delay=None):
@@ -140,21 +179,23 @@ class KeyboardAdaptor(AdaptivePressReleaseSender):
                 repeat=repeat)
 
     @hotkeys.add_pause_option(True)
-    def press(self, key, *keys, delay=None):
+    def press(self, key, *keys, delay=None, translate_names = True):
         """Send key press event(s) to the system. You need to manually send
         the corresponding release event(s) afterwards.
 
         :parameters: See :func:`tap`.
         """
-        return super().press(key, *keys, delay=None)
+        return super().press(key, *keys, delay=None,
+                translate_names = translate_names)
 
     @hotkeys.add_pause_option(True)
-    def rls(self, key, *keys, delay=None):
+    def rls(self, key, *keys, delay=None, translate_names = True):
         """Send key release event(s) to the system.
 
         :parameters: See :func:`tap`.
         """
-        return super().rls(key, *keys, delay=None)
+        return super().rls(key, *keys, delay=None, translate_names =
+                translate_names)
     
 
 
@@ -184,6 +225,7 @@ class KeyboardAdaptor(AdaptivePressReleaseSender):
 
     custom_text_method = True
     """Default value for parameter **custom** of method :func:`text`."""
+    
 
 
     @hotkeys.add_pause_option(True)
@@ -202,7 +244,7 @@ class KeyboardAdaptor(AdaptivePressReleaseSender):
         """
         return super().text(text,delay=delay, custom=custom, **kwargs)
 
-
+    
     @property
     def key(self):
         """This object allows accessing Dpowers' internal key objects and key

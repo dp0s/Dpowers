@@ -51,10 +51,10 @@ def adaptionmethod(target_name=None, require=False):
     raise TypeError
 
 
-
 class AdaptionFuncPlaceholder:
     def __init__(self, cls_func, target_name=None, require_target=False):
         cls_func.target_modifier = self.target_modifier
+        cls_func.adaptive_property = self.adaptive_property
         self.cls_func = cls_func
         self.__name__ = cls_func.__name__
         self.target_name = self.__name__ if target_name is None else target_name
@@ -62,6 +62,7 @@ class AdaptionFuncPlaceholder:
         self.require_target = require_target
         self.modifier_argnum = None
         self.__signature__ = inspect.signature(cls_func)
+        self.coupled_attrs = {}
     
     # def __call__(self, adaptioninstance, *args, **kwargs):
     #     """ Usage example: HookAdaptor.keyb(instance,*args,**kwargs) instead
@@ -83,8 +84,37 @@ class AdaptionFuncPlaceholder:
             raise SyntaxError("""target_modifer func must not have any
             default argument values.""")
         return func
+    
+    def adaptive_property(self, name, default=None, ty=None):
+        self.coupled_attrs[name] = (default, ty)
+        custom = "_custom_" + name
+        backend = "_backend_" + name
+        def func(adaptor_inst):
+            try:
+                custom_val = getattr(adaptor_inst, custom)
+                if custom_val is not None: return custom_val
+            except AttributeError:
+                pass
+            try:
+                backend_val = getattr(adaptor_inst, backend)
+            except AttributeError:
+                pass
+            else:
+                if backend_val not in (None, NotImplemented): return backend_val
+            return default
+        func.__name__ = name
+        func = property(func)
+        @func.setter
+        def func(adaptor_inst,val):
+            check_type(ty, val, allowed=(None,False,True))
+            setattr(adaptor_inst,custom,val)
+        return func
 
 
+
+
+
+        
 
 class AdaptionMethod:
     def __init__(self, placeholder, Adaptor_instance):
@@ -92,6 +122,7 @@ class AdaptionMethod:
         check_type(AdaptorBase, Adaptor_instance)
         self.placeholder = placeholder
         self.cls_func = placeholder.cls_func
+        self.coupled_attrs = placeholder.coupled_attrs
         functools.update_wrapper(self, self.cls_func)
         # this will copy __doc__, __name__ and __module__, as well as signature
         self.Adaptor_instance = Adaptor_instance
@@ -162,7 +193,7 @@ class AdaptionMethod:
                 **self._called_kwargs)
         bound.apply_defaults()
         return self.target(*bound.args, **bound.kwargs)
-    
+        
     
     def set_target(self):
         backend = self.Adaptor_instance.backend
@@ -173,6 +204,19 @@ class AdaptionMethod:
             self.target_space = None
             self.backend_info = None
             return
+        self.target_space = target_space
+        self.backend_info = backend.get_info(name)
+        
+        for attr_name, tu in self.coupled_attrs.items():
+            default, check_ty = tu
+            try:
+                attr_obj = getattr(target_space, attr_name)
+            except AttributeError:
+                attr_obj = NotImplemented
+            else:
+                check_type(check_ty,attr_obj)
+            setattr(self.Adaptor_instance,"_backend_" + attr_name,attr_obj)
+        
         try:
             target = getattr(target_space, self.target_name)
         except AttributeError:
@@ -181,8 +225,6 @@ class AdaptionMethod:
                 f"was not found.\ntartget namespace: "
                 f" {target_space}\nbackend: {backend}")
             target = NotImplemented
-        self.target_space = target_space
-        self.backend_info = backend.method_infos.get(name, backend.main_info)
         obj, ty = target, type(target)
         if ty is types.MethodType:
             def turn_to_func(method):
@@ -315,7 +357,7 @@ class AdaptorBase(KeepInstanceRefs):
                 for backend_name in self.backend_names():
                     doc += f"\n\t{self.creation_name}.adapt('{backend_name}')"
                 self.__doc__ = doc
-        self.backend = None
+        self.backend = Backend(self.__class__)
         
         for name in self.adaptionmethod_names:
             placeholder = getattr(self.__class__, name)._placeholder
@@ -391,7 +433,7 @@ class AdaptorBase(KeepInstanceRefs):
     
     @property
     def is_adapted(self):
-        return self.backend is not None
+        return bool(self.backend)
     
     @classmethod
     def deactivate_autoadapt(cls):

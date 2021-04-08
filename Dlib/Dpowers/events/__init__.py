@@ -17,7 +17,7 @@
 #
 #
 import functools
-from .. import Adaptor, AdaptionError, adaptionmethod
+from .. import Adaptor, AdaptionError, adaptionmethod, Layout
 from Dhelpers.arghandling import add_kw_only_arg
 
 class hotkeys:

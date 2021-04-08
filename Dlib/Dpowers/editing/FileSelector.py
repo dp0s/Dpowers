@@ -134,5 +134,7 @@ class playlist_creator(FileSelector):
     file_start = "#EXTM3U"
     
     @staticmethod
-    def default_selection_func(obj,genre=None):
-        return genre in obj.genre
+    def default_selection_func(obj,genre=None,case_sensitive=False):
+        if case_sensitive:
+            return genre in obj.genre
+        return genre.lower() in obj.genre.lower()

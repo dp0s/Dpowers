@@ -38,26 +38,26 @@ def get_files(folder):
         if path.isfile(fp): yield f, fp
 
 
-class Shifted:
-    
+class ShiftedKey:
+
     def __init__(self, keyname, num=1):
         self.keyname = keyname
         assert isinstance(num, int), num >= 1
         self.num = num
-        
+
     def __repr__(self):
         ret = f"<{self.__class__.__name__}({self.keyname}"
-        if self.num > 1: ret+= f", x{self.num}"
+        if self.num > 1: ret += f", x{self.num}"
         ret += ")>"
         return ret
-        
+
 class LayoutBase(ABC):
     
+    ShiftedKey = ShiftedKey
     json_savefolder = None
     folders=[]
     file_ending = ""
     available_layouts = {}
-    default_layout= "us"
     
     def __init__(self, name, folder=None, raise_error=True):
         self.name = name
@@ -135,28 +135,32 @@ class LayoutBase(ABC):
     @classmethod
     def translate(cls, *, source=None, to=None):
         if source == to: raise ValueError
-        if source is None: source = cls.default_layout
-        if to is None: source = cls.default_layout
         return cls(source) > cls(to)
     
-    def receive_map(self, source=None):
-        if source is None: source = self.default_layout
-        return self < source
         
     @staticmethod
-    def create_send_map(key_dict):
+    def create_shifted_map(key_dict):
         out = {}
         for key, val in key_dict.items():
             out[val[0]] = key
             for i in range(1, len(val)):
                 item = val[i]
-                out[item] = Shifted(key,num=i)
+                out[item] = ShiftedKey(key,num=i)
         return out
         
     
-    def send_map(self, to=None):
-        return self.create_send_map(self.receive_map(source=to))
+    def send_map(self, to=None, shifted = True):
+        if to is None: to = self
+        if not isinstance(to, LayoutBase): to = Layout(to)
+        if shifted:
+            return self.create_shifted_map(self < to)
+        else:
+            conversion = self > to
+            return {name: l[0] for name, l in conversion.items()}
 
+
+    
+            
 
 class Layout(LayoutBase):
     
@@ -167,11 +171,6 @@ class Layout(LayoutBase):
     
     def get_keydict(self):
         with open(self.sourcepath()) as f: return json.load(f)
-    
-
-class EvdevTargetLayout(Layout):
-    
-    default_layout = "evdev"
     
     
 class Layout_from_klfc(LayoutBase):

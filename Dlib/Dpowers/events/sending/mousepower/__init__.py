@@ -87,11 +87,11 @@ class MouseAdaptor(AdaptivePressReleaseSender):
     @hotkeys.add_pause_option(True)
     def click(self, button=1, count=1, x=None, y=None, duration=0.05):
         if x or y: self.moveto(x, y)
-        stan_name = self._press.standardizing_dict.get(button, button)
+        stan_name = self._press_no_translation.standardizing_dict.get(button, button)
         for _ in range(count):
-            self._press.target(stan_name)
+            self._press_no_translation.target(stan_name)
             sleep(duration)
-            self._rls.target(stan_name)
+            self._rls_action.target(stan_name)
     
     def rclick(self, *args, **kwargs):
         return self.click("right", *args, **kwargs)

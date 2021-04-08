@@ -36,6 +36,9 @@ class Backend:
             s += f", {self.method_infos}"
         return s
     
+    def __bool__(self):
+        return bool(self.main_info) or bool(self.method_infos)
+    
     def __info__(self):
         return self.adaptorcls, self.main_target_space, \
             self.method_target_spaces
@@ -52,6 +55,8 @@ class Backend:
         if self.method_infos: return self.method_target_spaces
         return self.main_target_space
     
+    def get_info(self, method_name):
+        return self.method_infos.get(method_name, self.main_info)
     
     def __init__(self, adaptorclass=None, main_info=None, method_infos={}):
         if not issubclass(adaptorclass, AdaptorBase): raise TypeError
@@ -62,7 +67,8 @@ class Backend:
         self.main_info = None  # will be set in update method
         self.method_infos = {}  # will be set in update method
         self.manager = None #set as soon as module was imported
-        self.update_target_spaces(main_info, method_infos)
+        if main_info or method_infos:
+            self.update_target_spaces(main_info, method_infos)
     
     def update_target_spaces(self, main_info=None, method_infos={}):
         main_info, method_infos = self._resolve_arguments(main_info,

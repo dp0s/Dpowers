@@ -44,12 +44,12 @@ class SenderAdaptorMixin:
     
     
 class SenderAdaptor(SenderAdaptorMixin, AdaptiveSender):
-    # inherits adaptionmethod _press
+    # inherits adaptionmethod press
     pass
 
 class PressReleaseSenderAdaptor(SenderAdaptorMixin, AdaptivePressReleaseSender):
     
-    # inherits adaptionmethods _press and _rls
+    # inherits adaptionmethods press and rls
     
     default_duration = 1
     """

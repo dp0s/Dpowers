@@ -16,12 +16,17 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from abc import ABC, abstractmethod
+
 from Dhelpers.baseclasses import AdditionContainer
 from Dhelpers.arghandling import check_type
 from ..event_classes import StringEvent, EventObjectSender
-from .. import hotkeys, Adaptor, adaptionmethod, AdaptionError
-import time, functools
+from .. import Adaptor, adaptionmethod, AdaptionError, Layout
+import functools, time
+
+sleep = time.sleep
+ShiftedKey = Layout.ShiftedKey
+
+
 
 def _doc(middle):
     return "*Class attribute.* Default time (in milliseconds) to wait between" \
@@ -33,22 +38,33 @@ def default_delay_doc(obj_name):
 
 def default_duration_doc(obj_name):
     print(_doc(f"press and release event of the same {obj_name}"))
+    
+    
 
-class Sender(AdditionContainer.Addend,ABC):
+class Sender(AdditionContainer.Addend):
     
     #only_defined_names = False
     default_delay = None  # must be set in subclass
     custom_text_method = True
     
-    @abstractmethod
-    def _press(self, name):
-        raise NotImplementedError
-
+    def get_backend_name(self, name):
+        return name
+    
     def press(self, *names, delay=None):
         if delay is None: delay = self.default_delay
         for k in names:
             self._press(k)
             if delay: time.sleep(delay/1000)
+            
+    def _press(self, name):
+        backend_name = self.get_backend_name(name)
+        if isinstance(backend_name, ShiftedKey):
+                backend_name = backend_name.keyname
+        self._press_action(backend_name)
+        return backend_name, self
+
+    def _press_action(self, name):
+        raise NotImplementedError
 
     def text(self, text, delay=None, custom=None, **kwargs):
         if delay is None: delay = self.default_delay
@@ -56,7 +72,7 @@ class Sender(AdditionContainer.Addend,ABC):
         for character in text:
             if custom:
                 try:
-                    self._text(character, **kwargs)
+                    self._text_action(character, **kwargs)
                     if delay: time.sleep(delay/1000)
                 except NotImplementedError:
                     custom = False
@@ -64,7 +80,7 @@ class Sender(AdditionContainer.Addend,ABC):
                 self.tap(character, delay=delay, duration=10)
                 
 
-    def _text(self, character, **kwargs):
+    def _text_action(self, character, **kwargs):
         raise NotImplementedError
     
     def tap(self, character, delay=None, duration=None):
@@ -113,16 +129,20 @@ class PressReleaseSender(Sender):
     
     default_duration = None
 
-    @abstractmethod
-    def _rls(self, name):
-        raise NotImplementedError
-
-    @hotkeys.add_pause_option(True)
     def rls(self, *names, delay=None):
         if delay is None: delay = self.default_delay
         for k in reversed(names):
             self._rls(k)
             if delay: time.sleep(delay/1000)
+            
+    def _rls(self, name):
+        backend_name = self.get_backend_name(name)
+        if isinstance(backend_name, ShiftedKey):
+                backend_name = backend_name.keyname
+        self._rls_action(backend_name)
+    
+    def _rls_action(self, name):
+        raise NotImplementedError
     
     def send_eventstring(self, string, auto_rls=True, delay=None):
         for entry in StringEvent.split_str(string):
@@ -139,25 +159,37 @@ class PressReleaseSender(Sender):
             else:
                 raise TypeError(entry)
             
-    @functools.wraps(Sender.press)
-    def pressed(self, *names, delay=None):
-        return PressedContext(self, *names, delay=delay)
-
-    def tap(self, *keynames, delay=None, duration=None, repeat=1):
+            
+    def comb(self, *names, delay=None, duration=None):
         if delay is None: delay = self.default_delay
         if duration is None: duration = self.default_duration
+        delay = delay/1000
+        duration = duration / 1000
+        send_infos = []
+        try:
+            for name in names:
+                send_infos.append(self._press(name))
+                sleep(delay)
+            sleep(duration)
+        finally:
+            e = None
+            for name, sender_inst in reversed(send_infos):
+                try:
+                    sender_inst._rls_action(name)
+                except Exception as e:
+                    continue
+                else:
+                    sleep(delay)
+            if e: raise e
+
+    def tap(self, *names, delay=None, duration=None, repeat=1):
         for _ in range(repeat):
-            for k in keynames:
-                with self.pressed(k, delay=delay): time.sleep(duration/1000)
-            
-            
-    @hotkeys.add_pause_option(True)
-    def comb(self, *keynames, delay=None, duration=None):
-        if delay is None: delay = self.default_delay
-        if duration is None: duration = self.default_duration
-        with self.pressed(*keynames, delay=delay):
-            time.sleep(duration/1000)
+            for n in names:
+                self.comb(n, delay=delay, duration=duration)
 
+    @functools.wraps(Sender.press)
+    def pressed(self, *names, **kwargs):
+        return PressedContext(self, *names, **kwargs)
 
 
 class PressedContext:
@@ -165,50 +197,68 @@ class PressedContext:
     def __init__(self, sender_instance, *names, delay=None):
         self.sender_instance = sender_instance
         self.names = names
-        self.delay = delay
+        self.delay = delay/1000
+        self.send_infos = []
     
     def __enter__(self):
-        self.sender_instance.press(*self.names, delay=self.delay)
+        for name in self.names:
+            self.send_infos.append(self.sender_instance._press(name))
+            sleep(self.delay)
         return self.sender_instance
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         #if exc_type == AdaptionError: return  # just raise this error directly
-        try:
-            self.sender_instance.rls(*self.names, delay=self.delay)
-            # try to rls the keys
-        except Exception as e:
+        e = None
+        for name, sender_inst in reversed(self.send_infos):
+            try:
+                sender_inst._rls_action(name)
+            except Exception as e:
+                continue
+            else:
+                sleep(self.delay)
+        if e:
             if exc_type == type(e): return  # only reraise press error
             raise
 
 
 
-class AdaptiveMixin(Adaptor):
+class AdaptiveSender(Sender, Adaptor):
     baseclass = True
     NamedClass = None
     #stand_dicts = defaultdict(lambda : defaultdict(lambda : list()))
+    translation_dict = None
+    default_translations = {}
+    _effective_dict = {}
     
     @property
     def Event(self):
         return self.NamedClass.Event
     
-    @adaptionmethod("press", require=True)
-    def _press(self, name, apply_map = True):
-        if apply_map:
-            try:
-                name = self._press.standardizing_dict.apply(name)
-            except AttributeError:
-                name = self._press.standardizing_dict.get(name,name)
+    
+    def get_backend_name(self, name):
         try:
-            return self._press.target(name)
+            return self._effective_dict.apply(name)
+        except AttributeError:
+            return self._effective_dict.get(name, name)
+        
+
+    @adaptionmethod("press", require=True)
+    def _press_action(self, name):
+        try:
+            return self._press_action.target(name)
         except Exception as e:
             if isinstance(e,self._press_errortype): raise NameError(name) from e
             raise
     
-    @_press.target_modifier
-    def _press_tm(self, target, amethod):
+    @_press_action.target_modifier
+    def _press_tm(self, target):
         self._press_errortype = self._get_errortype(target)
-        self._create_standardizing_dict(amethod)
+        self.create_effective_dict(transfer=True)
         return target
+
+
+    names = _press_action.adaptive_property("names", default={},
+            ty=(dict, list, tuple))
     
     def _get_errortype(self,target):
         try:
@@ -216,122 +266,89 @@ class AdaptiveMixin(Adaptor):
         except Exception as e:
             return type(e)
         raise RuntimeError("Name 'ASFASDFASDFASxcvjxcjsjsj23' is allowed!?")
+
     
-    def _create_standardizing_dict(self,  amethod):
+    def set_translation_dict(self, dic, make_default=False):
+        check_type(dict, dic)
+        self.translation_dict = dic
+        self.create_effective_dict(make_default=make_default)
+    
+    def _get_default_inst(self, target_space):
+        enforced_inst = self.default_translations.get(target_space)
+        if enforced_inst:
+            assert isinstance(enforced_inst, self.__class__)
+            assert enforced_inst._press_action.target_space is target_space
+        return enforced_inst
+    
+    def create_effective_dict(self, make_default=False, transfer=False):
+        ts = self._press_action.target_space
+        if ts is None: return False
+        enforced_inst = None
+        if transfer: enforced_inst = self._get_default_inst(ts)
+        self._create_effective_dict(ts, enforced_inst=enforced_inst)
+        if make_default:
+            # set this instance to be the default reference for this backend
+            self.default_translations[ts] = self
+            for instance in self.get_instances():
+                if instance is self: continue
+                if instance._press_action.target_space is not ts: continue
+                instance.create_effective_dict(transfer=True)
+    
+    
+    def _create_effective_dict(self, target_space, enforced_inst=None):
         #this should be executed when amethod is adapted, when NamedClass
         # changes or when name_translation changes
-        target_space = amethod.target_space
-        try:
-            names = target_space.names
-        except AttributeError:
-            names = {}
+        # stan dict format:
+        #       NamedKey : Object to send to backend
+        # translation_dict_format:
+        #       user_input_name : remapped_name (may be ShiftedKey instance)
+        names = self.names
         if self.NamedClass:
             stand_dict = self.NamedClass.StandardizingDict(names)
         else:
             stand_dict = names
-        if not self.name_translation:
-            try:
-                self.name_translation = self.universal_name_translations[target_space]
-            except KeyError:
-                pass
-        if self.name_translation:
-            old_dict = stand_dict.copy()
-            for key,val in self.name_translation.items():
-                try:
-                    val2 = old_dict[val]
-                except KeyError:
-                    pass
-                else:
-                    stand_dict[key] = val2
-        #check_type(self.NamedClass.StandardizingDict, stand_dict)
-        amethod.standardizing_dict = stand_dict
-
+        
+        if enforced_inst: self.translation_dict = enforced_inst.translation_dict
+            
+        if self.translation_dict:
+            copy = stand_dict.copy()  # copy is standardizing dict too
+            for key, remapped in self.translation_dict.items():
+                stand_dict[key] = self._process_trans_item(remapped, copy)
+                
+        self._effective_dict = stand_dict
+        
     
-    def _update_stand_dicts(self):
-        for n in ("_press", "_rls"):
-            try:
-                amethod = getattr(self, n)
-            except AttributeError:
-                continue
-            if amethod.target in (None,NotImplemented): continue
-            self._create_standardizing_dict(amethod)
-
-    name_translation = None
-    universal_name_translations = dict()
-    
-    
-    def set_name_translation(self, val, universal=False):
-        check_type(dict,val)
-        self.name_translation = val
-        self._update_stand_dicts()
-        if universal:
-            target_space1 = self._press.target_space
-            try:
-                target_space2 = self._rls.target_space
-            except AttributeError:
-                target_space2 = None
-            if target_space1 and target_space2:
-                assert target_space1 == target_space2
-            target_space = target_space1 if target_space1 else target_space2
-            if not target_space: raise ValueError
-            self.universal_name_translations[target_space] = val
-            for instance in self.get_instances():
-                if instance is self: continue
-                instance._update_stand_dicts()
+    def _process_trans_item(self, remapped, copy):
+        try:
+            return copy[remapped]  # check if standardized(remapped) is among
+            # the backend names defined in self.names (copy is standardized
+            # copy of it)
+        except KeyError:
+            return remapped #this is not standardized
+            # this is just in case if the backend accepts keys not
+            # defined in self.names
             
             
-    
-
-
-
-class AdaptiveSender(AdaptiveMixin, Sender):
-    baseclass = True
-
-
-#we don't inherit from AdaptiveSender directly
-# because that would give an undesired method resolution order.
-@AdaptiveSender.register
-class AdaptivePressReleaseSender(AdaptiveMixin, PressReleaseSender,
+class AdaptivePressReleaseSender(PressReleaseSender, AdaptiveSender,
         EventObjectSender):
     baseclass = True
-    
+
+
+
     @adaptionmethod("rls", require=True)
-    def _rls(self, name, apply_map=True):
-        if apply_map:
-            try:
-                name = self._rls.standardizing_dict.apply(name)
-            except AttributeError:
-                name = self._rls.standardizing_dict.get(name, name)
+    def _rls_action(self, name):
         try:
-            return self._rls.target(name)
+            return self._rls_action.target(name)
         except Exception as e:
             if isinstance(e, self._rls_errortype):
                 raise NameError(name) from e
             raise
     
-    @_rls.target_modifier
-    def _rls_tm(self, target, amethod):
+    @_rls_action.target_modifier
+    def _rls_tm(self, target):
         self._rls_errortype = self._get_errortype(target)
-        self._create_standardizing_dict(amethod)
+        self.create_effective_dict()
         return target
-
-    #_press_rls_standdict = None # default_value
-    
-    # def _create_standardizing_dict(self, amethod):
-    #     super()._create_standardizing_dict(amethod)
-    #     # now detect if standardizing_dicts are the same
-    #     # this will be important for Pressed ContextManager
-    #     try:
-    #         d1 = self._press.standardizing_dict
-    #         d2 = self._rls.standardizing_dict
-    #     except AttributeError:
-    #         pass
-    #     else:
-    #         if d1==d2:
-    #             self._press_rls_standdict = d1
-    #             return
-    #     self._press_rls_standdict = False
-        
 
 
     def _send_event(self, event, reverse_press=False, autorelease=False):
@@ -341,13 +358,72 @@ class AdaptivePressReleaseSender(AdaptiveMixin, PressReleaseSender,
             if autorelease: self.rls(event.name)
         else:
             self.rls(event.name)
+            
+        
+class AdaptivePRSenderShifted(AdaptivePressReleaseSender):
+    baseclass = True
+    
+    use_shifted = AdaptiveSender._press_action.adaptive_property("use_shifted",
+            False, ty=bool)
+    
+    def _process_trans_item(self, remapped, copy):
+        sup = super()._process_trans_item
+        if isinstance(remapped, Layout.ShiftedKey):
+            # extract the keyname from the ShiftedKey object and compose it
+            # again afterwards
+            backend_obj = sup(remapped.keyname, copy)
+            return Layout.ShiftedKey(backend_obj, num=remapped.num)
+        else:
+            return sup(remapped, copy)
+    
+    def _create_effective_dict(self, *args, **kwargs):
+        super()._create_effective_dict(*args,**kwargs)
+        self.shift_obj = self.get_backend_name("shift")
+        self.atr_gr_obj = self.get_backend_name("altgr")
+        
+    def _expand_shifted(self, obj):
+        if not isinstance(obj,Layout.ShiftedKey): return [obj]
+        ret = []
+        if obj.num in (1,3): ret.append(self.shift_obj)
+        if obj.num >= 2: ret.append(self.atr_gr_obj)
+        ret.append(obj.keyname)
+        return ret
+
+
+    # def _get_names(self, *names, shift=False):
+    #     for name in names:
+    #         backend_out = super()._get_names(name).__next__()
+    #         if isinstance(backend_out, Layout.ShiftedKey):
+    #             if shift is False:
+    #                 yield name
+    #             elif shift is True:
+    #                 yield self.shift_obj
+    #                 yield backend_out.keyname
+    #             else:
+    #                 yield backend_out
+    #         else:
+    #             yield backend_out
+
+    # def comb(self, *names, translate_names=True, **kwargs):
+    #     if translate_names: names = self.get_backend_names(*names, shift=True)
+    #     super().comb(*names,translate_names=False,**kwargs)
+    
+    def tap(self, *names, delay=None, duration=None, repeat=1):
+        for _ in range(repeat):
+            for n in names:
+                comb_names = self._expand_shifted(self.get_backend_name(n))
+                self.comb(*comb_names,delay=delay,duration=duration)
+                
+        
         
     
-
+    
+    
+    
+    
+    
 class CombinedSender(AdditionContainer, PressReleaseSender,
         EventObjectSender, basic_class=Sender):
-    
-    
     
     def __init__(self, *args):
         super().__init__(*args)
@@ -367,7 +443,7 @@ class CombinedSender(AdditionContainer, PressReleaseSender,
         pass
     
     @AdditionContainer.create_combined_method(NotImplementedError)
-    def _text(self, character, **kwargs):
+    def _text_action(self, character, **kwargs):
         pass
         
     def __call__(self, *args, **kwargs):
@@ -376,7 +452,7 @@ class CombinedSender(AdditionContainer, PressReleaseSender,
     # useful methods:
     # -- send_event: This will call EventObjectSender.send_event and then
     # iterate over all members' _send_event methods until no TypeError is raised
-    # -- press and rls will iterate over _press and _rls
+    # -- press and rls will iterate over _press_action and _rls_action
     # -- text will call super().text which will iterate over _text
     # -- send. This will automatically call prs, rls, text and thus iterate
     #       as well
