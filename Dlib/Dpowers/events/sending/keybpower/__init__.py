@@ -63,12 +63,6 @@ class KeyboardAdaptor(AdaptivePRSenderShifted):
     
     def set_layout(self, name, backend_layout=None,
             use_shifted=None, make_default=False):
-        """Set the layout of your keyboard to manually transfer keynames.
-        
-        :param name: Name of the curret
-        :param make_default:
-        :return:
-        """
         self.translation_dict = None
         self.backend_layout = backend_layout
         self.use_shifted = use_shifted

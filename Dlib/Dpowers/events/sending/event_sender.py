@@ -388,38 +388,12 @@ class AdaptivePRSenderShifted(AdaptivePressReleaseSender):
         if obj.num >= 2: ret.append(self.atr_gr_obj)
         ret.append(obj.keyname)
         return ret
-
-
-    # def _get_names(self, *names, shift=False):
-    #     for name in names:
-    #         backend_out = super()._get_names(name).__next__()
-    #         if isinstance(backend_out, Layout.ShiftedKey):
-    #             if shift is False:
-    #                 yield name
-    #             elif shift is True:
-    #                 yield self.shift_obj
-    #                 yield backend_out.keyname
-    #             else:
-    #                 yield backend_out
-    #         else:
-    #             yield backend_out
-
-    # def comb(self, *names, translate_names=True, **kwargs):
-    #     if translate_names: names = self.get_backend_names(*names, shift=True)
-    #     super().comb(*names,translate_names=False,**kwargs)
     
     def tap(self, *names, delay=None, duration=None, repeat=1):
         for _ in range(repeat):
             for n in names:
                 comb_names = self._expand_shifted(self.get_backend_name(n))
                 self.comb(*comb_names,delay=delay,duration=duration)
-                
-        
-        
-    
-    
-    
-    
     
     
 class CombinedSender(AdditionContainer, PressReleaseSender,

@@ -45,7 +45,7 @@ class MouseAdaptor(AdaptivePressReleaseSender):
     def NamedClass(self, val):
         if not issubclass(val, NamedButton): raise TypeError
         self.NamedButtonClass = val
-        self._update_stand_dicts()
+        self.create_effective_dict()
     
     @property
     def button(self):
@@ -64,16 +64,16 @@ class MouseAdaptor(AdaptivePressReleaseSender):
         if x is None: x = self.pos()[0]
         if y is None: y = self.pos()[1]
         return self.moveto.target(x, y)
-    
 
-    def press(self, *buttons, x=None, y=None, delay=None, pause_hotkeys=True):
+    @hotkeys.add_pause_option(True)
+    def press(self, button, *buttons, x=None, y=None, delay=None):
         if x or y: self.moveto(x, y)
-        return super().press(*buttons,delay=delay)
+        return super().press(button, *buttons,delay=delay)
 
-    
-    def rls(self, *buttons, x=None, y=None, delay=None, pause_hotkeys=True):
+    @hotkeys.add_pause_option(True)
+    def rls(self, button, *buttons, x=None, y=None, delay=None):
         if x or y: self.moveto(x, y)
-        return super().press(*buttons, delay=delay)
+        return super().rls(button, *buttons, delay=delay)
 
 
     @adaptionmethod
@@ -85,13 +85,11 @@ class MouseAdaptor(AdaptivePressReleaseSender):
         return self.scroll.target(vertical, horizontal)
 
     @hotkeys.add_pause_option(True)
-    def click(self, button=1, count=1, x=None, y=None, duration=0.05):
+    def click(self, button=1, count=1, x=None, y=None, duration=None,
+            delay=None):
         if x or y: self.moveto(x, y)
-        stan_name = self._press_no_translation.standardizing_dict.get(button, button)
-        for _ in range(count):
-            self._press_no_translation.target(stan_name)
-            sleep(duration)
-            self._rls_action.target(stan_name)
+        self.tap(button,delay=delay, duration=duration, repeat=count)
+        
     
     def rclick(self, *args, **kwargs):
         return self.click("right", *args, **kwargs)
