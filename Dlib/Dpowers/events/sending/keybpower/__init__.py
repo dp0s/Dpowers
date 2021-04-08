@@ -22,7 +22,18 @@ from ..event_sender import AdaptivePRSenderShifted
 
 
 class KeyboardAdaptor(AdaptivePRSenderShifted):
-    """Send key events to the system via the chosen backend."""
+    """Send key events to the system via the chosen backend.
+    
+    See `Dpowers.events.keybutton_names.py
+    <https://github.com/dp0s/Dpowers/tree/master/Dlib/Dpowers/events
+    /keybutton_names.py>`_ for a list of allowed key names and key groups.
+    Most of the defined keys can be called by more than one name equivalently.
+    Simply pass one of the key's names as a string to the methods defined below.
+    
+    For some backends (such as *evdev*) it might be neccessary to manually
+    specify the layout of the keyboard currently used via
+    the :func:`set_layout` method.
+    """
     
     
     #Following adaptionmethods are mandatory in adapt_*.py:
@@ -55,39 +66,6 @@ class KeyboardAdaptor(AdaptivePRSenderShifted):
         if not issubclass(val, NamedKey): raise TypeError
         self.NamedKeyClass = val
         self.create_effective_dict()
-
-    _pa = AdaptivePRSenderShifted._press_action
-    backend_layout = _pa.adaptive_property("backend_layout", ty=(Layout,str))
-    layout = _pa.adaptive_property("layout", ty=(Layout,str))
-    
-    
-    def set_layout(self, name, backend_layout=None,
-            use_shifted=None, make_default=False):
-        self.translation_dict = None
-        self.backend_layout = backend_layout
-        self.use_shifted = use_shifted
-        self.layout = name
-        self.create_effective_dict(make_default=make_default)
-       
-    def set_translation_dict(self, dic, make_default=False):
-        self.layout = False
-        self.backend_layout = False
-        super().set_translation_dict(dic, make_default)
-
-
-    def _create_effective_dict(self, ts, enforced_inst=None):
-        if enforced_inst:
-            self.layout = enforced_inst.layout
-            self.backend_layout = enforced_inst.backend_layout
-        if self.layout:
-            if self.backend_layout is None:
-                raise ValueError("Could not determine backend layout for backend"
-                                 f" {ts}. Please set it manually.")
-            L = Layout(self.layout)
-            self.translation_dict = L.send_map(to=self.backend_layout,
-                    shifted=self.use_shifted)
-            enforced_inst = None #this way, we avoid enforcing it twice
-        super()._create_effective_dict(ts, enforced_inst)
             
         
 
@@ -148,6 +126,12 @@ class KeyboardAdaptor(AdaptivePRSenderShifted):
 
         """
         super().send(string, auto_rls=auto_rls, delay=delay)
+
+    _pa = AdaptivePRSenderShifted._press_action
+    backend_layout = _pa.adaptive_property("backend_layout", ty=(Layout, str))
+    layout = _pa.adaptive_property("layout", ty=(Layout, str))
+
+
     
     @hotkeys.add_pause_option(True)
     def tap(self, key, *keys, delay=None, duration=None, repeat=1):
@@ -179,17 +163,15 @@ class KeyboardAdaptor(AdaptivePRSenderShifted):
 
         :parameters: See :func:`tap`.
         """
-        return super().press(key, *keys, delay=None,
-                translate_names = translate_names)
+        return super().press(key, *keys, delay=delay)
 
     @hotkeys.add_pause_option(True)
-    def rls(self, key, *keys, delay=None, translate_names = True):
+    def rls(self, key, *keys, delay=None):
         """Send key release event(s) to the system.
 
         :parameters: See :func:`tap`.
         """
-        return super().rls(key, *keys, delay=None, translate_names =
-                translate_names)
+        return super().rls(key, *keys, delay=delay)
     
 
 
@@ -238,11 +220,67 @@ class KeyboardAdaptor(AdaptivePRSenderShifted):
         """
         return super().text(text,delay=delay, custom=custom, **kwargs)
 
+    def set_layout(self, name, backend_layout=None, use_shifted=None,
+            make_default=False):
+        """Manually set the effective keyboard layout and
+        translate the key codes from the backend accordingly. This is e.g.
+        necessary for the *evdev* backend to make sure that the correct keys
+        are sent to the system.
+
+        :param str name: Name of the keyboard layout you use. This is usually a
+            two character abbreviation, such as *'de'* or *'us'*. A list of
+            available layouts can be found in
+            `Dhelpers.KeyboardLayouts.layouts_imported_from_xkb
+            <https://github.com/dp0s/Dpowers/tree/master/Dlib/Dhelpers
+            /KeyboardLayouts/layouts_imported_from_xkb>`_.
+        :param backend_layout:
+        :param use_shifted:
+        :param make_default:
+        :return:
+        
+        Example for a German keyboard:
+        
+        .. activecode::
+            
+            > from Dpowers import keyb
+            > keyb.adapt("evdev")
+            
+        
+        """
+        self.translation_dict = None
+        self.backend_layout = backend_layout
+        self.use_shifted = use_shifted
+        self.layout = name
+        self.create_effective_dict(make_default=make_default)
+
+    def set_translation_dict(self, dic, make_default=False):
+        self.layout = False
+        self.backend_layout = False
+        super().set_translation_dict(dic, make_default)
+
+
+    def _create_effective_dict(self, ts, enforced_inst=None):
+        if enforced_inst:
+            self.layout = enforced_inst.layout
+            self.backend_layout = enforced_inst.backend_layout
+        if self.layout:
+            if self.backend_layout is None:
+                raise ValueError(
+                        "Could not determine backend layout for backend"
+                        f" {ts}. Please set it manually.")
+            L = Layout(self.layout)
+            self.translation_dict = L.send_map(to=self.backend_layout,
+                    shifted=self.use_shifted)
+            enforced_inst = None  # this way, we avoid enforcing it twice
+        super()._create_effective_dict(ts, enforced_inst)
+    
     
     @property
     def key(self):
         """This object allows accessing Dpowers' internal key objects and key
-        groups. Find a key object by calling it's name:
+        groups as defined in `Dpowers.events.keybutton_names.py
+        <https://github.com/dp0s/Dpowers/tree/master/Dlib/Dpowers/events
+        /keybutton_names.py>`_. Find a key object by calling it's name:
 
         .. activecode::
             
@@ -252,6 +290,9 @@ class KeyboardAdaptor(AdaptivePRSenderShifted):
             repr(keyb.key("ctrl"))
             > keyb.key(1)
             repr(keyb.key(1))
+            > # check if two names belong to the same key object:
+            > keyb.key("ctrl") is keyb.key("leftcontrol")
+            keyb.key("ctrl") is keyb.key("leftcontrol")
 
         You can find key groups via the **.group** attribute and check if a
         key belongs to it:

@@ -148,7 +148,7 @@ class NamedObj(KeepInstanceRefs):
     
     @classmethod
     def instance(cls, name):
-        if not name: raise ValueError
+        if not name and name is not 0: raise ValueError
         if isinstance(name, cls): return name
         return cls.defined_objects[cls.make_comparable(name)]
 

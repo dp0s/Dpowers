@@ -309,7 +309,7 @@ class AdaptorBase(KeepInstanceRefs):
                 c = cls._first_level_subclass
                 add = f"Subclass of :class:`{c.__module__}.{c.__name__}`."
                 doc = cls.__doc__ if cls.__doc__ else ""
-                cls.__doc__ = doc + "\n\n" + add
+                cls.__doc__ = doc + "\n\n    " + add
         elif cls._subclass_level == 1:
             cls._first_level_subclass = cls
             initdoc = cls.__init__.__doc__

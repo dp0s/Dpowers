@@ -55,13 +55,22 @@ class Sender(AdditionContainer.Addend):
         for k in names:
             self._press(k)
             if delay: time.sleep(delay/1000)
-            
-    def _press(self, name):
+        
+        
+    def _press(self, name, send_infos=(), expand_shifted = False):
+        send_infos = list(send_infos) #creates an independent copy
         backend_name = self.get_backend_name(name)
         if isinstance(backend_name, ShiftedKey):
-                backend_name = backend_name.keyname
+            if expand_shifted:
+                for bn in self._expand_shifted(backend_name):
+                    self._press_action(bn)
+                    send_infos.append((bn, self))
+                return send_infos
+            else:
+                backend_name = [backend_name.keyname]
         self._press_action(backend_name)
-        return backend_name, self
+        send_infos.append((backend_name, self))
+        return send_infos
 
     def _press_action(self, name):
         raise NotImplementedError
@@ -160,7 +169,7 @@ class PressReleaseSender(Sender):
                 raise TypeError(entry)
             
             
-    def comb(self, *names, delay=None, duration=None):
+    def comb(self, *names, delay=None, duration=None, expand_shifted=False):
         if delay is None: delay = self.default_delay
         if duration is None: duration = self.default_duration
         delay = delay/1000
@@ -168,7 +177,7 @@ class PressReleaseSender(Sender):
         send_infos = []
         try:
             for name in names:
-                send_infos.append(self._press(name))
+                send_infos = self._press(name, send_infos, expand_shifted)
                 sleep(delay)
             sleep(duration)
         finally:
@@ -185,7 +194,8 @@ class PressReleaseSender(Sender):
     def tap(self, *names, delay=None, duration=None, repeat=1):
         for _ in range(repeat):
             for n in names:
-                self.comb(n, delay=delay, duration=duration)
+                PressReleaseSender.comb(self,n, delay=delay,
+                        duration=duration, expand_shifted=True)
 
     @functools.wraps(Sender.press)
     def pressed(self, *names, **kwargs):
@@ -202,7 +212,7 @@ class PressedContext:
     
     def __enter__(self):
         for name in self.names:
-            self.send_infos.append(self.sender_instance._press(name))
+            self.send_infos = self.sender_instance._press(name, self.send_infos)
             sleep(self.delay)
         return self.sender_instance
     
@@ -388,13 +398,6 @@ class AdaptivePRSenderShifted(AdaptivePressReleaseSender):
         if obj.num >= 2: ret.append(self.atr_gr_obj)
         ret.append(obj.keyname)
         return ret
-    
-    def tap(self, *names, delay=None, duration=None, repeat=1):
-        for _ in range(repeat):
-            for n in names:
-                comb_names = self._expand_shifted(self.get_backend_name(n))
-                self.comb(*comb_names,delay=delay,duration=duration)
-    
     
 class CombinedSender(AdditionContainer, PressReleaseSender,
         EventObjectSender, basic_class=Sender):

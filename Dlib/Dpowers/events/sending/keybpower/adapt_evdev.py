@@ -42,7 +42,7 @@ def iterator(dic):
 
 for integer, name in iterator(KEY):
     n = name[4:]
-    if len(n)==1 and n.isalpha(): n=n.lower()
+    n=n.lower()
     names[n] = integer
     
 global_uinput.start()
