@@ -38,7 +38,7 @@ except ModuleNotFoundError:
     import Dhelpers
     
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 from Dhelpers import __version__  as Dhelpers_version
 #Dpowers and Dhelpers share version number
 if __version__ != Dhelpers_version: raise ValueError
