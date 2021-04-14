@@ -399,6 +399,11 @@ class AdaptivePRSenderShifted(AdaptivePressReleaseSender):
         ret.append(obj.keyname)
         return ret
     
+    def _effective_dict_expanded(self):
+        return {i : self._expand_shifted(j) for i,j in \
+                self._effective_dict.items(prefer_single=True)}
+    
+    
 class CombinedSender(AdditionContainer, PressReleaseSender,
         EventObjectSender, basic_class=Sender):
     

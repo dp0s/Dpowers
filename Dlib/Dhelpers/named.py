@@ -124,6 +124,11 @@ class NamedObj(KeepInstanceRefs):
     def name(self):
         return self.names[0]
     
+    def name_single_preferred(self):
+        for name in self.names:
+            if isinstance(name,int) or len(name) == 1: return name
+        return self.name
+    
     @property
     def names_comparable(self):
         for name in self.names: yield self.make_comparable(name)
@@ -351,16 +356,20 @@ class StandardizingDict:
         except KeyError:
             return False
     
-    def keys(self):
-        for inst in self.registered_instances: yield inst.name
-        for key in self.other_dict.keys(): yield key
+    def keys(self, prefer_single=False):
+        for inst in self.registered_instances:
+            if prefer_single:
+                yield inst.name_single_preferred()
+            else:
+                yield inst.name
+        for key in self.other_dict: yield key
     
     def values(self):
         for value in self.registered_instances.values(): yield value
         for value in self.other_dict.values(): yield value
         
-    def items(self):
-        return zip(self.keys(), self.values())
+    def items(self, prefer_single=False):
+        return zip(self.keys(prefer_single=prefer_single), self.values())
     
     
     
