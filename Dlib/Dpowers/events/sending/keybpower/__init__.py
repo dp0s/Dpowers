@@ -252,12 +252,12 @@ class KeyboardAdaptor(AdaptivePRSenderShifted):
             
             > from Dpowers import keyb
             > keyb.adapt("evdev")
-            keyb.adapt("evdev")
+            "<module 'Dpowers.events.sending.keybpower.adapt_evdev'>"
             > keyb.layout # returns default layout for evdev backend
-            keyb.layout
+            "us"
             > keyb.tap("[") # sents the wrong key on a German keyboard:
             > ü
-            > # change to German layout, and set as default for evdev backend:
+            > # change to German layout & set as default for evdev backend:
             > keyb.set_layout("de", make_default=True)
             > keyb.tap("[") # now the correct key is sent:
             > [
