@@ -24,6 +24,7 @@ from abc import ABC, abstractmethod
 import threading, queue, logging, inspect, functools, traceback
 from ..event_classes import MouseMoveEvent
 
+
 class CallbackRunnerThread(threading.Thread):
     pass
 
@@ -47,7 +48,6 @@ class EventQueueReader:
     def run_callbacks(self):
         while True:
             handler, event_obj = self.event_queue.get()
-            # cls is a subclass of CallbackHook
             handler.run_callbacks(event_obj)
 
 
@@ -58,7 +58,8 @@ class InputEventHandler(ABC):
     reinject_implemented = False
     
     def __init__(self, hook_cls=None):
-        self.hook_cls = hook_cls
+        self.hook_cls = hook_cls  #this attribute can be left None as it will
+        # usually be defined by __init_subclass__ method of CallbackHook class
         self.active = False
         self.hook_num = 0
         self.active_hooks = []

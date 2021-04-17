@@ -51,7 +51,7 @@ class EvdevHandler(device_control.DeviceHandler, InputEventHandler):
                 **selection_kwargs)
     
         
-class Capturer( device_control.CapturerMixin, EvdevHandler):
+class Capturer(device_control.CapturerMixin, EvdevHandler):
     pass
 
 
@@ -146,57 +146,6 @@ class CursorCollector(Collector):
                     screen_coordinates=False)
         elif ty not in (EV_SYN, EV_MSC):
             _print("Wrong event type: ", ty, co, val)
-        
-    # def void(self):
-    #
-    #     if ty == EV_REL:
-    #         print("rel", event)
-    #     elif ty == EV_ABS:
-    #         print("abs", event)
-    #
-    #     return
-    #     print(event.type)
-    #     e = categorize(event)
-    #     if isinstance(e, SynEvent): return
-    #     print(type(e), e)
-    #     if isinstance(e, KeyEvent):
-    #         k = e.keycode
-    #         if isinstance(k, list): k = k[0]
-    #         if e.keystate == KeyEvent.key_down:
-    #             press = True
-    #         elif e.keystate == KeyEvent.key_up:
-    #             press = False
-    #         elif e.keystate == KeyEvent.key_hold:
-    #             # this happens if a key is hold down for
-    #             # longer mode. Usually, this will just send
-    #             # the key repeatedly. Here, it is ignored.
-    #             return
-    #         else:
-    #             raise ValueError
-    #         name = k[4:].lower()
-    #         t = k[:4]
-    #         if t == "KEY_":
-    #             self.queue_key(name, press=press)
-    #         elif t == "BTN_":
-    #             self.queue_button(name, press=press)
-    #         else:
-    #             raise NameError
-    #     elif isinstance(e, RelEvent):
-    #         if event.code == 8:
-    #             if event.value == 1:
-    #                 self.queue_button(4, press=True)
-    #                 # scroll_up
-    #             elif event.value == -1:
-    #                 self.queue_button(5, press = True)
-    #                 # scroll_down
-    #             else:
-    #                 raise ValueError(event.value)
-    #         elif event.code == 0:
-    #             self.queue_cursor(event.value, 0)
-    #         elif event.code == 1:
-    #             self.queue_cursor(0, event.value)
-    #         else:
-    #             raise ValueError(event.code)
 
 
 class EvdevhookMixin:

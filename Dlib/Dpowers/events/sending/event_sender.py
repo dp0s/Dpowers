@@ -21,7 +21,7 @@ from Dhelpers.baseclasses import AdditionContainer
 from Dhelpers.arghandling import check_type
 from ..event_classes import StringEvent, EventObjectSender
 from .. import Adaptor, adaptionmethod, AdaptionError, Layout
-import functools, time
+import functools, time, warnings
 
 sleep = time.sleep
 ShiftedKey = Layout.ShiftedKey
@@ -292,7 +292,10 @@ class AdaptiveSender(Sender, Adaptor):
     
     def create_effective_dict(self, make_default=False, transfer=False):
         ts = self._press_action.target_space
-        if ts is None: return False
+        if ts is None:
+            if make_default: raise ValueError("Option make_default=True used, "
+                  f"but no backend chosen yet for {self}." )
+            return False
         enforced_inst = None
         if transfer: enforced_inst = self._get_default_inst(ts)
         self._create_effective_dict(ts, enforced_inst=enforced_inst)
@@ -300,9 +303,9 @@ class AdaptiveSender(Sender, Adaptor):
             # set this instance to be the default reference for this backend
             self.default_translations[ts] = self
             for instance in self.get_instances():
-                if instance is self: continue
-                if instance._press_action.target_space is not ts: continue
-                instance.create_effective_dict(transfer=True)
+                if instance is not self and \
+                        instance._press_action.target_space is ts:
+                    instance.create_effective_dict(transfer=True)
     
     
     def _create_effective_dict(self, target_space, enforced_inst=None):
@@ -378,11 +381,14 @@ class AdaptivePRSenderShifted(AdaptivePressReleaseSender):
     
     def _process_trans_item(self, remapped, copy):
         sup = super()._process_trans_item
-        if isinstance(remapped, Layout.ShiftedKey):
+        if isinstance(remapped, ShiftedKey):
             # extract the keyname from the ShiftedKey object and compose it
             # again afterwards
+            if not self.use_shifted:
+                warnings.warn(f"Found ShiftedKey {remapped} although attribute"
+                  f" use_shifted of {self} is set to {self.use_shifted}.")
             backend_obj = sup(remapped.keyname, copy)
-            return Layout.ShiftedKey(backend_obj, num=remapped.num)
+            return ShiftedKey(backend_obj, num=remapped.num)
         else:
             return sup(remapped, copy)
     

@@ -127,10 +127,6 @@ class KeyboardAdaptor(AdaptivePRSenderShifted):
         """
         super().send(string, auto_rls=auto_rls, delay=delay)
 
-    _pa = AdaptivePRSenderShifted._press_action
-    backend_layout = _pa.adaptive_property("backend_layout", ty=(Layout, str))
-    layout = _pa.adaptive_property("layout", ty=(Layout, str))
-
 
     
     @hotkeys.add_pause_option(True)
@@ -220,8 +216,14 @@ class KeyboardAdaptor(AdaptivePRSenderShifted):
         """
         return super().text(text,delay=delay, custom=custom, **kwargs)
 
-    def set_layout(self, name, backend_layout=None, use_shifted=None,
-            make_default=False):
+    _pa = AdaptivePRSenderShifted._press_action
+    backend_layout = _pa.adaptive_property("backend_layout", ty=(Layout, str))
+    layout = _pa.adaptive_property("layout", ty=(Layout, str))
+    """Return the currently used keyboard layout for this instance. Use
+    :func:`set_layout` to change it manually."""
+    
+    def set_layout(self, name, make_default=False, backend_layout=None,
+            use_shifted=None):
         """Manually set the effective keyboard layout and
         translate the key codes from the backend accordingly. This is e.g.
         necessary for the *evdev* backend to make sure that the correct keys
@@ -233,10 +235,16 @@ class KeyboardAdaptor(AdaptivePRSenderShifted):
             `Dhelpers.KeyboardLayouts.layouts_imported_from_xkb
             <https://github.com/dp0s/Dpowers/tree/master/Dlib/Dhelpers
             /KeyboardLayouts/layouts_imported_from_xkb>`_.
-        :param backend_layout:
-        :param use_shifted:
-        :param make_default:
-        :return:
+        :param bool make_default: If set to ``True``, all other instances of
+            :class:`KeyboardAdaptor` with the same backend as this instance will
+            use this layout by default. Raises an exception if the backend
+            for this instance has not been chosen yet.
+        :param str backend_layout: Manually set the assumed backend
+            layout. Normally this is set by the backend, so don't use this
+            parameter unless you know what you are doing.
+        :param bool use_shifted:  Whether to use manualy key shifting when
+            sending keys. Normally this is set by the backend, so don't use this
+            parameter unless you know what you are doing.
         
         Example for a German keyboard:
         
@@ -244,7 +252,15 @@ class KeyboardAdaptor(AdaptivePRSenderShifted):
             
             > from Dpowers import keyb
             > keyb.adapt("evdev")
-            
+            keyb.adapt("evdev")
+            > keyb.layout # returns default layout for evdev backend
+            keyb.layout
+            > keyb.tap("[") # sents the wrong key on a German keyboard:
+            > ü
+            > # change to German layout, and set as default for evdev backend:
+            > keyb.set_layout("de", make_default=True)
+            > keyb.tap("[") # now the correct key is sent:
+            > [
         
         """
         self.translation_dict = None
