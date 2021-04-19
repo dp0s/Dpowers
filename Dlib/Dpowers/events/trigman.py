@@ -27,13 +27,12 @@ from Dhelpers.arghandling import check_type
 from Dhelpers.counting import dpress
 import collections
 
-
 class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
     
     adaptor = HookAdaptor(group="triggerman", _primary=True)
     
-    def __init__(self, hook_adaptor=None, timeout=60, hook_buttons=False,
-            buffer=2, **custom_key_kwargs):
+    def __init__(self, hook_adaptor=None, timeout=60, hook_keys=True,
+        hook_buttons=False, buffer=2, key_kwargs=None, **custom_kwargs):
         super().__init__(timeout=timeout)
         self.eventdict = dict()
         self.blocked_hks = []
@@ -44,11 +43,13 @@ class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
         self.recent_events = collections.deque()
         self.buffer = buffer
         self.hook_buttons = hook_buttons
+        self.hook_keys=hook_keys
         if hook_buttons:
             self.stringevent_analyzer = StringAnalyzer(NamedKey, NamedButton)
         else:
             self.stringevent_analyzer = NamedKey.Event
-        self.key_kwargs = custom_key_kwargs
+        self.key_kwargs = key_kwargs
+        self.custom_kwargs = custom_kwargs
        
     def _start_action(self):
         timeout = self.timeout + 5 if self.timeout else None
@@ -56,10 +57,16 @@ class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
             reinject_func = self.reinject_func
         else:
             reinject_func = None
-        self.hm = self.adaptor.keys(self.event, timeout=timeout,
+        hm = 0
+        if self.hook_keys:
+            hm += self.adaptor.keys(self.event, timeout=timeout,
                 reinject_func=reinject_func, **self.key_kwargs)
         if self.hook_buttons:
-            self.hm += self.adaptor.buttons(self.event, timeout=timeout)
+            hm += self.adaptor.buttons(self.event, timeout=timeout)
+        if self.custom_kwargs:
+            hm += self.adaptor.custom(self.event, timeout=timeout,
+                    **self.custom_kwargs)
+        self.hm = hm
         return self.hm.start()
     
     def reinject_func(self, event_obj):
