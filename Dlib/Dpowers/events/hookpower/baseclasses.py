@@ -224,12 +224,14 @@ class CallbackHook(AdditionContainer.Addend, TimedObject):
         newkwargs.update(kwargs)
         return self.__class__(*newargs, **newkwargs)
 
+
     def __bool__(self):
         return self.callback_func is not False or self.capture is True
 
         
     def process_custom_kwargs(self, **kwargs):
-        raise NotImplementedError(f"Hook {self} does not accept custom kwargs {kwargs}")
+        raise NotImplementedError(f"Hook {self} does not accept custom kwargs.")
+
 
     def run_callback(self, event_obj):
         if self.callback_func is None: return

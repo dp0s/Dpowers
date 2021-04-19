@@ -123,9 +123,10 @@ class Waiter(TimedObject):
     #         time.sleep(delay)
         
         
-class KeyWaiter(Waiter):
+class KeyWaiter(Waiter, HookAdaptor.AdaptiveClass):
     
-    hook = HookAdaptor(group="keywait", _primary=True)
+    adaptor = HookAdaptor(group="keywait", _primary=True)
+    hook = adaptor
     keyb = KeyboardAdaptor(group="keywait",_primary=True)
     mouse = MouseAdaptor(group="keywait", _primary=True)
     hotstring_keyb = KeyboardAdaptor(group="hotstring")

@@ -360,7 +360,7 @@ class AdditionContainer:
 
         
     @staticmethod
-    def create_combined_method(error_type):
+    def create_try_error_method(error_type):
         """A decorator to automatically create combination methods."""
         if not issubclass(error_type, Exception): raise TypeError
         def decorator(func):

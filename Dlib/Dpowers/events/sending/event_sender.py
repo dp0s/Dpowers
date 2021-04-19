@@ -418,19 +418,19 @@ class CombinedSender(AdditionContainer, PressReleaseSender,
         self.default_delay = self._members[0].default_delay
         self.default_duration = self._members[0].default_duration
         
-    @AdditionContainer.create_combined_method(NameError)
+    @AdditionContainer.create_try_error_method(NameError)
     def _press(self, name):
         pass
 
-    @AdditionContainer.create_combined_method(NameError)
+    @AdditionContainer.create_try_error_method(NameError)
     def _rls(self, name):
         pass
     
-    @AdditionContainer.create_combined_method(TypeError)
+    @AdditionContainer.create_try_error_method(TypeError)
     def _send_event(self, event, **kwargs):
         pass
     
-    @AdditionContainer.create_combined_method(NotImplementedError)
+    @AdditionContainer.create_try_error_method(NotImplementedError)
     def _text_action(self, character, **kwargs):
         pass
         
