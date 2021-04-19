@@ -39,7 +39,7 @@ from evdev.ecodes import (EV_KEY, EV_ABS, EV_SYN, EV_MSC, KEY, BTN,
 
 class EvdevHandler(device_control.DeviceHandler, InputEventHandler):
     
-    devupdater = device_control.DeviceUpdater(activate_looper=True)
+    devupdater = device_control.DeviceUpdater()
     # this class will also use the CollactableInputDevice class and the
     # EvdevInputLooper class in the background
     uinput = uinput.global_uinput
@@ -61,7 +61,7 @@ class Collector(device_control.CollectorMixin, EvdevHandler):
         if ty == EV_SYN: return
         name = bytype[ty][co]
         if isinstance(name, (list,tuple)): name = name[0]
-        self.queue_event(name.lower(), val, dev)
+        self.queue_event(name.lower(), val, dev, ty)
 
 
 
@@ -151,6 +151,7 @@ class CursorCollector(Collector):
 class EvdevhookMixin:
     
     def process_custom_kwargs(self,  **selection_kwargs):
+        if not selection_kwargs: return
         # create a new collector or capturer instance with updated
         # selection_kwargs
         old = self.capturer
@@ -163,7 +164,7 @@ class EvdevhookMixin:
         new = cls(self.__class__, **selection_kwargs)
         if old != new: self.collector = new
         
-        
+    
     def _handler(self):
         try:
             return self.collector
@@ -191,6 +192,12 @@ class Buttonhook(EvdevhookMixin, ButtonhookBase):
 class Cursorhook(EvdevhookMixin, CursorhookBase):
     collector = CursorCollector(category="mouse")
 
+
 class Customhook(EvdevhookMixin, CustomhookBase):
-    pass
-    # collector must be set via custom_kwargs
+    
+    # collector is set via process_custom_kwargs (see above)
+    
+    def process_custom_kwargs(self, **selection_kwargs):
+        if not selection_kwargs:
+            selection_kwargs = {"exclude_category": ("mouse", "keyboard")}
+        super().process_custom_kwargs(**selection_kwargs)

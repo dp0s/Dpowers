@@ -32,7 +32,7 @@ class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
     adaptor = HookAdaptor(group="triggerman", _primary=True)
     
     def __init__(self, hook_adaptor=None, timeout=60, hook_keys=True,
-        hook_buttons=False, buffer=2, key_kwargs=None, **custom_kwargs):
+        hook_buttons=False, hook_custom=False, buffer=2):
         super().__init__(timeout=timeout)
         self.eventdict = dict()
         self.blocked_hks = []
@@ -48,8 +48,7 @@ class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
             self.stringevent_analyzer = StringAnalyzer(NamedKey, NamedButton)
         else:
             self.stringevent_analyzer = NamedKey.Event
-        self.key_kwargs = key_kwargs
-        self.custom_kwargs = custom_kwargs
+        self.hook_custom = hook_custom
        
     def _start_action(self):
         timeout = self.timeout + 5 if self.timeout else None
@@ -60,12 +59,13 @@ class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
         hm = 0
         if self.hook_keys:
             hm += self.adaptor.keys(self.event, timeout=timeout,
-                reinject_func=reinject_func, **self.key_kwargs)
+                reinject_func=reinject_func)
         if self.hook_buttons:
             hm += self.adaptor.buttons(self.event, timeout=timeout)
-        if self.custom_kwargs:
-            hm += self.adaptor.custom(self.event, timeout=timeout,
-                    **self.custom_kwargs)
+        if self.hook_custom:
+            kwargs = {}
+            if isinstance(self.hook_custom, dict): kwargs = self.hook_custom
+            hm += self.adaptor.custom(self.event, timeout=timeout, **kwargs)
         self.hm = hm
         return self.hm.start()
     
@@ -81,7 +81,7 @@ class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
             self.timeout,self))
     
     def event(self, k):
-        #print(k)
+        print(k)
         self.recent_events.append(k)
         if len(self.recent_events) > self.buffer: self.recent_events.popleft()
         recent_events = self.recent_events.copy()

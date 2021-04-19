@@ -190,10 +190,7 @@ class CallbackHook(AdditionContainer.Addend, TimedObject):
         self.capture = capture
         self.custom_kwargs = custom_kwargs
         self.dedicated_thread = dedicated_thread
-        if custom_kwargs:
-            self.process_custom_kwargs(**custom_kwargs)
-            # for the evdev custom hook, this might set the self.capturer and
-            # self.collector variables
+        self.process_custom_kwargs(**custom_kwargs)
         if reinject_func is not None:
             if self.collector.reinject_implemented is False:
                 raise NotImplementedError(
@@ -230,6 +227,7 @@ class CallbackHook(AdditionContainer.Addend, TimedObject):
 
         
     def process_custom_kwargs(self, **kwargs):
+        if not kwargs: return
         raise NotImplementedError(f"Hook {self} does not accept custom kwargs.")
 
 
