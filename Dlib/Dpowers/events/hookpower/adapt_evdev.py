@@ -39,7 +39,7 @@ from evdev.ecodes import (EV_KEY, EV_ABS, EV_SYN, EV_MSC, KEY, BTN,
 
 class EvdevHandler(device_control.DeviceHandler, InputEventHandler):
     
-    devupdater = device_control.DeviceUpdater(activate_looper=True)
+    devupdater = device_control.DeviceUpdater()
     # this class will also use the CollactableInputDevice class and the
     # EvdevInputLooper class in the background
     uinput = uinput.global_uinput
