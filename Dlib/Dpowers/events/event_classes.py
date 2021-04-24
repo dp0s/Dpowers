@@ -318,13 +318,6 @@ class Buttonevent(PressReleaseEvent):
         return self
 
 
-
-
-
-
-
-
-
 class StringAnalyzer(StringEventUtilitites):
     
     #inherits method from_str!
@@ -354,34 +347,3 @@ class StringAnalyzer(StringEventUtilitites):
 
 
 
-class EventObjectSender(ABC):
-    
-    default_delay=None
-    
-    @abstractmethod
-    def _send_event(self, event, **kwargs):
-        raise NotImplementedError
-    
-    @hotkeys.add_pause_option(True)
-    def send_event(self, *events, delay=None,**kwargs):
-        delay = self.default_delay if delay is None else delay
-        for event in events:
-            if isinstance(event, EventSequence):
-                self.send_event(*event.members, **kwargs)
-            elif isinstance(event, EventCombination):
-                self.send_event(event.sending_version(), **kwargs)
-            else:
-                try:
-                    name = event.name
-                except AttributeError:
-                    pass
-                else:
-                    if name.startswith("[") and name.endswith("]"):
-                        name = name[1:-1]
-                        event.name = name
-                try:
-                    self._send_event(event, **kwargs)
-                except TypeError:
-                    raise TypeError(f"event argument {event} not allowed for "
-                                    f"send_event method of object {self}.")
-                if delay: sleep(delay/1000)
