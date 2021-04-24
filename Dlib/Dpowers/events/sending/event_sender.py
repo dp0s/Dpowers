@@ -19,7 +19,7 @@
 
 from Dhelpers.baseclasses import AdditionContainer
 from Dhelpers.arghandling import check_type
-from ..event_classes import StringEvent, EventObjectSender
+from ..event_classes import StringEvent, EventSequence, EventCombination
 from .. import Adaptor, adaptionmethod, AdaptionError, Layout
 import functools, time, warnings
 
@@ -38,8 +38,40 @@ def default_delay_doc(obj_name):
 
 def default_duration_doc(obj_name):
     print(_doc(f"press and release event of the same {obj_name}"))
+
+
+
+class EventObjectSenderMixin:
+    default_delay = None
     
+    def _send_event(self, event, **kwargs):
+        raise NotImplementedError
     
+    def send_event(self, *events, delay=None, **kwargs):
+        delay = self.default_delay if delay is None else delay
+        for event in events:
+            if isinstance(event, EventSequence):
+                self.send_event(*event.members, **kwargs)
+            elif isinstance(event, EventCombination):
+                self.send_event(event.sending_version(), **kwargs)
+            else:
+                try:
+                    name = event.name
+                except AttributeError:
+                    pass
+                else:
+                    if name.startswith("[") and name.endswith("]"):
+                        name = name[1:-1]
+                        event.name = name
+                try:
+                    self._send_event(event, **kwargs)
+                except TypeError:
+                    raise TypeError(f"event argument {event} not allowed for "
+                                    f"send_event method of object {self}.")
+                if delay: sleep(delay/1000)
+                
+                
+                
 
 class Sender(AdditionContainer.Addend):
     
@@ -343,8 +375,9 @@ class AdaptiveSender(Sender, Adaptor):
             # defined in self.names
             
             
+            
 class AdaptivePressReleaseSender(PressReleaseSender, AdaptiveSender,
-        EventObjectSender):
+        EventObjectSenderMixin):
     baseclass = True
 
 
@@ -409,10 +442,12 @@ class AdaptivePRSenderShifted(AdaptivePressReleaseSender):
     def _effective_dict_expanded(self):
         return {i : self._expand_shifted(j) for i,j in \
                 self._effective_dict.items(prefer_single=True)}
-    
+
+
+
     
 class CombinedSender(AdditionContainer, PressReleaseSender,
-        EventObjectSender, basic_class=Sender):
+        EventObjectSenderMixin, basic_class=Sender):
     
     def __init__(self, *args):
         super().__init__(*args)
