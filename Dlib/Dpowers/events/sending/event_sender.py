@@ -207,6 +207,7 @@ class PressedContext:
     def __init__(self, sender_instance, *names, delay=None):
         self.sender_instance = sender_instance
         self.names = names
+        if not delay: delay = sender_instance.default_delay
         self.delay = delay/1000
         self.send_infos = []
     

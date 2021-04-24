@@ -17,7 +17,7 @@
 #
 #
 from Dhelpers.named import NamedObj
-from .event_classes import Buttonevent, Keyvent, PressReleaseEvent
+from .event_classes import Buttonevent, Keyvent, NamedPressReleaseEvent
 import re
 
 class NamedKeyButton(NamedObj):
@@ -28,7 +28,8 @@ class NamedKeyButton(NamedObj):
         super().__init_subclass__()
         if event_baseclass == "inherit": event_baseclass = cls.Event
             #inherit Event's baseclass from parent's event baseclass
-        if not issubclass(event_baseclass, PressReleaseEvent): raise TypeError
+        if not issubclass(event_baseclass, NamedPressReleaseEvent):
+            raise TypeError
         ev = type(f"{cls.__name__}.Event", (event_baseclass,),{})
             # create a new event baseclass just for this NamedClass
         ev.__module__=cls.__module__

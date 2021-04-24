@@ -93,7 +93,7 @@ class MouseMoveEvent(Event):
 
 
 
-class StringEventUtilitites(ABC):
+class StringAnalyzeUtilitites(ABC):
     
     combination_symbol = "+"
     sequence_symbol = " "
@@ -123,7 +123,7 @@ class StringEventUtilitites(ABC):
             else:
                 yield s
     
-    def from_str(cls_or_self, string, hotkey=False, **kwargs):
+    def create_from_str(cls_or_self, string, hotkey=False, **kwargs):
         events = []
         for entry in cls_or_self.split_str(string):
             if isinstance(entry, str):
@@ -158,41 +158,23 @@ class StringEventUtilitites(ABC):
 
 
 
-class StringEvent(Event, StringEventUtilitites, str):
+class StringEvent(Event, StringAnalyzeUtilitites, str):
 
-    __slots__ = ["name","given_name","named_instance"]
+    __slots__ = ["name"]
 
-    NamedClass = None  # must be set by __init_subclass__ method of
-                       # NamedKeyButton subclass
+    
     allowed_names = () # set allowed_names even without use of NamedClass
     
 
     def __new__(cls, name="", *, only_defined_names=False):
-        given_name = name
-        named_instance = None
         if isinstance(name,int): name = str(name)
         if name != "":
-            if cls.NamedClass:
-                try:
-                    # print(name, named_instance)
-                    named_instance = cls.NamedClass.instance(name)
-                except KeyError:
-                    if not cls.allowed_names and only_defined_names:
-                        raise NameError(f"name '{name}' not allowed for "
-                        f"{cls}")
-                else:
-                    name = named_instance.name
-            if not named_instance:
+            if cls.allowed_names and only_defined_names:
                 if name not in cls.allowed_names:
-                    if cls.allowed_names and only_defined_names:
-                        raise NameError(f"name '{name}' not allowed for "
-                        f"{cls}")
-                    if name.isnumeric(): name = f"[{name}]"
+                    raise NameError(f"name '{name}' not allowed for {cls}")
+                #if name.isnumeric(): name = f"[{name}]"
         self = str.__new__(cls, name)
         self.name = name
-        self.named_instance = named_instance
-        self.given_name = given_name
-        assert str(self) == name
         return self
     
     @classmethod
@@ -208,26 +190,55 @@ class StringEvent(Event, StringEventUtilitites, str):
         # don't override
         return cls(*cls._args_from_str(s),**kwargs)
     
-    from_str = classmethod(StringEventUtilitites.from_str)
+    create_from_str = classmethod(StringAnalyzeUtilitites.create_from_str)
 
 
+
+    
+    
+    
+class NamedEvent(StringEvent):
+    
+    __slots__ = ["given_name","named_instance"]
+    
+    NamedClass = None  # Usually set by __init_subclass__ method of NamedClass
+    
+    
+    def __new__(cls, name="", *, only_defined_names=False):
+        given_name = name
+        named_instance = None
+        if isinstance(name,int): name = str(name)
+        if name != "":
+            try:
+                # print(name, named_instance)
+                named_instance = cls.NamedClass.instance(name)
+            except KeyError:
+                if not cls.allowed_names and only_defined_names:
+                    raise NameError(f"name '{name}' not allowed for {cls}")
+            else:
+                name = named_instance.name
+        self = super().__new__(cls, name, only_defined_names=only_defined_names)
+        self.given_name = given_name
+        self.named_instance = named_instance
+        return self
 
     # problem with redefining __eq__ and dicts/set __hash__ comparison
     # __hash__ method is needed for checking "self in dict" or "self in set"
     # however, as each name_string of the NamedKey has a unique hash,
-    # and the __contains__ method of set and dict is only checking for hash equality,
+    # and the __contains__ method of set and dict is only checking for
+    # hash equality,
     # (while __eq__-equality is checked only after hash equality)
-    # we would need to provide several hash values for each keyvent object, which is impossible
+    # we would need to provide several hash values for each keyvent
+    # object, which is impossible
     # workarounds:
     # 1. self in NamedKey.standardize(dict/set)
     #    this only checks for stnd name of self.
     #    the search inside the dict is using hashes and thus is quick
     #    however, standardization needs to be done beforehand
     # 2. custom methods defined below.
-    
-    
-    def eq(self,other):
-        if isinstance(other,int): other=f"[{other}]"
+
+    def eq(self, other):
+        if isinstance(other, int): other = f"[{other}]"
         if isinstance(other, str):
             if self.named_instance:
                 return self.named_instance == other
@@ -261,18 +272,18 @@ class StringEvent(Event, StringEventUtilitites, str):
         return return_if_not_found
     
     
-    
 
-class PressReleaseEvent(StringEvent):
+class PressReleaseMixin(StringEvent):
     __slots__ = ["press"]
     
-    def __new__(cls, name="", press=True, write_rls=True, only_defined_names=False):
+    def __new__(cls, name="", *, press=True, write_rls=True,
+            only_defined_names=False):
         assert press in (True, False, None)
-        self = StringEvent.__new__(cls, name, only_defined_names=only_defined_names)
+        sup = super()
+        self = sup.__new__(cls, name, only_defined_names=only_defined_names)
         if press is False and write_rls:
             self2 = str.__new__(cls, self.name + "_rls")
-            for attr in StringEvent.__slots__:
-                setattr(self2,attr,getattr(self,attr))
+            for attr in sup.__slots__: setattr(self2,attr,getattr(self,attr))
             self = self2
         self.press=press
         return self
@@ -282,32 +293,46 @@ class PressReleaseEvent(StringEvent):
         rls = s.endswith("_rls")
         if rls: s = s[:-4]
         return super()._args_from_str(s) + (not rls,)
-
-    def strip_rls(self, raise_error=True):
-        if not self: return self
-        if raise_error and self.press: raise ValueError
-        if self.named_instance:
-            return self.named_instance.release_event_without_rls
-        else:
-            return self.__class__(name=self.name,press=False,write_rls=False)
     
     def reverse(self):
-        if self.named_instance:
+        return self.__class__(name=self.name, press=not self.press)
+
+    def strip_rls(self, raise_error=True):
+        if not self: return self  # happrnd for empty string ""
+        if raise_error and self.press: raise ValueError
+        return self._rls_stripped()
+    
+    def _rls_stripped(self):
+        return self.__class__(name=self.name, press=False, write_rls=False)
+
+
+class PressReleaseEvent(PressReleaseMixin, StringEvent):
+    pass
+  
+  
+class NamedPressReleaseEvent(PressReleaseMixin, NamedEvent):
+    def reverse(self):
+        try:
             if self.press:
                 return self.named_instance.release_event
             else:
                 return self.named_instance.press_event
-        else:
-            return self.__class__(name=self.name, press=not self.press)
+        except AttributeError:
+            return super().reverse()
+        
+    def _rls_stripped(self):
+        try:
+            return self.named_instance.release_event_without_rls
+        except AttributeError:
+            return super()._rls_stripped()
+            
 
     
-    
-    
-class Keyvent(PressReleaseEvent):
+class Keyvent(NamedPressReleaseEvent):
     pass
 
 
-class Buttonevent(PressReleaseEvent):
+class Buttonevent(NamedPressReleaseEvent):
     
     __slots__ = ["x", "y"]
     
@@ -325,9 +350,9 @@ class Buttonevent(PressReleaseEvent):
 
 
 
-class StringAnalyzer(StringEventUtilitites):
+class StringAnalyzer(StringAnalyzeUtilitites):
     
-    #inherits method from_str!
+    #inherits method create_from_str!
     
     def __init__(self, *event_classes):
         self.event_classes = []

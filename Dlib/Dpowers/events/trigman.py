@@ -122,11 +122,11 @@ class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
         self.eventdict[event] = action
     
     def add_sequence(self, string, action):
-        event = self.stringevent_analyzer.from_str(string).hotkey_version()
+        event = self.stringevent_analyzer.create_from_str(string).hotkey_version()
         self.add_event(event, action)
     
     def add_hotkey(self, string, action, rls=False, block=True):
-        event = self.stringevent_analyzer.from_str(string)
+        event = self.stringevent_analyzer.create_from_str(string)
         if isinstance(event,EventSequence): raise ValueError
         if isinstance(event,StringEvent):
             if not event.press: raise ValueError
