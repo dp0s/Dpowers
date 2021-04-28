@@ -312,19 +312,38 @@ class AdaptorBase(KeepInstanceRefs):
                 cls.__doc__ = doc + "\n\n    " + add
         elif cls._subclass_level == 1:
             cls._first_level_subclass = cls
-            initdoc = cls.__init__.__doc__
-            if initdoc: cls.__doc__ += "\n" + initdoc
                 
             
     
     def __init__(self, main_info=None, *, group="default", _primary=False,
             **method_infos):
         """
+        Usually, you do not need to create Adaptor instances yourself as
+        a default instance is already available for each subclass (see
+        below).
+       
         
-        :param main_info:
-        :param group:
-        :param _primary:
-        :param method_infos:
+        :param str main_info: Name of the backend to be used, passed on to
+            :func:`adapt`.
+        :param str group: Name of the instance group to which the new
+            instance will belong.
+        :param _primary: Used only for internal documentation purposes. It
+            allows specifiying the primary/default instance for each instance group.
+        :param method_infos: Passed on to :func:`adapt`.
+        
+        
+        If the *main_info* and/or *method_infos* parameter is given, the new
+        instance is immediately adapted using its :func:`adapt` method.
+        
+        If neither *main_info* nor *method_infos* is specified (default),
+        and :attr:`Adpator.autoadapt_active` is ``True``,
+        choose the default backend according to the instance group and
+        `Dpowers.default_backends.py
+        <https://github.com/dp0s/Dpowers/tree/master/Dlib/Dpowers
+        /default_backends.py>`_.
+        
+        Otherwise an unadapted instance is created.
+        
         """
         
         super().__init__()
@@ -378,18 +397,32 @@ class AdaptorBase(KeepInstanceRefs):
     
     
     
-    def adapt(self, main_info=None, *, warn=True, raise_error=True,
-            check_adapted=True, **method_infos):
-        """
+    def adapt(self, main_info=None, *, raise_error=True,
+            require_backend=True, **method_infos):
+        """Choose the backend for this Adaptor instance. If neither
+        *main_info* nor *method_infos* is specified, the
+        default backend for this instance group is selected, as defined in
+        the module `Dpowers.default_backends.py
+        <https://github.com/dp0s/Dpowers/tree/master/Dlib/Dpowers
+        /default_backends.py>`_.
         
-        :param main_info:
-        :param warn:
-        :param raise_error:
-        :param check_adapted:
-        :param method_infos:
-        :return:
+        :param str main_info: Name of the backend to be used.
+        :param bool raise_error: If set to ``False``, exceptions caused
+            during backend import are suppressed. A warning is printed instead.
+        :param bool require_backend: If set to ``True`` (default), a
+            ``ValueError`` will be raised if no default backend could be
+            found.
+        :param method_infos: Explanation to be added    .
+        :return: - The module object of the backend's adapt_*.py file.
+                 - ``False`` if an exception occurs but is suppressed (see
+                   parameters *raise_error* and *require_backend*).
+        :raises:
+            - ``Dpowers.AdaptionError`` if there is an exception during
+              importing the backend.
+            - ``ValueError`` if used without arguments and no default backend
+              could be found (you can disable this via *require_backend=False*).
+            
         """
-        raise_error = True
         try:
             if isinstance(main_info, Backend):
                 backend = main_info
@@ -400,20 +433,20 @@ class AdaptorBase(KeepInstanceRefs):
                 backend = Backend(self.__class__, main_info, method_infos)
         except AdaptionError as e:
             if raise_error: raise
-            if warn:
-                text = f"Encountered an Exception trying to adapt\n{self}\n"
-                for _ in range(10):
-                    if str(e):
-                        text += type(e).__name__ + ": " + str(e) + "\n"
-                    e = e.__cause__
-                    if e is None: break
-                    text += "caused by\n"
-                warnings.warn(text)
+            text = f"Encountered an Exception trying to adapt\n{self}\n"
+            for _ in range(10):
+                if str(e):
+                    text += type(e).__name__ + ": " + str(e) + "\n"
+                e = e.__cause__
+                if e is None: break
+                text += "caused by\n"
+            warnings.warn(text)
             return False
-        if backend.main_info is None and not backend.method_infos:
-            if check_adapted:
-                raise AdaptionError("Given backend information not "
+        if not backend:
+            if require_backend:
+                raise ValueError("Given backend information not "
                             "valid and none found in default backends.")
+            return False
         self.backend = backend
         for amethod in self.adaptionmethods(): amethod.set_target()
         return backend.show_target_spaces()
@@ -452,7 +485,7 @@ class AdaptorBase(KeepInstanceRefs):
             bakcend_info = inst.get_from_backend_source(
                     backend_source=backend_source)
             inst.adapt(bakcend_info, raise_error=raise_error, warn=warn,
-                    check_adapted=False)
+                    require_backend=False)
     
     @classmethod
     def adapt_all(cls, *args, **kwargs):

@@ -3,6 +3,8 @@ Adaptors
 
 .. autoclass:: Dpowers.Adaptor
     :inherited-members:
+    :special-members: __init__
+
 
 
 

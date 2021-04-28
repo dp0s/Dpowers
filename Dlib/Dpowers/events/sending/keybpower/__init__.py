@@ -231,7 +231,7 @@ class KeyboardAdaptor(AdaptivePRSenderShifted):
 
         :param str name: Name of the keyboard layout you use. This is usually a
             two character abbreviation, such as *'de'* or *'us'*. A list of
-            available layouts can be found in
+            available layouts can be found in the folder
             `Dhelpers.KeyboardLayouts.layouts_imported_from_xkb
             <https://github.com/dp0s/Dpowers/tree/master/Dlib/Dhelpers
             /KeyboardLayouts/layouts_imported_from_xkb>`_.
@@ -294,7 +294,7 @@ class KeyboardAdaptor(AdaptivePRSenderShifted):
     @property
     def key(self):
         """This object allows accessing Dpowers' internal key objects and key
-        groups as defined in `Dpowers.events.keybutton_names.py
+        groups as defined in the module `Dpowers.events.keybutton_names.py
         <https://github.com/dp0s/Dpowers/tree/master/Dlib/Dpowers/events
         /keybutton_names.py>`_. Find a key object by calling it's name:
 
