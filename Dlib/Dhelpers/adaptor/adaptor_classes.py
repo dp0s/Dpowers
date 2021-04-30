@@ -478,13 +478,13 @@ class AdaptorBase(KeepInstanceRefs):
     
     
     @classmethod
-    def _adapt_all(cls, omit_adapted_inst=False, raise_error=True, warn=True,
+    def _adapt_all(cls, omit_adapted_inst=False, raise_error=True,
             backend_source=None):
         for inst in cls.get_instances():
             if inst.is_adapted and omit_adapted_inst: continue
             bakcend_info = inst.get_from_backend_source(
                     backend_source=backend_source)
-            inst.adapt(bakcend_info, raise_error=raise_error, warn=warn,
+            inst.adapt(bakcend_info, raise_error=raise_error,
                     require_backend=False)
     
     @classmethod
