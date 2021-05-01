@@ -101,6 +101,9 @@ class AdaptionFuncPlaceholder:
                 pass
             else:
                 if backend_val not in (None, NotImplemented): return backend_val
+            if default == NotImplementedError:
+                raise NotImplementedError(f"No value for attribute {name} of "
+                              f"{adaptor_inst} found.")
             return default
         func.__name__ = name
         func = property(func)
@@ -214,7 +217,7 @@ class AdaptionMethod:
             except AttributeError:
                 attr_obj = NotImplemented
             else:
-                check_type(check_ty,attr_obj)
+                if inspect.isclass(check_ty): check_type(check_ty,attr_obj)
             setattr(self.Adaptor_instance,"_backend_" + attr_name,attr_obj)
         
         try:

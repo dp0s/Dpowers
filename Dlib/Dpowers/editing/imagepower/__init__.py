@@ -66,17 +66,25 @@ ImageBase.set_prop("colortype", "color","type")
 
 class multipage_mixin:
     # created as a subclass of ImageBase.Sequence (see above)
+    allowed_file_extensions = [".pdf",".tif", ".tiff"]
     
-    def __init__(self, file=None, resolution=300, **load_kwargs):
-        self.file=file
-        if isinstance(file,iter_types): raise ValueError
-        self.file = file
+    def __init__(self, *files, resolution=300, **load_kwargs):
+        l = len(files)
+        if not l: raise ValueError
+        self.files=files
+        self.file = files[0]
+        if isinstance(self.file,iter_types): raise ValueError(self.file)
         self.filepath_split()
-        backend_objs = self.adaptor.load_multi(file,
+        backend_objs = []
+        for file in files:
+            backend_objs += self.adaptor.load_multi(file,
                 resolution= resolution, **load_kwargs)
         images = tuple(self.SingleClass(backend_obj=bo) for bo in backend_objs)
         super().__init__(images=images)
         #self.compr("jpeg")
     
     def save(self, destination=None, combine=True):
+        if destination and not destination.endswith(
+                tuple(self.allowed_file_extensions)):
+            combine=False
         return super().save(destination, combine)
