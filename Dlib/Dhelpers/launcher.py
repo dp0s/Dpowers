@@ -70,15 +70,40 @@ def kill_process(*pids_or_processes, timeout=5):
                            f"killed after {timeout} seconds:\n{alive}")
 
 
-def find_other_instances(compare=("name", "exe", "cmdline"), ad_value=None):
-    this_process = psutil.Process()
-    this_dict = this_process.as_dict(compare, ad_value)
-    print(this_dict)
-    print("find other instances")
-    for p in psutil.process_iter(compare, ad_value):
-        if p == this_process: continue
-        if this_dict["name"] == p.info["name"]:
-            print(p.info)
+def find_other_instances(cmd_contains=None, check_all_param=False):
+    this = psutil.Process()
+    cmdline = this.cmdline()
+    l = len(cmdline)
+    assert l > 0
+    for ps in psutil.process_iter():
+        if this == ps: continue
+        cmdline2 = ps.cmdline()
+        l2 = len(cmdline2)
+        if l2 == 0: continue
+        cmd2 = cmdline2[0]
+        if cmd2 != cmdline[0] and cmd_contains not in cmd2: continue
+        if l == 1:
+            yield ps
+        else:
+            range_end = l if check_all_param else 2
+            for i in range(1,range_end):
+                # breaking the inner loop will continue the outer loop
+                if l2 <= i: break
+                if cmdline[i] != cmdline2[i]: break
+            else:
+                # if the inner loop finishs, the process has been matched
+                yield ps
+                # now check the next process
+
+def kill_other_instances(cmd_contains=None,check_all_param=False,pr=True):
+    for ps in find_other_instances(cmd_contains=cmd_contains,
+            check_all_param=check_all_param):
+        if pr: print(f"Killing process {ps}")
+        kill_process(ps)
+
+
+
+
 
 
 class LaunchFuncs:
