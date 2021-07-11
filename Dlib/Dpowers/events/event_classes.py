@@ -270,11 +270,9 @@ class NamedEvent(StringEvent):
         for key in iter(dic):
             if self.eq(key): return dic[key]
         return return_if_not_found
-    
-    
 
-class PressReleaseMixin(StringEvent):
-    __slots__ = ["press"]
+
+class PressReleaseMixin:
     
     def __new__(cls, name="", *, press=True, write_rls=True,
             only_defined_names=False):
@@ -307,10 +305,11 @@ class PressReleaseMixin(StringEvent):
 
 
 class PressReleaseEvent(PressReleaseMixin, StringEvent):
-    pass
-  
+    __slots__ = ["press"]
   
 class NamedPressReleaseEvent(PressReleaseMixin, NamedEvent):
+    __slots__ = ["press"]
+    
     def reverse(self):
         try:
             if self.press:
@@ -325,11 +324,10 @@ class NamedPressReleaseEvent(PressReleaseMixin, NamedEvent):
             return self.named_instance.release_event_without_rls
         except AttributeError:
             return super()._rls_stripped()
-            
 
-    
+
 class Keyvent(NamedPressReleaseEvent):
-    pass
+    __slots__ = []
 
 
 class Buttonevent(NamedPressReleaseEvent):
