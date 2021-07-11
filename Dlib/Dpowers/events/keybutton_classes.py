@@ -22,7 +22,7 @@ import re
 
 class NamedKeyButton(NamedObj):
     Event = None
-    __slots__ = ["press_event", "release_event", "release_event_without_rls"]
+    #__slots__ = ["press_event", "release_event", "release_event_without_rls"]
     
     def __init_subclass__(cls, event_baseclass="inherit"):
         super().__init_subclass__()
@@ -30,11 +30,11 @@ class NamedKeyButton(NamedObj):
             #inherit Event's baseclass from parent's event baseclass
         if not issubclass(event_baseclass, NamedPressReleaseEvent):
             raise TypeError
-        ev = type(f"{cls.__name__}.Event", (event_baseclass,),{})
-            # create a new event baseclass just for this NamedClass
-        ev.__module__=cls.__module__
-        ev.NamedClass = cls
-        cls.Event = ev
+        class Event(event_baseclass):
+            __name__ = f"{cls.__name__}.Event"
+            __module__ = cls.__module__
+            NamedClass = cls
+        cls.Event = Event
     
     def __init__(self, *names):
         super().__init__(*names)
@@ -103,10 +103,12 @@ class NamedKeyButton(NamedObj):
 
 
 class NamedKey(NamedKeyButton, event_baseclass=Keyvent):
+    #__slots__ = []
     pass
 
-
 class NamedButton(NamedKeyButton, event_baseclass=Buttonevent):
+    
+    #__slots__ = []
     
     def get_event(self, press, write_rls=True, x=None, y=None):
         event = super().get_event(press, write_rls)

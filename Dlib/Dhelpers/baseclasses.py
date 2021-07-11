@@ -25,6 +25,7 @@ from abc import ABC, abstractmethod
 from inspect import signature
 
 class KeepInstanceRefs:
+    
     __instance_ref_dict__ = collections.defaultdict(list)
     # this class attribute is a dictionary, supposed to contain one list of
     # instance

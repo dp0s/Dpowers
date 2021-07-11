@@ -160,8 +160,9 @@ class StringAnalyzeUtilitites(ABC):
 
 class StringEvent(Event, StringAnalyzeUtilitites, str):
 
-    __slots__ = ["name"]
-
+    #__slots__ = ["name"]
+    # memory saving usually negligible and inheritance from non slot class is
+    # impossible
     
     allowed_names = () # set allowed_names even without use of NamedClass
     
@@ -199,7 +200,7 @@ class StringEvent(Event, StringAnalyzeUtilitites, str):
     
 class NamedEvent(StringEvent):
     
-    __slots__ = ["given_name","named_instance"]
+    _special_attr = ["given_name","named_instance"]
     
     NamedClass = None  # Usually set by __init_subclass__ method of NamedClass
     
@@ -274,14 +275,21 @@ class NamedEvent(StringEvent):
 
 class PressReleaseMixin:
     
+    
     def __new__(cls, name="", *, press=True, write_rls=True,
             only_defined_names=False):
         assert press in (True, False, None)
-        sup = super()
-        self = sup.__new__(cls, name, only_defined_names=only_defined_names)
+        self = super().__new__(cls, name, only_defined_names=only_defined_names)
         if press is False and write_rls:
             self2 = str.__new__(cls, self.name + "_rls")
-            for attr in sup.__slots__: setattr(self2,attr,getattr(self,attr))
+            self2.name = self.name
+            try:
+                special_attr = cls._special_attr
+            except AttributeError:
+                pass
+            else:
+                for attr in special_attr:
+                    setattr(self2,attr,getattr(self,attr))
             self = self2
         self.press=press
         return self
@@ -305,10 +313,11 @@ class PressReleaseMixin:
 
 
 class PressReleaseEvent(PressReleaseMixin, StringEvent):
-    __slots__ = ["press"]
+    pass
+    #__slots__ = ["press"]
   
 class NamedPressReleaseEvent(PressReleaseMixin, NamedEvent):
-    __slots__ = ["press"]
+    #__slots__ = ["press"]
     
     def reverse(self):
         try:
@@ -327,12 +336,13 @@ class NamedPressReleaseEvent(PressReleaseMixin, NamedEvent):
 
 
 class Keyvent(NamedPressReleaseEvent):
-    __slots__ = []
+    pass
+    #__slots__ = []
 
 
 class Buttonevent(NamedPressReleaseEvent):
     
-    __slots__ = ["x", "y"]
+    #__slots__ = ["x", "y"]
     
     def __new__(cls, *args, x=None, y=None,**kwargs):
         self= super().__new__(cls,*args,**kwargs)

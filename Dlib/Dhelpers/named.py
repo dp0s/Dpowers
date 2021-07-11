@@ -30,7 +30,9 @@ class NamedObj(KeepInstanceRefs):
     defined_groups = None
     NameContainer = None
     
-    __slots__ = ["names", "groups", "mapping_dict"]
+    #__slots__ = ["names", "groups", "mapping_dict", "mappings"]
+    # memory saving is negligible
+    #inheritance from KeepInstanceRefs not possible with slots
     
     def __init_subclass__(cls, inherit_names=False):
         cls.names_with_important_capital_letters = set()
