@@ -31,7 +31,8 @@ class NamedKeyButton(NamedObj):
         if not issubclass(event_baseclass, NamedPressReleaseEvent):
             raise TypeError
         class Event(event_baseclass):
-            __name__ = f"{cls.__name__}.Event"
+            __qualname__ = f"{cls.__name__}.Event"
+            __name__ = __qualname__
             __module__ = cls.__module__
             NamedClass = cls
         cls.Event = Event

@@ -342,12 +342,16 @@ class AdaptiveSender(Sender, Adaptor):
     
     
     def _create_effective_dict(self, target_space, enforced_inst=None):
-        #this should be executed when amethod is adapted, when NamedClass
-        # changes or when name_translation changes
+        #this should be executed:
+        # - when amethod is adapted (i.e. target space changes)
+        # - when NamedClass changes
+        # - when name_translation changes
+        # - when new enforced inst is set
         # stan dict format:
         #       NamedKey : Object to send to backend
         # translation_dict_format:
-        #       user_input_name : remapped_name (may be ShiftedKey instance)
+        #     user_input_name : remapped_name (may be ShiftedKey instance)
+        #     (both sides of this are usually standardized automatically)
         names = self.names
         if self.NamedClass:
             stand_dict = self.NamedClass.StandardizingDict(names)

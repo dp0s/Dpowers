@@ -278,7 +278,7 @@ class NamedEvent(StringEvent):
 class PressReleaseMixin:
     
     
-    def __new__(cls, name="", *, press=True, write_rls=True,
+    def __new__(cls, name="", press=True, *, write_rls=True,
             only_defined_names=False):
         assert press in (True, False, None)
         self = super().__new__(cls, name, only_defined_names=only_defined_names)

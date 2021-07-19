@@ -81,7 +81,7 @@ class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
             self.timeout,self))
     
     def event(self, k):
-        print(k)
+        #_print(k)
         self.recent_events.append(k)
         if len(self.recent_events) > self.buffer: self.recent_events.popleft()
         recent_events = self.recent_events.copy()
