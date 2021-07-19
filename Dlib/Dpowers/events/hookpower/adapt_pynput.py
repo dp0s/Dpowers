@@ -27,6 +27,7 @@ from abc import abstractmethod
 
 keyboard = pynput.keyboard.Controller()
 
+
 class PynputHandler(InputEventHandler):
     listener = None
     def run(self):

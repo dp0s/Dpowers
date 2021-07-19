@@ -23,7 +23,7 @@ from Dhelpers.arghandling import check_type
 from abc import ABC, abstractmethod
 import threading, queue, logging, inspect, functools, traceback
 from ..event_classes import MouseMoveEvent
-
+from Dhelpers.named import NamedObj
 
 class CallbackRunnerThread(threading.Thread):
     pass
@@ -55,6 +55,8 @@ class EventQueueReader:
 
 class InputEventHandler(ABC):
     
+    # base class to create Capturer and Collector classes
+    
     reinject_implemented = False
     
     def __init__(self, hook_cls=None):
@@ -77,16 +79,6 @@ class InputEventHandler(ABC):
             return True
         
         
-    def add_hook(self, hook):
-        self.active_hooks.append(hook)
-        self.active_hooks.sort(key=lambda s: s.priority)
-        self.add_one()
-
-    def remove_hook(self, hook):
-        self.active_hooks.remove(hook)
-        self.remove_one()
-        
-        
     def start(self):
         if self.active: raise RuntimeError
         self.active = True
@@ -107,7 +99,6 @@ class InputEventHandler(ABC):
     def terminate(self):
         pass
     
-
     def queue_event(self, *args, **kwargs):
         try:
             cls = self.hook_cls
@@ -131,8 +122,6 @@ class InputEventHandler(ABC):
             except Exception:
                 pass
             traceback.print_exc()
-        
-
     
     def run_callbacks(self, event_obj):
         if event_obj is None: return
@@ -140,11 +129,27 @@ class InputEventHandler(ABC):
             ret = hook.run_callback(event_obj)
             if ret == "block": break
             
+            
+    def add_hook(self, hook):
+        self.active_hooks.append(hook)
+        self.active_hooks.sort(key=lambda s: s.priority)
+        self.add_one()
+
+    def remove_hook(self, hook):
+        self.active_hooks.remove(hook)
+        self.remove_one()
+    
+            
+    
     
 class CallbackHook(AdditionContainer.Addend, TimedObject):
     
-    #these can be overwritten by instance attributes if they depend on
-    # instance arguments. However, usually they are set by __init_subclass__
+    # usually set by __init_subclass__ or subclass attribute. In these cases,
+    # there is at most one capturer and one collector instance for each
+    # subclass.
+    # They can optionally be set for a particular Hook instance, in which
+    # case this instance has it's own handler available (CustomHook subclass
+    # uses this for evdev)
     capturer = None
     collector = None
     
@@ -231,6 +236,7 @@ class CallbackHook(AdditionContainer.Addend, TimedObject):
         raise NotImplementedError(f"Hook {self} does not accept custom kwargs.")
 
 
+    # this method is called from cls.collector instance to run the callbacks
     def run_callback(self, event_obj):
         if self.callback_func is None: return
         event_obj = self.callback_condition(event_obj)
@@ -315,6 +321,8 @@ class CallbackHook(AdditionContainer.Addend, TimedObject):
     #         if ret == "stop": self.stop()
 
 
+    # the following method is called by the cls.collector instance to create
+    # event objects.
     @classmethod
     @abstractmethod
     def _create_event_obj(cls, *args, **kwargs):
@@ -322,49 +330,35 @@ class CallbackHook(AdditionContainer.Addend, TimedObject):
 
 
     def callback_condition(self, event_obj):
-        # can be overridden in subclass. event_obj will be adapted for
-        # specific instance
+        # can be overridden in subclass.
         return event_obj
-    
 
 
-
-
-class PressReleaseHook(CallbackHook):
-    
-    NamedClass = None # set by target modifier of HookAdaptor
-    
-    
-    #needs to be overwritten in subclass:
-    currently_pressed = None
+class NamedHook(CallbackHook):
+    NamedClass = None   #set by target_modifier of HookAdaptor
+    EventClass = None
     name_translation_dicts = None
+    #name_translation_dict = None
     _active_dict = None
     
-
+    
+    
     def __init_subclass__(cls):
         super().__init_subclass__()
-        cls.currently_pressed = set()
         if hasattr(cls, "name_translation_dict"):
             if len(cls.name_translation_dicts) != 0: raise AttributeError
             cls.name_translation_dicts = [cls.name_translation_dict]
         else:
             cls.name_translation_dicts = []
 
-    def init(self, *args, press=True, release = True, write_rls=True, **kwargs):
-        CallbackHook.init(self,*args, **kwargs)
-        self.press = press
-        self.release = release
-        self.multipress = True
-        self.write_rls=write_rls
-        
     @classmethod
     def update_active_dict(cls):
-        #this has to be called after cls.NamedClass has been set
+        # this has to be called after cls.NamedClass has been set
         for i in range(len(cls.name_translation_dicts)):
             dic = cls.name_translation_dicts[i]
             StandardizingDict = cls.NamedClass.StandardizingDict
             if not isinstance(dic, StandardizingDict):
-                check_type(dict,dic)
+                check_type(dict, dic)
                 cls.name_translation_dicts[i] = StandardizingDict(dic)
         coll = cls.collector
         if coll is None: return
@@ -376,7 +370,7 @@ class PressReleaseHook(CallbackHook):
         if hasattr(coll, "names"):
             for n in coll.names:
                 if n not in final_dict: final_dict[n] = n
-
+    
         for a, b in final_dict.items():
             for dic in cls.name_translation_dicts:
                 try:
@@ -387,10 +381,57 @@ class PressReleaseHook(CallbackHook):
                 final_dict[a] = cls.NamedClass.instance(b)
             except KeyError:
                 final_dict[a] = b
-        cls._active_dict = final_dict #this is used each time a key is pressed. It
-                 # is not standardizing to save time.
+        cls._active_dict = final_dict  # this is used each time a key is
+        # pressed. It  # is not standardizing to save time.
         
         
+    @classmethod
+    def _create_event_obj(cls, name, **kwargs):
+        effective = cls._active_dict.get(name, name)
+        NamedCl = cls.NamedClass
+        if NamedCl is None:
+            return cls.EventClass(effective, **kwargs)
+        else:
+            try:
+                EventCl = NamedCl.Event
+            except AttributeError:
+                EventCl = cls.EventClass
+            else:
+                if cls.EventClass is not None: assert cls.EventClass is EventCl
+                if isinstance(effective, NamedCl) and hasattr(effective,
+                        "get_event"):
+                    return effective.get_event(**kwargs)
+            event_obj = EventCl(effective, **kwargs)
+            # print(event_obj, event_obj.named_instance, event_obj.press)
+            if not event_obj.named_instance:
+                if not (event_obj.startswith("[")):
+                    warn("hook of type" + str(
+                            cls) + "got unknown key/button name:  " + event_obj)
+                    if not event_obj.endswith("_rls"):
+                        i = event_obj.lower()
+                        container.set_temp_store_key("F12_send",
+                                i + " = NamedKey('" + i + "')")
+            return event_obj
+
+
+
+class PressReleaseHook(NamedHook):
+    
+    currently_pressed = None
+    
+    def __init_subclass__(cls):
+        super().__init_subclass__()
+        cls.currently_pressed = set()
+        
+
+    def init(self, *args, press=True, release = True, write_rls=True, **kwargs):
+        super().init(*args, **kwargs)
+        self.press = press
+        self.release = release
+        self.multipress = True
+        self.write_rls=write_rls
+        
+    
     def _stop_action(self):
         super()._stop_action()
         if not self.collector.active_hooks:
@@ -399,22 +440,7 @@ class PressReleaseHook(CallbackHook):
 
     @classmethod
     def _create_event_obj(cls, name, press, **kwargs):
-        effective = cls._active_dict.get(name,name)
-        if isinstance(effective, cls.NamedClass):
-            event_obj = effective.get_event(press, **kwargs)
-        else:
-            event_obj = cls.NamedClass.Event(effective, press=press,
-                    **kwargs)
-        #print(event_obj, event_obj.named_instance, event_obj.press)
-        if not event_obj.named_instance:
-            if not (event_obj.startswith("[")):
-                warn("hook of type" + str(
-                        cls) + "got unknown key/button name:  " + event_obj)
-                if not event_obj.endswith("_rls"):
-                    i = event_obj.lower()
-                    container.set_temp_store_key("F12_send",
-                            i + " = NamedKey('" + i + "')")
-        return event_obj
+        return super()._create_event_obj(name,press=press, **kwargs)
     
     
     def callback_condition(self, event_obj):
@@ -434,7 +460,7 @@ class KeyhookBase(PressReleaseHook):
     
     
     def init(self, *args, allow_multipress=False, **kwargs):
-        PressReleaseHook.init(self,*args, **kwargs)
+        super().init(*args, **kwargs)
         if allow_multipress and not self.press: raise ValueError
         self.multipress = allow_multipress
         
