@@ -270,6 +270,7 @@ class KeyboardAdaptor(AdaptivePRSenderShifted):
         self.create_effective_dict(make_default=make_default)
 
     def set_translation_dict(self, dic, make_default=False):
+        # idea: combine translation dict and layout
         self.layout = False
         self.backend_layout = False
         super().set_translation_dict(dic, make_default)
