@@ -135,6 +135,5 @@ class playlist_creator(FileSelector):
     
     @staticmethod
     def default_selection_func(obj,genre=None,case_sensitive=False):
-        if case_sensitive:
-            return genre in obj.genre
+        if case_sensitive: return genre in obj.genre
         return genre.lower() in obj.genre.lower()

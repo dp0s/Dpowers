@@ -37,22 +37,20 @@ class EditorAdaptor(Adaptor):
     baseclass = True
     save_in_place = False
     
-    @adaptionmethod(require=True)
-    def obj_class(self):
-        return self.obj_class.target
-    
     def _check(self, obj):
         if isinstance(obj, iter_types):
             for o in obj:
-                if not isinstance(o, self.obj_class()): raise TypeError
+                if not isinstance(o, self.obj_class): raise TypeError
         else:
-            if not isinstance(obj, self.obj_class()): raise TypeError
+            if not isinstance(obj, self.obj_class): raise TypeError
         return obj
     
     @adaptionmethod(require=True)
     def load(self, file, **load_kwargs):
         backend_object = self._check(self.load.target_with_args())
         return backend_object
+    
+    obj_class = load.adaptive_property("obj_class", NotImplementedError)
     
     @adaptionmethod
     def load_multi(self, file, **load_kwargs):
@@ -83,6 +81,11 @@ class EditorAdaptor(Adaptor):
 
 class ResourceBase:
     
+    file = None
+    adaptor = None
+    sequence = None
+    SingleClass = None
+    
     allowed_file_extensions = None
     
     # def __init_subclass__(cls) -> None:
@@ -102,11 +105,45 @@ class ResourceBase:
         self.filename = name
         self.ext = ext
     
-    def default_destination(self, num=None):
-        append = edit_tag
-        if num: append += f"_{num}"
-        return path.join(self.folder, self.filename + edit_tag + self.ext)
+    def get_destination(self, input_dest=None, num=None, insert_folder=False):
+        ext = None
+        inp_name = None
+        if input_dest:
+            if input_dest.startswith("."):
+                inp_name, ext = "", input_dest
+            else:
+                inp_name, ext = path.splitext(input_dest)
+        elif self.adaptor.save_in_place:
+            return
+        if not ext: ext = self.ext
+        if insert_folder:
+            folder_name = insert_folder if isinstance(insert_folder,
+                    str) else self.filename + edit_tag
+        if not inp_name:
+            if insert_folder:
+                folder = path.join(self.folder, folder_name)
+                os.makedirs(folder, exist_ok=True)
+                append = f"_{num}" if num else ""
+            else:
+                folder = self.folder
+                append = f"_{num}" if num else edit_tag
+            return path.join(folder, self.filename + append + ext)
+        if insert_folder:
+            if not path.split(inp_name)[0]:
+                # that means inp_name is a file not a folder structure
+                os.makedirs(folder_name, exist_ok=True)
+                inp_name = path.join(folder_name,inp_name)
+        append = f"_{num}" if num else ""
+        return inp_name + append + ext
     
+    
+    def _save(self, dest=None):
+        self.adaptor.save(self.backend_obj, dest)
+        return dest
+
+    def save(self, destination=None, num=None):
+        dest = self.get_destination(destination, num)
+        return self._save(dest)
     
     def __enter__(self):
         return self
@@ -177,13 +214,6 @@ class Resource(ResourceBase):
     @backend_obj.setter
     def backend_obj(self, value):
         self._backend_obj = value
-    
-    
-    def save(self, destination=None):
-        if destination is None and not self.adaptor.save_in_place:
-            destination = self.default_destination()
-        return self.adaptor.save(self.backend_obj, destination)
-
 
     def _wrapper_func(self, adaptionmethod_name, *args, **kwargs):
         amethod = getattr(self.adaptor, adaptionmethod_name)
@@ -194,7 +224,7 @@ class Resource(ResourceBase):
         val = amethod(self.backend_obj, *args,
                 **kwargs) if self.backend_obj else None
         vals = tuple(amethod(single.backend_obj, *args, **kwargs) for single in
-        self.sequence)
+            self.sequence)
         return val, vals
     
     
@@ -268,30 +298,36 @@ class ResourceSequence(ResourceBase):
         return self.adaptor.construct_multi(self.backend_objs())
     
     
-    
     def save(self, destination=None, combine=False):
-        if combine:
-            if destination is None:
-                if not hasattr(self, "file") or not self.file:
+        if combine: return super().save(destination)
+        l = len(self.sequence)
+        if l==0: raise ValueError
+        first = self.sequence[0]
+        if l==1:
+            if destination is None and self.adaptor.save_in_place:
+                return first._save()
+            try:
+                dest = self.get_destination(destination)
+            except AttributeError:
+                try:
+                    dest = first.get_destination(destination)
+                except AttributeError:
                     raise ValueError("Could not find destination name.")
-                destination = self.default_destination()
-            self.adaptor.save(self.backend_obj, destination)
-            return destination
+            return first._save(dest)
         destinations = []
-        for num in range(len(self.sequence)):
+        for num in range(l):
             single = self.sequence[num]
-            dest = None
-            if destination is None and not self.adaptor.save_in_place:
-                if not single.file:  # this means we need to find dest otherwise
-                    if not hasattr(self, "file") or not self.file:
-                        raise ValueError("Could not find destination name.")
-                    new_folder = path.join(self.folder, self.filename + edit_tag)
-                    os.makedirs(new_folder, exist_ok=True)
-                    destination = path.join(new_folder, self.filename + self.ext)
-            if destination:
-                base, ext = path.splitext(destination)
-                dest = base + f"_{num}" + ext
-            destinations.append(single.save(destination=dest))
+            if destination is None:
+                if self.adaptor.save_in_place: single._save()
+            try:
+                dest = self.get_destination(destination,num=num,
+                        insert_folder=True)
+            except AttributeError:
+                try:
+                    dest = single.get_destination(destination)
+                except AttributeError:
+                    raise ValueError("Could not find destination name.")
+            destinations.append(single._save(dest))
         return destinations
     
     

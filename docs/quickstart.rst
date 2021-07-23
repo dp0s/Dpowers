@@ -112,7 +112,13 @@ You can perform the two steps (import and adapt) in only one line::
     import Dpowers
     Dpowers.activate_autoadapt()
 
-This will try to adapt ALL adaptable objects to their default backend if possible. Alternatively, the wildcard import also activates autoadapt:
+This will try to adapt ALL adaptable objects to their default backend if
+possible, and prints a warning for each exception encountered. The list of
+default backends is defined in `Dpowers .default_backends.py
+<https://github.com/dp0s/Dpowers/tree/master/Dlib/Dpowers/default_backends.py>`_
+
+
+Alternatively, the wildcard import also activates autoadapt::
 
     >>> from Dpowers import *
     >>> keyb.tap("a") # check if it works
