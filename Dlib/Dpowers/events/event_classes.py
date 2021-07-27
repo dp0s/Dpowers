@@ -27,7 +27,8 @@ from time import sleep
 
 class Event(AdditionContainer.Addend):
     
-    source = [None,None]  #should be module, device
+    device = None
+    source = None  #should be a class or module
     
     def __repr__(self):
         return f"<Event '{self}' of subclass " \

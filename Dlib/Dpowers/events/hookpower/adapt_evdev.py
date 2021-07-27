@@ -20,7 +20,8 @@
 
 
 from .baseclasses import (InputEventHandler, KeyhookBase, ButtonhookBase,
-    CursorhookBase, CustomhookBase, PressReleaseHook)
+    CursorhookBase, PressReleaseHook)
+from ..event_classes import PressReleaseEvent
 
 from Dhelpers.adaptor import DependencyManager
 
@@ -59,9 +60,12 @@ class Collector(device_control.CollectorMixin, EvdevHandler):
     
     def process_event(self, ty, co ,val, dev):
         if ty == EV_SYN: return
+        press = bool(val != 0)
+            # val==0 means that it was released, val==1 or
+            # val==2 means it is pressed
         name = bytype[ty][co]
         if isinstance(name, (list,tuple)): name = name[0]
-        self.queue_event(name.lower(), val, dev, ty)
+        self.queue_event(name.lower(), press=press)
 
 
 
@@ -79,8 +83,7 @@ class KeyCollector(Collector):
     def process_event(self,ty,co,val, dev):
         #_print(ty,co,val,dev)
         if ty == EV_KEY:
-            press = bool(val != 0)  # val==0 means that it was released, val==1 or
-            # val==2 means it is pressed
+            
             if self.queue_event(co, press=press) is True:
                 self.uinput.write(ty, co, val)
         elif ty not in (EV_SYN, EV_MSC, EV_LED):
@@ -193,7 +196,9 @@ class Cursorhook(EvdevhookMixin, CursorhookBase):
     collector = CursorCollector(category="mouse")
 
 
-class Customhook(EvdevhookMixin, CustomhookBase):
+class Customhook(EvdevhookMixin, PressReleaseHook):
+    
+    EventClass = PressReleaseEvent
     
     # collector is set via process_custom_kwargs (see above)
     

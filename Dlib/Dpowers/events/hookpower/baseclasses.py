@@ -339,7 +339,7 @@ class NamedHook(CallbackHook):
     EventClass = None
     name_translation_dicts = None
     #name_translation_dict = None
-    _active_dict = None
+    _active_dict = {}
     
     
     
@@ -490,7 +490,7 @@ class CursorhookBase(CallbackHook):
         return MouseMoveEvent(*args, **kwargs)
 
 
-class CustomhookBase(CallbackHook):
+class DefaulthookBase(CallbackHook):
     
     @classmethod
     def _create_event_obj(cls, *args):

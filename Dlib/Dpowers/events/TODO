@@ -3,3 +3,5 @@
 3.  Improve NAmedHook name translation mechanism
 4.  Enforce Using one global NamedClass for keyb/hook
 5.  Update Triggermanager
+6. Enable source and device attribute of events -- usually this is problamatic
+    as NamedEvents shouldn't be recreated everytime. Maybe second attribute?
