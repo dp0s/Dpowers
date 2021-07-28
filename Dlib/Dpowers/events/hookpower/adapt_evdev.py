@@ -110,10 +110,8 @@ class CursorHandler(EvdevHandler):
     
     capture_allowed = False
 
-    def __init__(self, hook_cls=None, *, category=None, name=None, path=None,
-            selection_func=None):
-        super().__init__(hook_cls, category=category, name=name, path=path,
-                selection_func=selection_func)
+    def __init__(self, *args,**kwargs):
+        super().__init__(*args,**kwargs)
         self.saved_vals = {}
         
     def _intelligent_collect(self, co ,co_x, co_y, val, **kwargs):

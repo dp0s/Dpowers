@@ -503,8 +503,11 @@ class KeyhookBase(PressReleaseHook):
             else:
                 event_obj.multipress = False
                 cls.currently_pressed.add(info)
-        elif event_obj.press is False:
-            cls.currently_pressed.remove(info)
+        else:
+            try:
+                cls.currently_pressed.remove(info)
+            except KeyError:
+                pass
         return event_obj
 
 
