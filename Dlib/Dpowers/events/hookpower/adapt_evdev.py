@@ -40,6 +40,7 @@ from evdev.ecodes import (EV_KEY, EV_ABS, EV_SYN, EV_MSC, KEY, BTN,
 
 class EvdevHandler(device_control.DeviceHandler, InputEventHandler):
     
+   
     devupdater = device_control.DeviceUpdater()
     # this class will also use the CollactableInputDevice class and the
     # EvdevInputLooper class in the background
@@ -51,13 +52,6 @@ class EvdevHandler(device_control.DeviceHandler, InputEventHandler):
         device_control.DeviceHandler.__init__(self,devupdater= self.devupdater,
                 **selection_kwargs)
     
-        
-class Capturer(device_control.CapturerMixin, EvdevHandler):
-    pass
-
-
-class Collector(device_control.CollectorMixin, EvdevHandler):
-    
     def process_event(self, ty, co ,val, dev):
         if ty == EV_SYN: return
         press = bool(val != 0)
@@ -66,10 +60,12 @@ class Collector(device_control.CollectorMixin, EvdevHandler):
         name = bytype[ty][co]
         if isinstance(name, (list,tuple)): name = name[0]
         self.queue_event(name.lower(), press=press)
+    
+    
+    
+    
 
-
-
-class KeyCollector(Collector):
+class KeyHandler(EvdevHandler):
     
     reinject_implemented = True
     
@@ -91,7 +87,9 @@ class KeyCollector(Collector):
         
         
 
-class ButtonCollector(Collector):
+class ButtonHandler(EvdevHandler):
+    
+    capture_allowed = False
     
     name_dict = {}
     for a, b in BTN.items():
@@ -108,9 +106,9 @@ class ButtonCollector(Collector):
             _print("Wrong event type: ", ty, co ,val)
 
 
-class CursorCollector(Collector):
+class CursorHandler(EvdevHandler):
     
-    
+    capture_allowed = False
 
     def __init__(self, hook_cls=None, *, category=None, name=None, path=None,
             selection_func=None):
@@ -156,43 +154,35 @@ class EvdevhookMixin:
         if not selection_kwargs: return
         # create a new collector or capturer instance with updated
         # selection_kwargs
-        old = self.capturer
-        cls = Capturer if not old else old.__class__
+        old = self.handler
+        cls = EvdevHandler if not old else old.__class__
         new = cls(self.__class__, **selection_kwargs)
-        if old != new: self.capturer = new
+        if old != new: self.handler = new
         
-        old = self.collector
-        cls = Collector if not old else old.__class__
-        new = cls(self.__class__, **selection_kwargs)
-        if old != new: self.collector = new
-        
-    
-    def _handler(self):
-        try:
-            return self.collector
-        except AttributeError:
-            return self.capturer
             
     def matching_devs(self):
-        return self._handler().matching_devs()
+        return self.handler.matching_devs()
     
-    def matched_devs(self):
-        return self._handler().matched_devs()
+    def collected_devs(self):
+        return self.handler.collected_devs
+    
+    def captured_devs(self):
+        return self.handler.grabbed_devs
+
 
 
 class Keyhook(EvdevhookMixin, KeyhookBase):
-    collector = KeyCollector(category="keyboard")
-    capturer = Capturer(category="keyboard")
+    handler = KeyHandler(category="keyboard")
 
     name_translation_dict = {"braceleft": "bracketleft", "braceright":
         "bracketright"}
     
 
 class Buttonhook(EvdevhookMixin, ButtonhookBase):
-    collector = ButtonCollector(category="mouse")
+    handler = ButtonHandler(category="mouse")
 
 class Cursorhook(EvdevhookMixin, CursorhookBase):
-    collector = CursorCollector(category="mouse")
+    handler = CursorHandler(category="mouse")
 
 
 class Customhook(EvdevhookMixin, PressReleaseHook):

@@ -23,27 +23,41 @@ with DependencyManager(__name__) as tester:
 
 from .baseclasses import (InputEventHandler, KeyhookBase, ButtonhookBase,
     CursorhookBase)
-from abc import abstractmethod
 
 keyboard = pynput.keyboard.Controller()
 
 
 class PynputHandler(InputEventHandler):
-    listener = None
-    def run(self):
-        self.listener = self.get_listener()
-        self.listener.start()
-    def terminate(self):
-        self.listener.stop()
-    @abstractmethod
-    def get_listener(self):
-        pass
-
-
-class PynputKeyCollector(PynputHandler):
     
     
-    def get_listener(self):
+    collector = None
+    capturer = None
+    
+    def start_collecting(self):
+        self.collector = self.get_collector()
+        self.collector.start()
+    def stop_collecting(self):
+        self.collector.stop()
+        
+    def start_capturing(self):
+        self.capturer = self.get_capturer()
+        self.capturer.start()
+    def stop_capturing(self):
+        self.capturer.stop()
+        
+
+    def get_collector(self):
+        raise NotImplementedError
+    
+
+    def get_capturer(self):
+        raise NotImplementedError
+
+
+class PynputKeyHandler(PynputHandler):
+    
+    
+    def get_collector(self):
         return pynput.keyboard.Listener(on_press=self.key_down_event,
                 on_release=self.key_up_event)
     
@@ -64,9 +78,13 @@ class PynputKeyCollector(PynputHandler):
         else:
             raise TypeError
 
+    @staticmethod
+    def get_capturer():
+        return pynput.keyboard.Listener(suppress=True)
 
-class PynputMouseCollector(PynputHandler):
-    def get_listener(self):
+
+class PynputMouseHandler(PynputHandler):
+    def get_collector(self):
         return pynput.mouse.Listener(on_click=self.click_event,
                 on_scroll=self.scroll_event)
 
@@ -86,32 +104,28 @@ class PynputMouseCollector(PynputHandler):
         else:
             raise ValueError
         self.queue_event(button, press=None, x=x, y=y)
-        
 
-class PynputCursorCollector(PynputHandler):
-    def get_listener(self):
-        return pynput.mouse.Listener(on_move=self.queue_event)
-        
-        
-class PynputKeyCapturer(PynputHandler):
     @staticmethod
-    def get_listener():
-        return pynput.keyboard.Listener(suppress=True)
-
-class PynputMouseCapturer(PynputHandler):
-    
-    @staticmethod
-    def get_listener():
+    def get_capturer():
         return pynput.mouse.Listener(suppress=True)
 
 
+
+class PynputCursorHandler(PynputHandler):
+    
+    capture_allowed = False
+    
+    def get_collector(self):
+        return pynput.mouse.Listener(on_move=self.queue_event)
+    
+
+
+
 class Keyhook(KeyhookBase):
-    collector = PynputKeyCollector()
-    capturer = PynputKeyCapturer()
+    handler = PynputKeyHandler()
 
 class Buttonhook(ButtonhookBase):
-    collector = PynputMouseCollector()
-    capturer = PynputMouseCapturer()
+    handler = PynputMouseHandler()
 
 class Cursorhook(CursorhookBase):
-    collector = PynputCursorCollector()
+    handler = PynputCursorHandler()

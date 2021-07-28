@@ -58,46 +58,68 @@ class InputEventHandler(ABC):
     # base class to create Capturer and Collector classes
     
     reinject_implemented = False
+    capture_allowed = True  #need to be manually activated
+    collect_allowed = True  #need to be manually activated
     
     def __init__(self, hook_cls=None):
         self.hook_cls = hook_cls  #this attribute can be left None as it will
         # usually be defined by __init_subclass__ method of CallbackHook class
-        self.active = False
-        self.hook_num = 0
+        self.collect_active = False
+        self.capture_active = False
         self.active_hooks = []
+        self.cap_num = 0
 
-    def add_one(self):
-        self.hook_num += 1
-        if self.hook_num == 1:
-            self.start()
+
+    def add_hook(self, hook):
+        ah = self.active_hooks
+        ah.append(hook)
+        ah.sort(key=lambda s: s.priority)
+        if len(ah) == 1:
+            if self.collect_active: raise RuntimeError
+            self.collect_active = True
+            self.start_collecting()
             return True
 
-    def remove_one(self):
-        self.hook_num -= 1
-        if self.hook_num == 0:
-            self.stop()
+    def remove_hook(self, hook):
+        self.active_hooks.remove(hook)
+        if len(self.active_hooks) == 0:
+            if not self.collect_active: raise RuntimeError
+            self.collect_active = False
+            self.stop_collecting()
             return True
-        
-        
-    def start(self):
-        if self.active: raise RuntimeError
-        self.active = True
-        #self.prepare()
-        self.run()
-        
-    def stop(self):
-        if not self.active: raise RuntimeError
-        self.active = False
-        self.terminate()
-            
-    @abstractmethod
-    def run(self):
-        # must be non_blocking
-        pass
     
-    @abstractmethod
-    def terminate(self):
+    def add_capturer(self):
+        self.cap_num += 1
+        if self.cap_num == 1:
+            if self.capture_active: raise RuntimeError
+            self.capture_active = True
+            self.start_capturing()
+            return True
+
+    def remove_capturer(self):
+        self.cap_num -= 1
+        if self.cap_num == 0:
+            if not self.capture_active: raise RuntimeError
+            self.capture_active = False
+            self.stop_capturing()
+            return True
+        
+        
+    def start_collecting(self):
+        # must be non_blocking
+        raise NotImplementedError
+        
+    def stop_collecting(self):
         pass
+
+
+    def start_capturing(self):
+        # must be non_blocking
+        raise NotImplementedError
+
+    def stop_capturing(self):
+        pass
+        
     
     def queue_event(self, *args, **kwargs):
         try:
@@ -118,7 +140,11 @@ class InputEventHandler(ABC):
             except Exception:
                 pass
             try:
-                self.stop()
+                self.stop_collecting()
+            except Exception:
+                pass
+            try:
+                self.stop_capturing()
             except Exception:
                 pass
             traceback.print_exc()
@@ -130,14 +156,7 @@ class InputEventHandler(ABC):
             if ret == "block": break
             
             
-    def add_hook(self, hook):
-        self.active_hooks.append(hook)
-        self.active_hooks.sort(key=lambda s: s.priority)
-        self.add_one()
-
-    def remove_hook(self, hook):
-        self.active_hooks.remove(hook)
-        self.remove_one()
+    
     
 
 class Missing: pass
@@ -146,13 +165,19 @@ class Missing: pass
 class CallbackHook(AdditionContainer.Addend, TimedObject):
     
     # usually set by __init_subclass__ or subclass attribute. In these cases,
-    # there is at most one capturer and one collector instance for each
-    # subclass.
+    # there is at most one handler instance for each subclass.
     # They can optionally be set for a particular Hook instance, in which
     # case this instance has it's own handler available (CustomHook subclass
     # uses this for evdev)
-    capturer = None
-    collector = None
+    handler = None
+    
+    @property
+    def capture_allowed(self):
+        return self.handler.capture_allowed
+        
+    @property
+    def collect_allowed(self):
+        return self.handler.collect_allowed
     
     
     queue_reader = EventQueueReader()
@@ -165,11 +190,11 @@ class CallbackHook(AdditionContainer.Addend, TimedObject):
         cls._active_capturers = 0
         cls._active_reinject_func = None
         cls.reinject_active = False
-        for handler in (cls.collector, cls.capturer):
-            if handler is not None:
-                check_type(InputEventHandler, handler)
-                if handler.hook_cls is None: handler.hook_cls = cls
-                if handler.hook_cls is not cls: raise ValueError
+        handler = cls.handler
+        if handler is not None:
+            check_type(InputEventHandler, handler)
+            if handler.hook_cls is None: handler.hook_cls = cls
+            if handler.hook_cls is not cls: raise ValueError
         cls.__init__.__signature__ = inspect.signature(cls.init)
 
 
@@ -203,8 +228,9 @@ class CallbackHook(AdditionContainer.Addend, TimedObject):
         self.custom_kwargs = custom_kwargs
         self.dedicated_thread = dedicated_thread
         self.process_custom_kwargs(**custom_kwargs)
+        if self.callback_func and not self.collect_allowed: raise ValueError
         if reinject_func is not None:
-            if self.collector.reinject_implemented is False:
+            if self.handler.reinject_implemented is False:
                 raise NotImplementedError(
                     "The following hook implementation does not support "
                     "reinjecting:\n" + str(self.__class__))
@@ -213,7 +239,7 @@ class CallbackHook(AdditionContainer.Addend, TimedObject):
             self.capture = True
             if not callable(reinject_func):
                 self.reinject_func = lambda *args: reinject_func
-        if not self.capturer and self.capture is True:
+        if self.capture is True and not self.capture_allowed:
             raise NotImplementedError(
                     "The following hook implementation does not support "
                     "capturing:\n" + str(self.__class__))
@@ -267,11 +293,11 @@ class CallbackHook(AdditionContainer.Addend, TimedObject):
         if self.capture:
             cls._active_capturers += 1
             cls._update_reinject()
-            self.capturer.add_one()
+            self.handler.add_capturer()
         if self.callback_func is not False:
             self.queue_reader.start()  # just in case the queue_reader has
             # somehow been stopped, lets recheck everytime
-            self.collector.add_hook(self)
+            self.handler.add_hook(self)
 
     # stop method is defined in TimedObj Baseclass and will use this:
     def _stop_action(self):
@@ -281,9 +307,9 @@ class CallbackHook(AdditionContainer.Addend, TimedObject):
         if self.capture:
             cls._active_capturers -= 1
             cls._update_reinject()
-            self.capturer.remove_one()
+            self.handler.remove_capturer()
         if self.callback_func is not False:
-            self.collector.remove_hook(self)
+            self.handler.remove_hook(self)
     
     def _timeout_action(self):
         warn("Timeout after %s seconds: Stopping hook %s." % (
@@ -362,7 +388,7 @@ class NamedHook(CallbackHook):
             if not isinstance(dic, StandardizingDict):
                 check_type(dict, dic)
                 cls.name_translation_dicts[i] = StandardizingDict(dic)
-        coll = cls.collector
+        coll = cls.handler
         if coll is None: return
         check_type(InputEventHandler, coll)
         try:
@@ -436,7 +462,7 @@ class PressReleaseHook(NamedHook):
     
     def _stop_action(self):
         super()._stop_action()
-        if not self.collector.active_hooks:
+        if not self.handler.active_hooks:
             self.__class__.currently_pressed = set()
 
 
