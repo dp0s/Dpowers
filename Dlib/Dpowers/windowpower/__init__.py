@@ -40,10 +40,10 @@ class WindowAdaptor(Adaptor):
     @staticmethod
     def _error(prop_name, func):
         return NotImplementedError(
-                "\nTried to use the following property name for window "
-                "argument: {prop_name}\nHowever, the following adaption module "
-                "does not support this window property name:\n{"
-                "func.module}".format_map(locals()))
+                f"\nTried to use the following property name for window "
+                f"argument: {prop_name}\nHowever, the following adaption "
+                f"module does not support this window property name:\n"
+                f"{func.__module__}")
     
     @adaptionmethod(require=True)
     def IDs_from_property(self, prop_name, prop_val, visible=None):

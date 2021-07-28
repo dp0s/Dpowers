@@ -197,3 +197,17 @@ class PauseObject(TimedObject):
         self.cls.unblock(delay=0.1)
         # delaying the unblock is necessary because when the user types,
         # the key up events are often catched without intention otherwise
+        
+        
+        
+class CustomTriggerMan(TriggerManager):
+    
+    
+    
+    def __init__(self, hook_adaptor=None, timeout=60, hook_keys=False,
+            hook_buttons=False, buffer=2, reinject=False, **custom_hook_kwargs):
+        super().__init__(hook_adaptor, timeout, hook_keys, hook_buttons, buffer)
+        assert bool(custom_hook_kwargs)
+        self.add_hook(self.adaptor.custom(**custom_hook_kwargs),
+                reinject=reinject)
+        
