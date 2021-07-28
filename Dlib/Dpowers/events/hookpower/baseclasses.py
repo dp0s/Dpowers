@@ -139,7 +139,8 @@ class InputEventHandler(ABC):
         self.active_hooks.remove(hook)
         self.remove_one()
     
-            
+
+class Missing: pass
     
     
 class CallbackHook(AdditionContainer.Addend, TimedObject):
@@ -174,9 +175,15 @@ class CallbackHook(AdditionContainer.Addend, TimedObject):
 
 
     def __init__(self, *args, **kwargs):
-        self._init_args = args
-        self._init_kwargs = kwargs
-        self.init(*args, **kwargs)
+        self._init_kwargs = self._swallow_args(*args,**kwargs)
+        self.init(**self._init_kwargs)
+    
+    @staticmethod
+    def _swallow_args(callback_func=Missing,timeout=Missing, **kwargs):
+        # btw: makes sure that no positional arg is also specified in kwargs
+        if callback_func is not Missing: kwargs["callback_func"]=callback_func
+        if timeout is not Missing: kwargs["timeout"] = timeout
+        return kwargs
     
     def init(self, callback_func = False, timeout = 60, *, capture: bool =
             False, reinject_func = None, priority: int  = 0,
@@ -210,22 +217,17 @@ class CallbackHook(AdditionContainer.Addend, TimedObject):
             raise NotImplementedError(
                     "The following hook implementation does not support "
                     "capturing:\n" + str(self.__class__))
-
-        
-    def __call__(self, *args, reuse=True, **kwargs):
+    
+    def __call__(self, *args, _reuse=True, **kwargs):
         """Create a copy, Adding left out arguments.
         For a useful example of successively adding argument see
         Dpowers.events.waiter.Keywaiter class."""
-        if not reuse: return self.__class__(*args,**kwargs)
-        newargs = list(args)
-        for i in range(len(args), len(self._init_args)):
-            # this happens if less new args were given than inital args,
-            # so we will reuse the old args as much as possible
-            newargs.append(self._init_args[i])
+        if not _reuse: return self.__class__(*args,**kwargs)
         newkwargs = self._init_kwargs.copy()
-        newkwargs.update(kwargs)
-        return self.__class__(*newargs, **newkwargs)
-
+            #this includes initial *args and **kwargs values
+        newkwargs.update(self._swallow_args(*args, **kwargs))
+            #this will overwrite inital *args and **kwargs value
+        return self.__class__(**newkwargs)
 
     def __bool__(self):
         return self.callback_func is not False or self.capture is True

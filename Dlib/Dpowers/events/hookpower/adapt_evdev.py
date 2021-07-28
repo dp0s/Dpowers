@@ -83,7 +83,7 @@ class KeyCollector(Collector):
     def process_event(self,ty,co,val, dev):
         #_print(ty,co,val,dev)
         if ty == EV_KEY:
-            
+            press = bool(val != 0)
             if self.queue_event(co, press=press) is True:
                 self.uinput.write(ty, co, val)
         elif ty not in (EV_SYN, EV_MSC, EV_LED):
@@ -102,8 +102,7 @@ class ButtonCollector(Collector):
     def process_event(self, ty, co, val, dev):
         #print(ty,co,val)
         if ty == EV_KEY:
-            press = bool(val != 0)  # val==0 means that it was released, val==1 or
-            # val==2 means it is pressed
+            press = bool(val != 0)
             self.queue_event(co, press=press)
         elif ty not in (EV_SYN, EV_MSC, EV_ABS, EV_REL):
             _print("Wrong event type: ", ty, co ,val)

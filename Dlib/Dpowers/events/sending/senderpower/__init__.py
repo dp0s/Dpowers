@@ -41,13 +41,8 @@ class SenderAdaptorMixin:
         if not devices: raise ValueError
         self.selected_devs+= devices
         return self.selected_devs
-    
-    
-class SenderAdaptor(SenderAdaptorMixin, AdaptiveSender):
-    # inherits adaptionmethod press
-    pass
 
-class PressReleaseSenderAdaptor(SenderAdaptorMixin, AdaptivePressReleaseSender):
+class SenderAdaptor(SenderAdaptorMixin, AdaptivePressReleaseSender):
     
     # inherits adaptionmethods press and rls
     

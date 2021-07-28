@@ -280,6 +280,7 @@ class AdditionContainerAddend:
     ContainerClass = None
 
     def __add__(self, other):
+        if other is None: return self
         if isinstance(other,
                 (self.ContainerClass.basic_class, self.ContainerClass)):
             return self.ContainerClass(self, other)
@@ -289,7 +290,8 @@ class AdditionContainerAddend:
             return NotImplemented
 
     def __radd__(self, other):
-        if other is 0: return self  # necessary for using sum()
+        if other is 0 or other is None: return self
+        #0 necessary for using sum()
         try:
             return super().__radd__(other)
         except AttributeError:
@@ -331,6 +333,7 @@ class AdditionContainer:
                 raise TypeError(arg)
     
     def __add__(self, other):
+        if other is None: return self
         if isinstance(other, (self.basic_class, self.__class__)):
             return self.__class__(self, other)
         try:
@@ -339,7 +342,8 @@ class AdditionContainer:
             return NotImplemented
 
     def __radd__(self, other):
-        if other is 0: return self  # necessary for using sum()
+        if other is 0 or other is None: return self
+        # 0 necessary for using sum()
         try:
             return super().__radd__(other)
         except AttributeError:

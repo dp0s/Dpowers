@@ -62,4 +62,4 @@ def press(nums):
 
 def rls(nums):
     ev_type_num, event_num = nums
-    global_uinput.write(ev_type_num, event_num, 1)
+    global_uinput.write(ev_type_num, event_num, 0)
