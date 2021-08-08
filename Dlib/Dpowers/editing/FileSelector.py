@@ -50,6 +50,7 @@ class BooleanFunction:
                 self.func(*args, **kwargs)) | bool(
                 otherfunc(*args, **kwargs)))
 
+
 class Filelist(BooleanFunction):
     creator = None
     def __init__(self, name=None, func=None, add=True, **kwargs):

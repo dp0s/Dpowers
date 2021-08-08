@@ -26,7 +26,7 @@ path = os.path
 
 iter_types = (list, tuple, GeneratorType)
 class ClosedResource: pass
-class CloseResourceError(Exception): pass
+class ClosedResourceError(Exception): pass
 
 
 edit_tag = "__edit"
@@ -79,24 +79,37 @@ class EditorAdaptor(Adaptor):
 
 
 
-class ResourceBase:
+class Resource:
     
     file = None
     adaptor = None
-    sequence = None
+    adaptor_cls = None
     SingleClass = None
     
     allowed_file_extensions = None
-    
-    # def __init_subclass__(cls) -> None:
-    #     super().__init_subclass__()
-    #     print(cls)
-    #     for name, inst in NamedAttr.defined_objects.items():
-    #         def method(self,value=None):
-    #             return self.set_value(inst,value)
-    #         method.__name__ = name
-    #         cls.name = method
-    #         print(name, method)
+
+
+    def __init__(self, file=None, backend_obj=None, **load_kwargs):
+        if isinstance(file, iter_types) or isinstance(backend_obj, iter_types):
+            raise ValueError
+        self.file = file
+        self.backend_obj = backend_obj
+        if file:
+            assert backend_obj is None
+            self.filepath_split()
+            self.backend_obj = self.adaptor.load(file, **load_kwargs)
+        elif backend_obj:
+            self.adaptor._check(backend_obj)
+        self.sequence = (self,)
+
+    @property
+    def backend_obj(self):
+        if self._backend_obj is ClosedResource: raise ClosedResourceError
+        return self._backend_obj
+
+    @backend_obj.setter
+    def backend_obj(self, value):
+        self._backend_obj = value
     
     def filepath_split(self):
         folder, filename = path.split(self.file)
@@ -148,7 +161,6 @@ class ResourceBase:
     def __enter__(self):
         return self
     
-    
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
     
@@ -158,16 +170,16 @@ class ResourceBase:
         self.backend_obj = ClosedResource
     
     
-    def __add__(self, other):
-        seq = self.sequence
-        assert all(type(s) is self.SingleClass for s in seq)
-        try:
-            if all(type(s) is self.SingleClass for s in other.sequence):
-                return self.SingleClass.Sequence(
-                        images=self.sequence + other.sequence)
-        except AttributeError:
-            pass
-        return NotImplemented
+    # def __add__(self, other):
+    #     seq = self.sequence
+    #     assert all(type(s) is self.SingleClass for s in seq)
+    #     try:
+    #         if all(type(s) is self.SingleClass for s in other.sequence):
+    #             return self.SingleClass.Sequence(
+    #                     images=self.sequence + other.sequence)
+    #     except AttributeError:
+    #         pass
+    #     return NotImplemented
     
     # def __getattr__(self, item):
     #     try:
@@ -176,56 +188,21 @@ class ResourceBase:
     #         raise AttributeError(item, self)
     #     warn(f"Using attr {item} of backend_obj instead of {self}.")
     #     return ret
-
-
-class Resource(ResourceBase):
-    
-    adaptor = None #to be set in subclass
-
-   
-
-    def __init_subclass__(cls):
-        Sequence = type("Sequence", (ResourceSequence,), {})
-        Sequence.__module__ = cls.__module__
-        Sequence.SingleClass = cls
-        cls.SingleClass = cls
-        cls.Sequence = Sequence
-        super().__init_subclass__()
     
     
-    def __init__(self, file=None, backend_obj=None, **load_kwargs):
-        if isinstance(file, iter_types) or isinstance(backend_obj, iter_types):
-            raise ValueError
-        self.file = file
-        self.backend_obj = backend_obj
-        if file:
-            assert backend_obj is None
-            self.filepath_split()
-            self.backend_obj = self.adaptor.load(file, **load_kwargs)
-        elif backend_obj:
-            self.adaptor._check(backend_obj)
-        self.sequence = (self,)
     
-    @property
-    def backend_obj(self):
-        if self._backend_obj is ClosedResource: raise CloseResourceError
-        return self._backend_obj
-    
-    @backend_obj.setter
-    def backend_obj(self, value):
-        self._backend_obj = value
 
     def _wrapper_func(self, adaptionmethod_name, *args, **kwargs):
         amethod = getattr(self.adaptor, adaptionmethod_name)
         return amethod(self.backend_obj, *args, **kwargs)
     
-    def _sequence_wrapper_func(self, adaptionmethod_name, *args, **kwargs):
-        amethod = getattr(self.adaptor, adaptionmethod_name)
-        val = amethod(self.backend_obj, *args,
-                **kwargs) if self.backend_obj else None
-        vals = tuple(amethod(single.backend_obj, *args, **kwargs) for single in
-            self.sequence)
-        return val, vals
+    # def _sequence_wrapper_func(self, adaptionmethod_name, *args, **kwargs):
+    #     amethod = getattr(self.adaptor, adaptionmethod_name)
+    #     val = amethod(self.backend_obj, *args,
+    #             **kwargs) if self.backend_obj else None
+    #     vals = tuple(amethod(single.backend_obj, *args, **kwargs) for single in
+    #         self.sequence)
+    #     return val, vals
     
     
     @classmethod
@@ -238,15 +215,15 @@ class Resource(ResourceBase):
         @wrapper_prop.setter
         def wrapper_prop(self,value):
             return self._wrapper_func(amethod_name, value)
-        @property
-        def sequence_wrapper_prop(self):
-            return self._sequence_wrapper_prop(amethod_name)
-        @sequence_wrapper_prop.setter
-        def sequence_wrapper_prop(self, value):
-            return self._sequence_wrapper_prop(amethod_name, value)
+        # @property
+        # def sequence_wrapper_prop(self):
+        #     return self._sequence_wrapper_prop(amethod_name)
+        # @sequence_wrapper_prop.setter
+        # def sequence_wrapper_prop(self, value):
+        #     return self._sequence_wrapper_prop(amethod_name, value)
         for name in names:
             setattr(cls, name, wrapper_prop)
-            setattr(cls.Sequence, name, sequence_wrapper_prop)
+            #setattr(cls.Sequence, name, sequence_wrapper_prop)
         
         
     
@@ -263,28 +240,46 @@ class Resource(ResourceBase):
         for name in names:
             setattr(cls, name, wrapper_func)
             setattr(cls.Sequence, name, sequence_wrapper_func)
-        
-        
-        
-        
-        
-class ResourceSequence(ResourceBase):
+
+
+class MultiResource:
+    
     SingleClass = None  # set by init subclass form Image class
+    allowed_file_extensions = None #might differ from SingleClass
+    
+    def __init__(self, file=None, **load_kwargs):
+        self.file = file
+        self.sequence = []
+        if isinstance(self.file, iter_types): raise ValueError(self.file)
+        #self.filepath_split()
+        if file:
+            backend_objs = self.adaptor.load_multi(file, **load_kwargs)
+            images = tuple(self.SingleClass(backend_obj=bo) for bo in backend_objs)
+            self.sequence += images
     
     
-    def __init__(self, files=None, images=None, **load_kwargs):
-        self.files = files
-        if files:
-            check_type(iter_types, files)
-            assert images is None
-            self.sequence = tuple(
-                    self.SingleClass(file=f, **load_kwargs) for f in files)
-        elif images:
-            assert files is None
-            assert load_kwargs == {}
-            check_type(CollectionWithProps(self.SingleClass, minlen=1), images)
-            self.sequence = images
-        self.backend_obj = self.construct_backend_obj()
+    def save(self, destination=None, combine=True):
+        if destination and not destination.endswith(
+                tuple(self.allowed_file_extensions)):
+            combine = False
+        return super().save(destination, combine)
+        
+    
+    
+    
+    # def __init__(self, files=None, images=None, **load_kwargs):
+    #     self.files = files
+    #     if files:
+    #         check_type(iter_types, files)
+    #         assert images is None
+    #         self.sequence = tuple(
+    #                 self.SingleClass(file=f, **load_kwargs) for f in files)
+    #     elif images:
+    #         assert files is None
+    #         assert load_kwargs == {}
+    #         check_type(CollectionWithProps(self.SingleClass, minlen=1), images)
+    #         self.sequence = images
+    #     self.backend_obj = self.construct_backend_obj()
     
     
     @property
