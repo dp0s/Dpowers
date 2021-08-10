@@ -84,7 +84,7 @@ def my_skip_member(app, what, name, obj, skip, options):
         if name == "adaptor" and isinstance(obj, Dpowers.Adaptor):
             return True
         if name == "ContainerClass": return True
-        if name == "SingleClass" and issubclass(obj,Dpowers.editing.ResourceBase):
+        if name == "SingleClass" and issubclass(obj,Dpowers.editing.Resource):
             return True
             
 

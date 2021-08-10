@@ -16,7 +16,8 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from ..ressource_classes import EditorAdaptor, adaptionmethod, Resource
+from ..ressource_classes import EditorAdaptor, adaptionmethod, \
+    SingleResource, MultiResource
 from types import GeneratorType
 iter_types = (list,tuple,GeneratorType)
 
@@ -47,12 +48,8 @@ class ImageAdaptor(EditorAdaptor):
 
 
 
-class ImageBase(Resource, ImageAdaptor.AdaptiveClass):
-    
-    def __init_subclass__(cls):
-        super().__init_subclass__()
-        cls.multipage = type("multipage", (multipage_mixin, cls.Sequence),{})
-        cls.multipage.__module__ = cls.__module__
+class ImageBase(SingleResource, ImageAdaptor.AdaptiveClass):
+    pass
 
 
 ImageBase.set_prop("compression", "compr")
@@ -63,28 +60,10 @@ ImageBase.set_prop("resolution", "res")
 ImageBase.set_prop("colortype", "color","type")
 
 
-
-class multipage_mixin:
+@ImageBase.make_multi_base
+class MultiImage(MultiResource):
     # created as a subclass of ImageBase.Sequence (see above)
     allowed_file_extensions = [".pdf",".tif", ".tiff"]
     
-    def __init__(self, *files, resolution=300, **load_kwargs):
-        l = len(files)
-        if not l: raise ValueError
-        self.files=files
-        self.file = files[0]
-        if isinstance(self.file,iter_types): raise ValueError(self.file)
-        self.filepath_split()
-        backend_objs = []
-        for file in files:
-            backend_objs += self.adaptor.load_multi(file,
-                resolution= resolution, **load_kwargs)
-        images = tuple(self.SingleClass(backend_obj=bo) for bo in backend_objs)
-        super().__init__(images=images)
-        #self.compr("jpeg")
-    
-    def save(self, destination=None, combine=True):
-        if destination and not destination.endswith(
-                tuple(self.allowed_file_extensions)):
-            combine=False
-        return super().save(destination, combine)
+    def __init__(self, file=None, resolution=300, **load_kwargs):
+        super().__init__(file,resolution=resolution,**load_kwargs)

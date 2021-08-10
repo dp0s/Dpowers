@@ -18,9 +18,8 @@
 #
 from .. import Adaptor, adaptionmethod
 from types import GeneratorType
-from Dhelpers.arghandling import check_type, CollectionWithProps
 import os
-from warnings import warn
+from Dhelpers.file_iteration import FileIterator
 
 path = os.path
 
@@ -62,7 +61,7 @@ class EditorAdaptor(Adaptor):
         sequ = tuple(sequence_of_backend_objs)
         self._check(sequ)
         return self.construct_multi.target(sequ)
-    
+        
     @adaptionmethod(require=True)
     def save(self, backend_obj, destination=None):
         self._check(backend_obj)
@@ -84,40 +83,18 @@ class Resource:
     file = None
     adaptor = None
     adaptor_cls = None
-    SingleClass = None
     
     allowed_file_extensions = None
 
 
-    def __init__(self, file=None, backend_obj=None, **load_kwargs):
-        if isinstance(file, iter_types) or isinstance(backend_obj, iter_types):
-            raise ValueError
-        self.file = file
-        self.backend_obj = backend_obj
-        if file:
-            assert backend_obj is None
-            self.filepath_split()
-            self.backend_obj = self.adaptor.load(file, **load_kwargs)
-        elif backend_obj:
-            self.adaptor._check(backend_obj)
-        self.sequence = (self,)
 
-    @property
-    def backend_obj(self):
-        if self._backend_obj is ClosedResource: raise ClosedResourceError
-        return self._backend_obj
-
-    @backend_obj.setter
-    def backend_obj(self, value):
-        self._backend_obj = value
-    
     def filepath_split(self):
         folder, filename = path.split(self.file)
         name, ext = path.splitext(filename)
         self.folder = folder
         self.filename = name
         self.ext = ext
-    
+
     def get_destination(self, input_dest=None, num=None, insert_folder=False):
         ext = None
         inp_name = None
@@ -145,24 +122,79 @@ class Resource:
             if not path.split(inp_name)[0]:
                 # that means inp_name is a file not a folder structure
                 os.makedirs(folder_name, exist_ok=True)
-                inp_name = path.join(folder_name,inp_name)
+                inp_name = path.join(folder_name, inp_name)
         append = f"_{num}" if num else ""
         return inp_name + append + ext
-    
-    
+
     def _save(self, dest=None):
-        self.adaptor.save(self.backend_obj, dest)
-        return dest
+        raise NotImplementedError
 
     def save(self, destination=None, num=None):
         dest = self.get_destination(destination, num)
         return self._save(dest)
-    
+
     def __enter__(self):
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+        
+    def close(self):
+        raise NotImplementedError
+    
+    
+    
+class SingleResource(Resource):
+    
+    multi_base = None
+    
+    @classmethod
+    def make_multi_base(cls, MultiClass):
+        """A decorator"""
+        cls.multi_base = MultiClass
+        return MultiClass
+    
+    
+    def __init_subclass__(cls):
+        super().__init_subclass__()
+        class multi(cls.multi_base):
+            __qualname__ = f"{cls.__name__}.multi"
+            __name__ = __qualname__
+            __module__ = cls.__module__
+            SingleClass = cls
+        cls.multi = multi
+
+    def __init__(self, file=None, backend_obj=None, **load_kwargs):
+        if isinstance(file, iter_types) or isinstance(backend_obj, iter_types):
+            raise ValueError
+        self.file = file
+        self.backend_obj = backend_obj
+        if file:
+            assert backend_obj is None
+            self.filepath_split()
+            self.backend_obj = self.adaptor.load(file, **load_kwargs)
+        elif backend_obj:
+            self.adaptor._check(backend_obj)
+        self.sequence = (self,)
+        
+    @classmethod
+    def iterator(cls, *args,**kwargs):
+        for filepath in FileIterator(*args,**kwargs).generate_paths():
+            yield cls(filepath)
+
+    @property
+    def backend_obj(self):
+        if self._backend_obj is ClosedResource: raise ClosedResourceError
+        return self._backend_obj
+
+    @backend_obj.setter
+    def backend_obj(self, value):
+        self._backend_obj = value
+        
+    def _save(self, dest=None):
+        self.adaptor.save(self.backend_obj, dest)
+        return dest
+    
     
     def close(self):
         """Close the ressource"""
@@ -242,13 +274,16 @@ class Resource:
             setattr(cls.Sequence, name, sequence_wrapper_func)
 
 
-class MultiResource:
+
+@SingleResource.make_multi_base
+class MultiResource(Resource):
     
     SingleClass = None  # set by init subclass form Image class
     allowed_file_extensions = None #might differ from SingleClass
     
     def __init__(self, file=None, **load_kwargs):
         self.file = file
+        self.filepath_split()
         self.sequence = []
         if isinstance(self.file, iter_types): raise ValueError(self.file)
         #self.filepath_split()
@@ -257,12 +292,43 @@ class MultiResource:
             images = tuple(self.SingleClass(backend_obj=bo) for bo in backend_objs)
             self.sequence += images
     
+    def _save(self, dest=None):
+        self.adaptor.save(self.construct_backend_obj(), dest)
+        return dest
     
-    def save(self, destination=None, combine=True):
-        if destination and not destination.endswith(
-                tuple(self.allowed_file_extensions)):
-            combine = False
-        return super().save(destination, combine)
+    def save(self, destination=None, split=False):
+        if destination and not destination.endswith(tuple(self.allowed_file_extensions)):
+            split = True
+        if not split: return super().save(destination)
+        l = len(self.sequence)
+        if l == 0: raise ValueError
+        first = self.sequence[0]
+        if l == 1:
+            if destination is None and self.adaptor.save_in_place:
+                return first._save()
+            try:
+                dest = self.get_destination(destination)
+            except AttributeError:
+                try:
+                    dest = first.get_destination(destination)
+                except AttributeError:
+                    raise ValueError("Could not find destination name.")
+            return first._save(dest)
+        destinations = []
+        for num in range(l):
+            single = self.sequence[num]
+            if destination is None:
+                if self.adaptor.save_in_place: single._save()
+            try:
+                dest = self.get_destination(destination, num=num+1,
+                        insert_folder=True)
+            except AttributeError:
+                try:
+                    dest = single.get_destination(destination)
+                except AttributeError:
+                    raise ValueError("Could not find destination name.")
+            destinations.append(single._save(dest))
+        return destinations
         
     
     
@@ -293,42 +359,8 @@ class MultiResource:
         return self.adaptor.construct_multi(self.backend_objs())
     
     
-    def save(self, destination=None, combine=False):
-        if combine: return super().save(destination)
-        l = len(self.sequence)
-        if l==0: raise ValueError
-        first = self.sequence[0]
-        if l==1:
-            if destination is None and self.adaptor.save_in_place:
-                return first._save()
-            try:
-                dest = self.get_destination(destination)
-            except AttributeError:
-                try:
-                    dest = first.get_destination(destination)
-                except AttributeError:
-                    raise ValueError("Could not find destination name.")
-            return first._save(dest)
-        destinations = []
-        for num in range(l):
-            single = self.sequence[num]
-            if destination is None:
-                if self.adaptor.save_in_place: single._save()
-            try:
-                dest = self.get_destination(destination,num=num,
-                        insert_folder=True)
-            except AttributeError:
-                try:
-                    dest = single.get_destination(destination)
-                except AttributeError:
-                    raise ValueError("Could not find destination name.")
-            destinations.append(single._save(dest))
-        return destinations
-    
-    
     def close(self):
         for im in self.sequence: im.close()
-        super().close()
     
     
     # def __getattr__(self, item):
@@ -355,19 +387,19 @@ class MultiResource:
     #         else:
     #             return attrs
     
-    def __getitem__(self, item):
-        ims = self.sequence[item]
-        if isinstance(item, int):
-            check_type(self.SingleClass, ims)
-            return ims
-        if isinstance(item, slice):
-            return self.__class__(images=ims)
-        raise NotImplementedError
-    
-    def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return self.sequence == other.sequence
-        return NotImplemented
-    
-    def __hash__(self):
-        return hash(self.sequence)
+    # def __getitem__(self, item):
+    #     ims = self.sequence[item]
+    #     if isinstance(item, int):
+    #         check_type(self.SingleClass, ims)
+    #         return ims
+    #     if isinstance(item, slice):
+    #         return self.__class__(images=ims)
+    #     raise NotImplementedError
+    #
+    # def __eq__(self, other):
+    #     if isinstance(other, self.__class__):
+    #         return self.sequence == other.sequence
+    #     return NotImplemented
+    #
+    # def __hash__(self):
+    #     return hash(self.sequence)

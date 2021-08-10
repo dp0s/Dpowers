@@ -16,7 +16,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from ..ressource_classes import EditorAdaptor, adaptionmethod, Resource
+from ..ressource_classes import EditorAdaptor, adaptionmethod, SingleResource
 
 
 class mp3tagAdaptor(EditorAdaptor):
@@ -27,7 +27,7 @@ class mp3tagAdaptor(EditorAdaptor):
     
     
     
-class mp3tagBase(Resource, mp3tagAdaptor.AdaptiveClass):
+class mp3tagBase(SingleResource, mp3tagAdaptor.AdaptiveClass):
     allowed_file_extensions = [".mp3"]
 
 

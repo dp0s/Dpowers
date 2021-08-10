@@ -28,6 +28,18 @@ class Image(ImageBase):
     
 class mp3tag(mp3tagBase):
     adaptor = mp3tagAdaptor(_primary=True)
+
+
+
+from Dhelpers.file_iteration import FileSelector
+
+
+class playlist_creator(FileSelector):
+    editor_class = mp3tag
+    file_extension = ".m3u"
+    file_start = "#EXTM3U"
     
-    
-from .FileSelector import *
+    @staticmethod
+    def default_selection_func(obj, genre=None, case_sensitive=False):
+        if case_sensitive: return genre in obj.genre
+        return genre.lower() in obj.genre.lower()
