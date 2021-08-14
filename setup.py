@@ -42,6 +42,7 @@ sys.path.insert(0, module_folder)
 #this way we will import from this folder from local version
 import Dpowers, Dhelpers
 
+if Dpowers.__version__ != Dhelpers.__version__: raise ValueError
 
 
 def my_setup(name, **kwargs):
