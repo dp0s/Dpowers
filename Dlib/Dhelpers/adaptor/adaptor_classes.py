@@ -309,6 +309,7 @@ class AdaptorBase(KeepInstanceRefs):
                 cls.baseclass = False
                 cls.AdaptiveClass = type("AdaptiveClass",
                         (AdaptiveClass,), dict(adaptor_class=cls))
+                cls.AdaptiveClass.__doc__ = None
                 c = cls._first_level_subclass
                 add = f"Subclass of :class:`{c.__module__}.{c.__name__}`."
                 doc = cls.__doc__ if cls.__doc__ else ""
@@ -349,6 +350,7 @@ class AdaptorBase(KeepInstanceRefs):
         
         """
         
+        cls = self.__class__
         super().__init__()
         
         check_type((str, int), group, allowed=(None,))
@@ -366,23 +368,12 @@ class AdaptorBase(KeepInstanceRefs):
             self.primary = True
             self._primary_instances[self.creation_name]=self
             if group == "default":
-                doc= \
-                f"Default instance of {self.__class__.__name__} class.\n\n"\
-                "How to import::\n\n"\
-                f"\tfrom Dpowers import {self.creation_name}"
-                default_backends = self.get_from_backend_source()
-                if default_backends is not None:
-                    doc += "\n\n\t# choose the default backend for your system:"
-                    doc += f"\n\t{self.creation_name}.adapt()"
-                doc += "\n\n\t# alternatively, choose one of the following " \
-                       "backends:"
-                for backend_name in self.backend_names():
-                    doc += f"\n\t{self.creation_name}.adapt('{backend_name}')"
-                self.__doc__ = doc
-        self.backend = Backend(self.__class__)
+                self.__doc__ = f"Default instance of {cls.__name__} class.\n\n"
+                self.__doc__ += self._create_import_instr(self.creation_name)
+        self.backend = Backend(cls)
         
         for name in self.adaptionmethod_names:
-            placeholder = getattr(self.__class__, name)._placeholder
+            placeholder = getattr(cls, name)._placeholder
             amethod = AdaptionMethod(placeholder, self)
             setattr(self, name, amethod)
         
@@ -690,12 +681,34 @@ class AdaptorBase(KeepInstanceRefs):
                 :class:`Dpowers.AdaptiveClass`.")
             print()
 
+    @classmethod
+    def _create_import_instr(cls, name):
+        doc =  "How to import::\n\n\tfrom Dpowers import "+name
+        default_backends = cls._get_from_backend_source()
+        if default_backends is not None:
+            doc += "\n\n\t# choose the default backend for your system:"
+            doc += f"\n\t{name}.adapt()"
+        doc += "\n\n\t# alternatively, choose one of the following " \
+               "backends:"
+        for backend_name in cls.backend_names():
+            doc += f"\n\t{name}.adapt('{backend_name}')"
+        install_instr = cls.install_instructions()  # this works
+        # already because it is a classmethod
+        if install_instr:
+            doc += "\n\n\nHow to install dependencies for all " \
+                   "available backends::\n\n"
+            doc += f"\t>>> print(" \
+                   f"{name}.install_instructions())"
+            for line in str(install_instr).split("\n"):
+                doc += f"\n\t{line}"
+        return doc
 
 wrap = functools.wraps(AdaptorBase.adapt, assigned=())
 class AdaptiveClass:
     
     def __init_subclass__(cls):
         add = f"Subclass of :class:`Dpowers.AdaptiveClass`.\n\n"
+        add += cls.adaptor_class._create_import_instr(cls.__name__)
         doc = cls.__doc__ if cls.__doc__ else ""
         cls.__doc__ = add + doc
     
