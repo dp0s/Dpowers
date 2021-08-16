@@ -17,8 +17,16 @@
 #
 #
 import functools
-from .. import Adaptor, AdaptionError, adaptionmethod, Layout
-from Dhelpers.arghandling import add_kw_only_arg
+from .. import Adaptor, AdaptionError, adaptionmethod, Layout, DependencyManager
+
+_evdev_infos = {"pkg": "evdev_prepared", "instruction": "Before using, please "
+        "follow steps at https://github.com/dp0s/evdev_prepared#install"}
+
+DependencyManager.save_dependency_info("evdev_prepared.device_control",
+        **_evdev_infos)
+DependencyManager.save_dependency_info("evdev_prepared.uinput",**_evdev_infos)
+DependencyManager.save_dependency_info("pynput",pkg="pynput")
+
 
 class hotkeys:
     @classmethod

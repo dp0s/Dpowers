@@ -737,6 +737,11 @@ class AdaptiveClass:
         self.adaptor = self.adaptor_class()
         return self.adaptor.adapt(*args, **kwargs)
     
+    
+    @classmethod
+    def install_instructions(cls):
+        return cls.adaptor_class.install_instructions()
+    
 
 
 from .backend_class import Backend

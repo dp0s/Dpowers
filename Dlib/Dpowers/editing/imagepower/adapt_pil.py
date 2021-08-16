@@ -18,8 +18,8 @@
 #
 from Dhelpers.adaptor import DependencyManager
 
-with DependencyManager(__name__) as tester:
-    Image = tester.import_module("PIL.Image", pkg="pillow")
+with DependencyManager(__name__) as manager:
+    Image = manager.import_module("PIL.Image", pkg="pillow")
 
 obj_class = Image.Image
 
