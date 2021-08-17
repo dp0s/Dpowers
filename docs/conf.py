@@ -44,11 +44,12 @@ version = Dpowers.__version__
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = ['sphinx.ext.autodoc', "sphinx.ext.autosummary",
-    'sphinx_rtd_theme', 'sphinx.ext.autosectionlabel']
+    'sphinx_rtd_theme', 'sphinx.ext.autosectionlabel', 'hoverxref.extension']
 
 # Make sure the target is unique for autosectionlabel extension
 autosectionlabel_prefix_document = True
-
+hoverxref_auto_ref = True
+hoverxref_domains = ['py']
 #napoleon_use_param = True
 
 autodoc_default_options = {'member-order':"bysource", "members":True}
