@@ -19,9 +19,15 @@ Requirements
 
 .. toctree::
    :maxdepth: 2
-   :caption: Quick Start
+   :caption: Preperation
 
-   quickstart
+   preperation
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Quickstart
+
+   Quickstart
 
 .. toctree::
    :maxdepth: 2

@@ -35,36 +35,6 @@ system (given example is for Debian/Ubuntu/Linux Mint):
 Execute the output lines in your shell and you should be able to use all backends.
 
 
-
-Overview of adaptable objects
-*********************************
-
-An adaptable object can be coupled to a specific backend by calling its :func:`~Dpowers.Adaptor.adapt` method. There are two kinds of adaptable objects within Dpowers - Adaptors and AdaptiveClasses.
-
-
-Adaptors
-----------------------
-
-- :data:`Dpowers.keyb`: Send key events.
-- :data:`Dpowers.mouse`: Send mouse events.
-- :data:`Dpowers.hook`: Receive events from keyboard, mouse and other devices.
-- :data:`Dpowers.clip`: Access and modify the clipboard content.
-- :data:`Dpowers.ntfy`: Post notifcations on the desktop.
-- :data:`Dpowers.dlg`: Show dialog boxes and wait for user confirmation.
-
-An Adaptor is an instance of the common baseclass :class:`Dpowers.Adaptor`. Each Adaptor provides a collection of methods which automatically call the corresponding backend's functions.
-
-
-AdaptiveClasses
-----------------
-
-- :class:`Dpowers.Win`: Find and manipulate windows on your screen.
-- :class:`Dpowers.Icon`: Create and display tray icons, including context menu.
-- :class:`Dpowers.Image`: Edit and assemble image files.
-- :class:`Dpowers.KeyWaiter`: Collect key events until a condition is fullfilled.
-
-An AdaptiveClass is a subclass of the common baseclass :class:`Dpowers.AdaptiveClass`. All instances created by this class will share the same backend. 
-
 Importing and Adapting
 ************************
 

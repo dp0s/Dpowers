@@ -44,7 +44,7 @@ Icon
 ----
 .. autoclass:: Dpowers.Icon
 
-Image / Image.Sequence / Image.multipage
+Image
 ----------------------------------------
 .. autoclass:: Dpowers.Image
 
