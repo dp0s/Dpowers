@@ -29,6 +29,11 @@ Adaptive Classes
 
 Win / Win.Search
 ----------------
+
+.. topic:: Examples
+
+    - :ref:`quickstart:Click on a window to paste its properties to the clipboard`
+
 .. autoclass:: Dpowers.Win
     :exclude-members: Search
 
@@ -42,7 +47,14 @@ Win / Win.Search
 
 Icon
 ----
+
+.. topic:: Examples
+
+    - :ref:`quickstart:Display a tray icon with customized menu`
+
 .. autoclass:: Dpowers.Icon
+
+
 
 Image
 ----------------------------------------

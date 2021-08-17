@@ -651,32 +651,17 @@ class AdaptorBase(KeepInstanceRefs):
         if global_instructions: print(global_instructions)
 
     @classmethod
-    def _print_sphinx_docs(cls,*names):
-        for name in names:
-            if isinstance(name, str):
-                inst = cls._primary_instances[name]
-                assert name == inst.creation_name
-                subcls = inst.__class__
-                heading = name + f" ({subcls.__name__})"
-                assert issubclass(subcls, cls)
-            elif issubclass(name, cls):
-                inst = None
-                subcls = name
-                heading = subcls.__name__
-            else:
-                raise TypeError
-            subcls.adapt.__doc__ = "Choose the backend for this instance. See :func:`Adaptor.adapt`."
-            subcls.AdaptiveClass = None
-            print(heading)
-            print("_"*len(heading))
-            if inst:
-                print(".. autodata:: Dpowers." + name)
-                print("\t:no-value:")
-            print(".. autoclass:: Dpowers." + subcls.__name__)
+    def _print_sphinx_docs(cls):
+            cls.adapt.__doc__ = "Choose the backend for this instance. See " \
+                               ":func:`Adaptor.adapt`."
+            name = cls._get_primary_instance().creation_name
+            print(".. autodata:: Dpowers." + name)
+            print("\t:no-value:")
+            print(".. autoclass:: Dpowers." + cls.__name__)
             print()
             print("\t.. automethod:: adapt")
             print()
-            print(f".. class:: Dpowers.{subcls.__name__}.AdaptiveClass")
+            print(f".. class:: Dpowers.{cls.__name__}.AdaptiveClass")
             print()
             print("\t\tA baseclass to create your own AdaptiveClasses. See \
                 :class:`Dpowers.AdaptiveClass`.")
@@ -696,10 +681,8 @@ class AdaptorBase(KeepInstanceRefs):
         install_instr = cls.install_instructions()  # this works
         # already because it is a classmethod
         if install_instr:
-            doc += "\n\n\nHow to install dependencies for all " \
-                   "available backends::\n\n"
-            doc += f"\t>>> print(" \
-                   f"{name}.install_instructions())"
+            doc += f"\n\n\nHow to install dependencies for available backends::" \
+                   f"\n\n\t>>> print({name}.install_instructions())"
             for line in str(install_instr).split("\n"):
                 doc += f"\n\t{line}"
         doc+= "\n\n"

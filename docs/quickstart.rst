@@ -40,7 +40,7 @@ Examples
 
 
 
-Dispaly a tray icon with customized menu
+Display a tray icon with customized menu
 -----------------------------------------
 
 Reference:

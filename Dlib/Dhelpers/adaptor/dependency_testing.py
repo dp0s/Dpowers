@@ -290,7 +290,7 @@ class InstallInstruction:
             if not pkgs: continue
             ret += install_commands[tool].strip() + " " + " ".join(pkgs) + "\n"
         if self.instructions:
-            ret += "--- Additional instructions:\n"
+            ret += "\n--- Additional instructions:\n"
             for pkg, instruction in self.instructions.items():
                 if not instruction: continue
                 ret += f"    {pkg}: " + ", ".join(instruction) + "\n"
