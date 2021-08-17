@@ -108,3 +108,5 @@ finally:
 #clean up this namespace
 del os, AdaptorBase, adaptionmethod, always_print_traceback, \
     restore_print_func, backends
+
+Adaptor._set_effective_paths(globals(),__name__)
