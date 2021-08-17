@@ -50,6 +50,7 @@ extensions = ['sphinx.ext.autodoc', "sphinx.ext.autosummary",
 autosectionlabel_prefix_document = True
 hoverxref_auto_ref = True
 hoverxref_domains = ['py']
+
 #napoleon_use_param = True
 
 autodoc_default_options = {'member-order':"bysource", "members":True}
