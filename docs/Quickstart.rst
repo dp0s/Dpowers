@@ -61,9 +61,6 @@ Reference:
 
 Click on a window to paste its properties to the clipboard
 ----------------------------------------------------------
-Taken from module `Dpowers.Dfuncs.py <https://github
-.com/dp0s/Dpowers/blob/93ecd73e19307abee248af4b90509931747e54e8/Dlib/Dpowers
-/Dfuncs.py#L224>`_.
 
 Reference:
 :data:`Dpowers.ntfy`
@@ -76,21 +73,32 @@ Reference:
 
     from Dpowers import autoadapt, ntfy, Win, dlg, clip
 
-    ntfy("Click on a window", 3)
 
-    x = Win(loc="SELECT").all_info()
-    winprops = x[:3] + ((x[1], x[2]),) + x[3:]
+    def display_win_info():
+        ntfy("Click on a window", 3)
 
-    show = [str(winprops[0]) + " [ID]", str(winprops[1]) + " [TITLE]",
-        str(winprops[2]) + " [CLASS]", str(winprops[3]),
-        str(winprops[4]) + " [PID]",
-        str(winprops[5]) + " [GEOMETRY] (x,y,width,height)"]
+        x = Win(loc="SELECT").all_info()
+        winprops = x[:3] + ((x[1], x[2]),) + x[3:]
 
-    ret = dlg.choose(show, default=3, title="Window information",
-            text="Save to clipboard:", width=700)
+        show = [str(winprops[0]) + " [ID]", str(winprops[1]) + " [TITLE]",
+            str(winprops[2]) + " [CLASS]", str(winprops[3]),
+            str(winprops[4]) + " [PID]",
+            str(winprops[5]) + " [GEOMETRY] (x,y,width,height)"]
 
-    if ret is not None:
-        for i in range(len(show)):
-            if ret == show[i]:
-                clip.fill(winprops[i], notify=True)
-                break
+        ret = dlg.choose(show, default=3, title="Window information",
+                text="Save to clipboard:", width=700)
+
+        if ret is not None:
+            for i in range(len(show)):
+                if ret == show[i]:
+                    clip.fill(winprops[i], notify=True)
+                    break
+
+    display_win_info()
+
+This function is pre-defined in the module `Dpowers.Dfuncs.py
+<https://github.com/dp0s/Dpowers/tree/master/Dlib/Dpowers/Dfuncs.py>`_::
+
+    from Dpowers import autoadapt, Dfuncs
+    Dfuncs.display_win_info()
+
