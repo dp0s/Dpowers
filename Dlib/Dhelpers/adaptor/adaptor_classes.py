@@ -20,7 +20,7 @@
 
 
 ### TODO: activate_autoadapt and exception handling.
-
+import importlib
 import inspect, functools, types, os, pkgutil, warnings
 from ..baseclasses import RememberInstanceCreationInfo, KeepInstanceRefs
 from ..arghandling import (check_type, remove_first_arg, ArgSaver)
@@ -295,6 +295,8 @@ class AdaptorBase(KeepInstanceRefs):
     
     def __init_subclass__(cls):
         cls._subclass_level += 1
+        cls.__visible_module__ = None
+        cls.__visible_name__ = None
         l = tuple(_get_AdaptionFuncPlaceholders(cls))
         if l:
             # this means that this subclass can actually create instances
@@ -349,6 +351,7 @@ class AdaptorBase(KeepInstanceRefs):
         
         """
         
+        cls = self.__class__
         super().__init__()
         
         check_type((str, int), group, allowed=(None,))
@@ -366,23 +369,12 @@ class AdaptorBase(KeepInstanceRefs):
             self.primary = True
             self._primary_instances[self.creation_name]=self
             if group == "default":
-                doc= \
-                f"Default instance of {self.__class__.__name__} class.\n\n"\
-                "How to import::\n\n"\
-                f"\tfrom Dpowers import {self.creation_name}"
-                default_backends = self.get_from_backend_source()
-                if default_backends is not None:
-                    doc += "\n\n\t# choose the default backend for your system:"
-                    doc += f"\n\t{self.creation_name}.adapt()"
-                doc += "\n\n\t# alternatively, choose one of the following " \
-                       "backends:"
-                for backend_name in self.backend_names():
-                    doc += f"\n\t{self.creation_name}.adapt('{backend_name}')"
-                self.__doc__ = doc
-        self.backend = Backend(self.__class__)
+                self.__doc__ = f"Default instance of {cls.__name__} class.\n\n"
+                self.__doc__ += self._create_import_instr(self.creation_name)
+        self.backend = Backend(cls)
         
         for name in self.adaptionmethod_names:
-            placeholder = getattr(self.__class__, name)._placeholder
+            placeholder = getattr(cls, name)._placeholder
             amethod = AdaptionMethod(placeholder, self)
             setattr(self, name, amethod)
         
@@ -659,65 +651,74 @@ class AdaptorBase(KeepInstanceRefs):
         if global_instructions: print(global_instructions)
 
     @classmethod
-    def _print_sphinx_docs(cls,*names):
-        for name in names:
-            if isinstance(name, str):
-                inst = cls._primary_instances[name]
-                assert name == inst.creation_name
-                subcls = inst.__class__
-                heading = name + f" ({subcls.__name__})"
-                assert issubclass(subcls, cls)
-            elif issubclass(name, cls):
-                inst = None
-                subcls = name
-                heading = subcls.__name__
-            else:
-                raise TypeError
-            subcls.adapt.__doc__ = "Choose the backend for this instance. See :func:`Adaptor.adapt`."
-            subcls.AdaptiveClass = None
-            print(heading)
-            print("_"*len(heading))
-            if inst:
-                print(".. autodata:: Dpowers." + name)
-                print("\t:no-value:")
-            print(".. autoclass:: Dpowers." + subcls.__name__)
+    def _print_sphinx_docs(cls):
+            cls.adapt.__doc__ = "Choose the backend for this instance. See " \
+                               ":func:`Adaptor.adapt`."
+            name = cls._get_primary_instance().creation_name
+            print(".. autodata:: Dpowers." + name)
+            print("\t:no-value:")
+            print(".. autoclass:: Dpowers." + cls.__name__)
             print()
             print("\t.. automethod:: adapt")
             print()
-            print(f".. class:: Dpowers.{subcls.__name__}.AdaptiveClass")
+            print(f".. class:: Dpowers.{cls.__name__}.AdaptiveClass")
             print()
             print("\t\tA baseclass to create your own AdaptiveClasses. See \
                 :class:`Dpowers.AdaptiveClass`.")
             print()
 
+    @classmethod
+    def _create_import_instr(cls, name):
+        doc =  "How to import::\n\n\tfrom Dpowers import "+name
+        default_backends = cls._get_from_backend_source()
+        if default_backends is not None:
+            doc += "\n\n\t# choose the default backend for your system:"
+            doc += f"\n\t{name}.adapt()"
+        doc += "\n\n\t# alternatively, choose one of the following " \
+               "backends:"
+        for backend_name in cls.backend_names():
+            doc += f"\n\t{name}.adapt('{backend_name}')"
+        install_instr = cls.install_instructions()  # this works
+        # already because it is a classmethod
+        if install_instr:
+            doc += f"\n\n\nHow to install dependencies for available backends::" \
+                   f"\n\n\t>>> print({name}.install_instructions())"
+            for line in str(install_instr).split("\n"):
+                doc += f"\n\t{line}"
+        doc+= "\n\n"
+        return doc
+    
+    @classmethod
+    def _set_effective_paths(cls, globals, modname, create_docs=True):
+        # a function to create effective paths for documentation purposes
+        items = globals.items()
+        for subcls in cls.iter_subclasses():
+            try:
+                for name, obj in items:
+                    if obj is subcls:
+                        subcls.__visible_module__ = modname
+                        subcls.__visible_name__  = name
+                        break
+            except:
+                pass
+            finally:
+                if create_docs: subcls.AdaptiveClass._create_subclass_docs()
+            
+
+
+        
+        
 
 wrap = functools.wraps(AdaptorBase.adapt, assigned=())
 class AdaptiveClass:
     
-    def __init_subclass__(cls):
-        add = f"Subclass of :class:`Dpowers.AdaptiveClass`.\n\n"
-        doc = cls.__doc__ if cls.__doc__ else ""
-        cls.__doc__ = add + doc
-    
     adaptor_class = None
     adaptor = None
-    """*Class attribute.* The current :class:`Dpowers.Adaptor` instance which determines the
-     backend for this AdaptiveClass. You shouldn't change this directly. Instead
-     use the  classmethod :func:`~AdaptiveClass.adapt`."""
-    
-    @property
-    def backend(self):
-        return self.adaptor.backend
 
 
     @classmethod
     @wrap
     def adapt(cls, *args, **kwargs):
-        """Changes the backend for all instances of this AdaptiveClass,
-        including already created instances (unless
-        :func:`~AdaptiveClass.adapt_instance` was used).
-        
-        For parameters see :func:`Dpowers.Adaptor.adapt`."""
         if "adaptor" in cls.__dict__:
             #in this case, an adaptor instance was explicitly set for this
             # subclass before
@@ -731,12 +732,42 @@ class AdaptiveClass:
         
     @wrap
     def adapt_instance(self, *args, **kwargs):
-        """Changes the backend for this instance only.
-        
-        For parameters see :func:`Dpowers.Adaptor.adapt`."""
         self.adaptor = self.adaptor_class()
         return self.adaptor.adapt(*args, **kwargs)
     
+    
+    @classmethod
+    def install_instructions(cls):
+        return cls.adaptor_class.install_instructions()
+
+
+    @classmethod
+    def _iter_subclasses(cls):
+        for subclass in cls.__subclasses__():
+            yield subclass
+            for subcls in subclass._iter_subclasses(): yield subcls
+
+    @classmethod
+    def _create_doc(cls):
+        aclss = cls.adaptor_class
+        aclss_ref = ":class:"
+        if aclss.__visible_module__ is not None:
+            aclss_ref += f"`{aclss.__visible_module__}.{aclss.__visible_name__}`"
+        else:
+            aclss_ref += f"`{aclss.__module__}.{aclss.__name__}`"
+        doc = "Subclass of :class:`Dpowers.AdaptiveClass`.\n\n" \
+              f"Adaptor subclass used internally: {aclss_ref}\n\n"
+        doc += aclss._create_import_instr(cls.__name__)
+        if cls.__doc__: doc += cls.__doc__ + "\n\n"
+        doc += f".. data:: adaptor\n\n\t*Class attribute.* An instance of " \
+               f"{aclss_ref}, as explained in :attr:`AdaptiveClass.adaptor`.\n\n"
+        doc += ".. automethod:: adapt\n\n\tSee :func:`AdaptiveClass.adapt`." \
+               " For parameters see :func:`Dpowers.Adaptor.adapt`."
+        cls.__doc__ = doc
+    
+    @classmethod
+    def _create_subclass_docs(cls):
+        for subcls in cls._iter_subclasses(): subcls._create_doc()
 
 
 from .backend_class import Backend

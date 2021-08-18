@@ -1,45 +1,9 @@
-Installation and Dependencies
-*****************************
-
-Install from PyPI::
-
-    $ pip install Dpowers
-
-(This will automatically install the package 'Dhelpers' as a
-necessary dependency. All of Dhelpers' functions and classes can be used
-independently for your own projects, i.e. without the Dpowers package
-installed, via ``pip install Dhelpers``.)
-
-After first installation, you should try::
-
-    >>> import Dpowers
-
-This should never raise an exception, otherwise please file a bug report.
-
-.. note:: The pip install command does NOT install any of the backend
-    dependencies. You need to manually install the dependencies for the backends you want to
-    use.
-
-
-
-The following prints a list of all dependencies for all backends on your
-system (given example is for Debian/Ubuntu/Linux Mint):
-
-
-.. activecode::
-
-        >>> import Dpowers
-        >>> print(Dpowers.Adaptor.install_instructions())
-        Dpowers.Adaptor.install_instructions()
-
-Execute the output lines in your shell and you should be able to use all backends.
-
-
-
 Overview of adaptable objects
 *********************************
 
-An adaptable object can be coupled to a specific backend by calling its :func:`~Dpowers.Adaptor.adapt` method. There are two kinds of adaptable objects within Dpowers - Adaptors and AdaptiveClasses.
+An adaptable object can be coupled to a specific backend by calling its
+:func:`~Dpowers.Adaptor.adapt` method. There are two kinds of adaptable objects
+within Dpowers - Adaptors and AdaptiveClasses.
 
 
 Adaptors
@@ -52,7 +16,9 @@ Adaptors
 - :data:`Dpowers.ntfy`: Post notifcations on the desktop.
 - :data:`Dpowers.dlg`: Show dialog boxes and wait for user confirmation.
 
-An Adaptor is an instance of the common baseclass :class:`Dpowers.Adaptor`. Each Adaptor provides a collection of methods which automatically call the corresponding backend's functions.
+An Adaptor is an instance of the common baseclass :class:`Dpowers.Adaptor`.
+Each Adaptor provides a collection of methods which automatically call the
+corresponding backend's functions.
 
 
 AdaptiveClasses
@@ -63,71 +29,76 @@ AdaptiveClasses
 - :class:`Dpowers.Image`: Edit and assemble image files.
 - :class:`Dpowers.KeyWaiter`: Collect key events until a condition is fullfilled.
 
-An AdaptiveClass is a subclass of the common baseclass :class:`Dpowers.AdaptiveClass`. All instances created by this class will share the same backend. 
-
-Importing and Adapting
-************************
-
-Step 1: Import
-------------------------
-
-This is done as usual. Examples::
-
-    import Dpowers
-    from Dpowers import keyb, ntfy
+An AdaptiveClass is a subclass of the common baseclass
+:class:`Dpowers.AdaptiveClass`. All instances created by this class will share
+the same backend.
 
 
-By default the imported objects are unadapted, i.e. there's no backend chosen yet. If you try using them, you'll get an exception::
 
-    >>> from Dpowers import keyb
-    >>> keyb.tap("a")
-    AdaptionError: No backend chosen for following adaptor:
-    <Dpowers.events.sending.keybpower.KeyboardAdaptor object at 0x7fedf46e00b8 with creation_name 'keyb', primary instance of group 'default', backend: None>
+Examples
+************************************
 
 
-Step 2: Adapt
-------------------------------
-    
-For each object, choose a backend by calling its :func:`~Dpowers.Adaptor.adapt` method. If you call it without any arguments, the default backend for your platform will be chosen depending on your system::
 
-    >>> from Dpowers import keyb
-    >>> keyb.adapt()  # pynput is the default backend in this example
-    <module 'Dpowers.events.sending.keybpower.adapt_pynput'>
-    >>> keyb.adapt("pynput") # another way to select pynput
-    <module 'Dpowers.events.sending.keybpower.adapt_pynput'>
-    >>> keyb.adapt("evdev")  # manually chose another backend
-    <module 'Dpowers.events.sending.keybpower.adapt_evdev'>
-    >>> keyb.tap("a") # check if it works
-    >>> a
+Display a tray icon with customized menu
+-----------------------------------------
 
-.. note:: Calling the adapt method will import the corresponding backend module (if it hasn't been imported before). It raises an exception if the backend is not supported on your system or the backend's dependencies could not be found.
+Reference:
+:data:`Dpowers.ntfy`
+:class:`Dpowers.Icon`
 
-Alternative: autoadapt
------------------------
+.. code::
 
-You can perform the two steps (import and adapt) in only one line::
+    from Dpowers import autoadapt, Icon, ntfy
+    myicon = Icon()
 
-    import Dpowers.autoadapt
-    # which is equivalent to
-    import Dpowers
-    Dpowers.activate_autoadapt()
+    @myicon.additem
+    def my_custom_menu_item():
+        ntfy("You clicked the custom menu item.")
 
-This will try to adapt ALL adaptable objects to their default backend if
-possible, and prints a warning for each exception encountered. The list of
-default backends is defined in `Dpowers .default_backends.py
-<https://github.com/dp0s/Dpowers/tree/master/Dlib/Dpowers/default_backends.py>`_
+    myicon.start()
 
 
-Alternatively, the wildcard import also activates autoadapt::
+Click on a window to paste its properties to the clipboard
+----------------------------------------------------------
 
-    >>> from Dpowers import *
-    >>> keyb.tap("a") # check if it works
-    >>> a
+Reference:
+:data:`Dpowers.ntfy`
+:data:`Dpowers.dlg`
+:data:`Dpowers.clip`
+:class:`Dpowers.Win`
 
- 
-A list of all names imported this way:
 
-.. activecode:: 
+.. code::
 
-    >>> Dpowers.__all__
-    Dpowers.__all__
+    from Dpowers import autoadapt, ntfy, Win, dlg, clip
+
+
+    def display_win_info():
+        ntfy("Click on a window", 3)
+
+        x = Win(loc="SELECT").all_info()
+        winprops = x[:3] + ((x[1], x[2]),) + x[3:]
+
+        show = [str(winprops[0]) + " [ID]", str(winprops[1]) + " [TITLE]",
+            str(winprops[2]) + " [CLASS]", str(winprops[3]),
+            str(winprops[4]) + " [PID]",
+            str(winprops[5]) + " [GEOMETRY] (x,y,width,height)"]
+
+        ret = dlg.choose(show, default=3, title="Window information",
+                text="Save to clipboard:", width=700)
+
+        if ret is not None:
+            for i in range(len(show)):
+                if ret == show[i]:
+                    clip.fill(winprops[i], notify=True)
+                    break
+
+    display_win_info()
+
+This function is pre-defined in the module `Dpowers.Dfuncs.py
+<https://github.com/dp0s/Dpowers/tree/master/Dlib/Dpowers/Dfuncs.py>`_::
+
+    from Dpowers import autoadapt, Dfuncs
+    Dfuncs.display_win_info()
+

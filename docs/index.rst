@@ -19,7 +19,13 @@ Requirements
 
 .. toctree::
    :maxdepth: 2
-   :caption: Quick Start
+   :caption: Preperation
+
+   preperation
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Quickstart
 
    quickstart
 
@@ -36,7 +42,5 @@ Indices and tables
 ******************
 
 * :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
 
 

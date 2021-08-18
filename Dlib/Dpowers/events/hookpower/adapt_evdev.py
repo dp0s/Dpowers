@@ -25,10 +25,9 @@ from ..event_classes import PressReleaseEvent
 
 from Dhelpers.adaptor import DependencyManager
 
-with DependencyManager(__name__) as tester:
-    device_control = tester.import_module("evdev_prepared.device_control",
-            pkg="evdev_prepared")
-    uinput = tester.import_module("evdev_prepared.uinput", pkg="evdev_prepared")
+with DependencyManager(__name__) as manager:
+    device_control = manager.import_module("evdev_prepared.device_control")
+    uinput = manager.import_module("evdev_prepared.uinput")
 
 
 # the following import will not be performed if the DependencyManager is only

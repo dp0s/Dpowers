@@ -58,7 +58,7 @@ def get_module_dependencies(mod_full_name,perform_check=False,**kwargs):
         return DependencyManager.instances[mod_full_name]
     except KeyError:
         pass
-    DependencyManager.exit_module = True
+    DependencyManager.exit_module_after_import = True
     DependencyManager.check_dependency  = perform_check
     try:
         mod, manager_inst = import_adapt_module(mod_full_name,**kwargs)
@@ -73,7 +73,7 @@ def get_module_dependencies(mod_full_name,perform_check=False,**kwargs):
                    f"although DependencyManager instance was defined. Please "
                    f"use DependencyManager.exit() method.")
     finally:
-        DependencyManager.exit_module = False
+        DependencyManager.exit_module_after_import = False
         DependencyManager.check_dependency = True
     return manager_inst
     
@@ -104,15 +104,16 @@ class BackendDependencyError(Exception):
 
 class DependencyManager:
     raise_errors = True  #this is set in Dependency class inside method raise_
-    exit_module = False
+    exit_module_after_import = False
     check_dependency = True
     instances = {}
+    saved_dependency_infos = dict()
     
     def __init__(self, module_name) -> None:
         if self.instances.get(module_name) is not None:
             raise KeyError("Duplicate. DependencyTester already defined for "
                            "module "+module_name)
-        if not self.exit_module:
+        if not self.exit_module_after_import:
             self.instances[module_name] = self
         self.module = module_name
         self.pydependencies = []
@@ -127,26 +128,24 @@ class DependencyManager:
         if exc_type is None: self.exit()
 
     def exit(self):
-        if self.exit_module: raise ReturnFromModule(self)
+        if self.exit_module_after_import: raise ReturnFromModule(self)
     
-    def pydependency(self, *args, **kwargs):
-        dep = PythonDependency(*args, **kwargs)
+    def pydependency(self, module_name, **kwargs):
+        dep = PythonDependency(module_name,self, **kwargs)
         self.pydependencies.append(dep)
-        dep.manager = self
         return dep
     
-    def import_module(self, *args, **kwargs):
-        dep = self.pydependency(*args, **kwargs)
+    def import_module(self, module_name, **kwargs):
+        dep = self.pydependency(module_name, **kwargs)
         return dep.imprt()
 
-    def shelldependency(self, *args, **kwargs):
-        dep = ShellDependency(*args, **kwargs)
+    def shelldependency(self, cmd, **kwargs):
+        dep = ShellDependency(cmd, self, **kwargs)
         self.shelldependencies.append(dep)
-        dep.manager = self
         return dep
     
-    def test_shellcommand(self, *args,**kwargs):
-        dep = self.shelldependency(*args,**kwargs)
+    def test_shellcommand(self, cmd,**kwargs):
+        dep = self.shelldependency(cmd,**kwargs)
         return dep.test()
     
     @property
@@ -164,26 +163,40 @@ class DependencyManager:
         if self.raise_errors is False: return False
         if self.raise_errors is True and isinstance(caused_by, Exception):
             raise caused_by
-        if self.exit_module: return "exit"
+        if self.exit_module_after_import: return "exit"
         raise dependency_error
 
+    @classmethod
+    def save_dependency_info(cls, name, **kwargs):
+        cls.saved_dependency_infos[name] = kwargs
 
 
 class Dependency:
     
     default_install_tool = None
     
-    def __init__(self, name, pkg=None, instruction=None,install_tool=None, system=""):
+    def __init__(self, name, manager_inst, **kwargs):
         self.name = name
-        self.manager = None
+        self.manager = manager_inst
         self.error = None
         self.install_instructions = defaultdict(InstallInstruction)
-            #map {system: InstallInstruction instance}
+        # map {system: InstallInstruction instance}
+        try:
+            kwarg_infos = self.manager.saved_dependency_infos[name]
+        except KeyError:
+            kwarg_infos = kwargs
+        else:
+            kwarg_infos.update(kwargs)
+        self.process_kwargs(**kwarg_infos)
+        
+    
+    def process_kwargs(self, pkg=None, instruction=None,
+            install_tool=None, system=""):
         if instruction:
-            self.add_instruction(instruction, system=system)
+            self.add_instruction(pkg, instruction, system=system)
         if pkg:
             self.add_pkg(pkg, install_tool=install_tool, system=system)
-        
+    
     
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} '{self.name}' from " \
@@ -197,8 +210,8 @@ class Dependency:
         if not install_tool: install_tool = self.default_install_tool
         self.install_instructions[system].add_names(install_tool,*pkgs)
     
-    def add_instruction(self, instr, system=""):
-        self.install_instructions[system].specific_instruction = instr
+    def add_instruction(self,name, instruction,system=""):
+        self.install_instructions[system].add_instructions(name, instruction)
         
     def raise_BackendDependencyError(self, caused_by=None):
         self.error = BackendDependencyError(self,caused_by)
@@ -208,15 +221,11 @@ class Dependency:
 class PythonDependency(Dependency):
     
     default_install_tool = "pip"
-    
-    def __init__(self, module_name,*args,**kwargs):
-        super().__init__(module_name, *args,**kwargs)
-        self.module_name = module_name
         
     def imprt(self):
         if not self.perform_check: return
         try:
-            mod = importlib.import_module(self.module_name)
+            mod = importlib.import_module(self.name)
         except Exception as e:
             self.raise_BackendDependencyError(e)
             mod = NotImplemented
@@ -231,9 +240,9 @@ class ShellDependency(Dependency):
     
     default_install_tool = "apt"
     
-    def __init__(self, cmd, test_cmd=None, expected_return=None,*args,
-            **kwargs):
-        super().__init__(cmd,*args,**kwargs)
+    def __init__(self, cmd, manager_inst, *, test_cmd=None,
+            expected_return=None, **kwargs):
+        super().__init__(cmd,manager_inst,**kwargs)
         self.cmd = cmd
         self.test_cmd = test_cmd
         self.expected_return = expected_return
@@ -270,7 +279,7 @@ class ShellDependency(Dependency):
     
     
     
-install_commands = {"pip" : "pip install", "apt": "apt install"}
+install_commands = {"pip" : "pip install -U", "apt": "sudo apt install"}
 
 
 class InstallInstruction:
@@ -279,12 +288,12 @@ class InstallInstruction:
         ret = ""
         for tool, pkgs in self.packages.items():
             if not pkgs: continue
-            ret += install_commands[tool]
-            for pkg in pkgs:
-                ret += " " + pkg
-            ret += "\n"
-        for instruction in self.instructions:
-            ret += "\n " + instruction
+            ret += install_commands[tool].strip() + " " + " ".join(pkgs) + "\n"
+        if self.instructions:
+            ret += "\n--- Additional instructions:\n"
+            for pkg, instruction in self.instructions.items():
+                if not instruction: continue
+                ret += f"    {pkg}: " + ", ".join(instruction) + "\n"
         return ret
     
     def command_list(self):
@@ -299,7 +308,10 @@ class InstallInstruction:
     
     def __init__(self):
         self.packages = defaultdict(set)
-        self.instructions = []
+        self.instructions = defaultdict(set)
+        
+    def add_instructions(self, name, *instructions):
+        self.instructions[name] |= set(instructions)
     
     def add_names(self, tool, *names):
         self.packages[tool] |= set(names)
@@ -307,11 +319,10 @@ class InstallInstruction:
     def update(self, other):
         if not isinstance(other,self.__class__):
             raise ValueError
-        for tool, pkgs in other.packages.items():
-            self.add_names(tool, *pkgs)
-        for instruction in other.instructions:
-            if instruction in self.instructions: pass
-            self.instructions.append(instruction)
+        for tool, names in other.packages.items():
+            self.add_names(tool, *names)
+        for name, instructions in other.instructions.items():
+            self.add_instructions(name, *instructions)
             
     def __bool__(self):
         return bool(self.packages)

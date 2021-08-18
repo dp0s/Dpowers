@@ -33,7 +33,7 @@ class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
     adaptor = HookAdaptor(group="triggerman", _primary=True)
     
     def __init__(self, hook_adaptor=None, timeout=60, hook_keys=True,
-        hook_buttons=False, buffer=2):
+        hook_buttons=False, buffer=4):
         super().__init__(timeout=timeout)
         self.eventdict = dict()
         self.blocked_hks = []
@@ -82,9 +82,11 @@ class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
         recent_events = self.recent_events.copy()
         for event,action in self.eventdict.items():
             members = event.members
-            for i in range(1,min(len(members),len(recent_events))+1):
-                #_print(i, recent_events)
-                if members[-i] != recent_events[-i]: break
+            lm = len(members)
+            if lm > len(recent_events): continue
+                #if more members are required than actual events passed
+            for i in range(-1,-lm-1, -1):
+                if members[i] != recent_events[i]: break
             else:
                 launch.thread(self.runscript, action, event)
                 # this means that for each member event, the suiting recent

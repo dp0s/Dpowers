@@ -38,7 +38,7 @@ except ModuleNotFoundError:
     import Dhelpers
     
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 from Dhelpers import __version__  as Dhelpers_version
 #Dpowers and Dhelpers share version number
 if __version__ != Dhelpers_version: raise ValueError
@@ -108,3 +108,5 @@ finally:
 #clean up this namespace
 del os, AdaptorBase, adaptionmethod, always_print_traceback, \
     restore_print_func, backends
+
+Adaptor._set_effective_paths(globals(),__name__)

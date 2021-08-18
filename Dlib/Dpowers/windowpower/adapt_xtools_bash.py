@@ -28,7 +28,8 @@ with DependencyManager(__name__) as manager:
 
     manager.test_shellcommand("wmctrl", pkg="wmctrl")
 
-    manager.test_shellcommand("xprop", f"xprop -id {current_id} WM_CLASS")
+    manager.test_shellcommand("xprop", test_cmd=f"xprop -id {current_id} " \
+                                           "WM_CLASS")
     # checks if xprop is installed and if it gets the current window's class
 
 
