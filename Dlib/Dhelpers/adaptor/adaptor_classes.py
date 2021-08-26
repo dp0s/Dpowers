@@ -755,8 +755,8 @@ class AdaptiveClass:
             aclss_ref += f"`{aclss.__visible_module__}.{aclss.__visible_name__}`"
         else:
             aclss_ref += f"`{aclss.__module__}.{aclss.__name__}`"
-        doc = "Subclass of :class:`Dpowers.AdaptiveClass`.\n\n" \
-              f"Adaptor subclass used internally: {aclss_ref}\n\n"
+        doc = f"Subclass of :class:`Dpowers.AdaptiveClass`.\n\n" \
+              f"Associated Adaptor class: {aclss_ref}\n\n"
         doc += aclss._create_import_instr(cls.__name__)
         if cls.__doc__: doc += cls.__doc__ + "\n\n"
         doc += f".. data:: adaptor\n\n\t*Class attribute.* An instance of " \

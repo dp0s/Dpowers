@@ -33,6 +33,7 @@ Win / Win.Search
 .. topic:: Examples
 
     - :ref:`quickstart:Click on a window to paste its properties to the clipboard`
+    - :ref:`quickstart:Launch the browser and simultaneously redirect key presses`
 
 .. autoclass:: Dpowers.Win
     :exclude-members: Search
@@ -56,15 +57,20 @@ Icon
 
 
 
-Image
-----------------------------------------
-.. autoclass:: Dpowers.Image
-
 
 
 KeyWaiter
 -------------------
 
+.. topic:: Examples
+
+    - :ref:`quickstart:Launch the browser and simultaneously redirect key presses`
 
 .. autoclass:: Dpowers.KeyWaiter
+
+
+
+Image
+----------------------------------------
+.. autoclass:: Dpowers.Image
 

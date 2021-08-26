@@ -35,7 +35,7 @@ the same backend.
 
 
 
-Examples
+Basic Examples
 ************************************
 
 
@@ -57,6 +57,13 @@ Reference:
         ntfy("You clicked the custom menu item.")
 
     myicon.start()
+
+
+
+
+Advanced Examples
+********************
+
 
 
 Click on a window to paste its properties to the clipboard
@@ -102,3 +109,35 @@ This function is pre-defined in the module `Dpowers.Dfuncs.py
     from Dpowers import autoadapt, Dfuncs
     Dfuncs.display_win_info()
 
+
+
+
+
+Launch the browser and simultaneously redirect key presses
+------------------------------------------------------------
+
+Reference:
+:data:`Dpowers.launch`
+:class:`Dpowers.Win`
+:class:`Dpowers.KeyWaiter`
+
+.. code::
+
+        from Dpowers import autoadapt, launch, Win, KeyWaiter, ntfy
+
+        def firefox_launch():
+
+            with KeyWaiter(100, 15, endevents="Return", capture=True) as address:
+                FirefoxWindows = Win("^Mozilla Firefox$")  # the ^ and $
+                # mark that we want an exact title match  (regular expression)
+                launch("firefox", "-P", "default", check=True, check_err=False)
+                newWin = FirefoxWindows.wait_num_change(+1, timeout=10)
+
+            if not newWin: return
+            if newWin.num != 1: raise ValueError
+            newWin.activate()
+
+            code = address.exitcode
+            if code not in  ("endevent", "__exit__"):
+                raise ValueError(f"Wrong exitcode: {code}")
+            address.reinject(delay=1)
