@@ -25,74 +25,36 @@ from Dhelpers.launcher import launch
 from Dhelpers.baseclasses import TimedObject
 from Dhelpers.arghandling import check_type
 from Dhelpers.counting import dpress
-import collections
+import collections, functools
 
 
-class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
+class PatternListener:
     
-    adaptor = HookAdaptor(group="triggerman", _primary=True)
-    
-    def __init__(self, hook_adaptor=None, timeout=60, hook_keys=True,
-        hook_buttons=False, buffer=4):
-        super().__init__(timeout=timeout)
+    def __init__(self, buffer = 4):
         self.eventdict = dict()
-        self.blocked_hks = []
-        if hook_adaptor is not None: self.adaptor = hook_adaptor
-        check_type(HookAdaptor, self.adaptor)
-        self.k_old = ""
-        self.hooks = 0
         self.recent_events = collections.deque()
         self.buffer = buffer
-        self.hook_buttons = hook_buttons
-        self.hook_keys=hook_keys
-        if hook_buttons:
-            self.stringevent_analyzer = StringAnalyzer(NamedKey, NamedButton)
-        else:
-            self.stringevent_analyzer = NamedKey.Event
-            
-    def add_hook(self, hook_instance, reinject=False):
-        check_type(CallbackHook,hook_instance)
-        timeout = self.timeout + 5 if self.timeout else None
-        reinject_func = self.reinject_func if reinject else None
-        self.hooks += hook_instance(self.event,timeout = timeout,
-                reinject_func=reinject_func)
-       
-    def _start_action(self):
-        if self.hook_keys:
-            reinject = True if self.blocked_hks else False
-            self.add_hook(self.adaptor.keys(), reinject=reinject)
-        if self.hook_buttons: self.add_hook(self.adaptor.buttons())
-        return self.hooks.start()
-    
-    def reinject_func(self, event_obj):
-        if event_obj in self.blocked_hks: return False
-        return True
-        
-    def _stop_action(self):
-        return self.hooks.stop()
-    
-    def _timeout_action(self):
-        warn("Timeout after %s seconds: Stopping TriggerManager %s." % (
-            self.timeout,self))
-    
+        self.blocked_hks = []
+        self.stringevent_analyzer = NamedKey.Event
+
     def event(self, k):
-        #_print(k)
+        # _print(k)
         self.recent_events.append(k)
         if len(self.recent_events) > self.buffer: self.recent_events.popleft()
         recent_events = self.recent_events.copy()
-        for event,action in self.eventdict.items():
+        for event, action in self.eventdict.items():
             members = event.members
             lm = len(members)
             if lm > len(recent_events): continue
-                #if more members are required than actual events passed
-            for i in range(-1,-lm-1, -1):
+            # if more members are required than actual events passed
+            for i in range(-1, -lm - 1, -1):
                 if members[i] != recent_events[i]: break
             else:
                 launch.thread(self.runscript, action, event)
                 # this means that for each member event, the suiting recent
                 # event has been found
                 self.recent_events.clear()
-  
+
     def runscript(self, action, hk):
         if self.active_blocks: return
         # print(hk_func)
@@ -112,24 +74,25 @@ class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
                 return action()
         else:
             raise TypeError
-        
+
     def add_event(self, event, action):
         if event in self.eventdict:
             raise ValueError(f"Tiggerevent {event} defined more than one time.")
         self.eventdict[event] = action
-    
+
     def add_sequence(self, string, action):
-        event = self.stringevent_analyzer.create_from_str(string).hotkey_version()
+        event = self.stringevent_analyzer.create_from_str(
+                string).hotkey_version()
         self.add_event(event, action)
-    
+
     def add_hotkey(self, string, action, rls=False, block=True):
         event = self.stringevent_analyzer.create_from_str(string)
-        if isinstance(event,EventSequence): raise ValueError
-        if isinstance(event,StringEvent):
+        if isinstance(event, EventSequence): raise ValueError
+        if isinstance(event, StringEvent):
             if not event.press: raise ValueError
             if block: self.blocked_hks.append(event)
             if rls: event += event.reverse()
-        elif isinstance(event,EventCombination):
+        elif isinstance(event, EventCombination):
             event = event.hotkey_version(rls=rls)
         else:
             raise TypeError
@@ -149,13 +112,22 @@ class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
                 self.add_hotkey(string, decorated_func, rls=rls, block=block)
             return decorated_func
         return decorator
-    
-    def hotkey_rls(self,*strings, block=True):
-        return self.hotkey(*strings,rls=True,block=block)
-    
+
+    def hotkey_rls(self, *strings, block=True):
+        return self.hotkey(*strings, rls=True, block=block)
+
     def add_triggerdict(self, triggerdict):
         for eventstring, action in triggerdict.items():
-            self.add_sequence(eventstring,action)
+            self.add_sequence(eventstring, action)
+
+    
+    def reinject_func(self, event_obj):
+        if event_obj in self.blocked_hks: return False
+        return True
+
+
+
+
 
 
 
@@ -163,9 +135,8 @@ class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
 
     @classmethod
     def block(cls):
-        cls.active_blocks += 1
-        #print(cls.active_blocks)
-        
+        cls.active_blocks += 1  # print(cls.active_blocks)
+
     @classmethod
     def unblock(cls, delay=None):
         if delay:
@@ -176,14 +147,82 @@ class TriggerManager(TimedObject, HookAdaptor.AdaptiveClass):
     @classmethod
     def _unblock(cls):
         cls.active_blocks -= 1
-        #print(cls.active_blocks)
+        # print(cls.active_blocks)
         if cls.active_blocks < 0: raise ValueError
 
     @classmethod
     def paused(cls, timeout=10):
         return PauseObject(timeout, cls)
-    # this creates a PauseObject suitable for a with statement
-    # usage: with instance.paused():   or    with TriggerManager.paused():
+        # this creates a PauseObject suitable for a with statement
+        # usage: with instance.paused():   or    with TriggerManager.paused():
+
+
+
+class RegisteredHook(PatternListener):
+    
+    def __init__(self, buffer, hook_instance, container_triggerman=None,
+            timeout=False, reinject_func=None):
+        super().__init__(buffer)
+        check_type(CallbackHook, hook_instance)
+        kwargs = {}
+        if timeout is not False: kwargs["timeout"] = timeout
+        if reinject_func is not None: kwargs["reinject_func"] = reinject_func
+        self.hook_instance = hook_instance(self.event,**kwargs)
+        self.triggerman_instance = container_triggerman
+        
+    def event(self, k):
+        super().event(k)
+        if self.triggerman_instance: self.triggerman_instance.event(k)
+        
+
+
+class TriggerManager(PatternListener,TimedObject, HookAdaptor.AdaptiveClass):
+    
+    adaptor = HookAdaptor(group="triggerman", _primary=True)
+    
+    def __init__(self, hook_adaptor=None, timeout=60, hook_keys=True,
+        hook_buttons=False, buffer=4):
+        PatternListener.__init__(self,buffer=buffer)
+        TimedObject.__init__(self,timeout=timeout)
+        if hook_adaptor is not None: self.adaptor = hook_adaptor
+        check_type(HookAdaptor, self.adaptor)
+        self.registered_hooks = []
+        self.hook_buttons = hook_buttons
+        self.hook_keys=hook_keys
+        if hook_buttons:
+            self.stringevent_analyzer = StringAnalyzer(NamedKey, NamedButton)
+            
+    def add_hook(self, hook_instance, reinject=False):
+        timeout = None if self.timeout is None else self.timeout + 5
+        reinject_func = self.reinject_func if reinject else None
+        new_registered_hook = RegisteredHook(self.buffer, hook_instance,
+                container_triggerman=self, timeout=timeout,
+                reinject_func=reinject_func)
+        self.registered_hooks.append(new_registered_hook)
+       
+    def _start_action(self):
+        if self.hook_keys:
+            reinject = True if self.blocked_hks else False
+            self.add_hook(self.adaptor.keys(), reinject=reinject)
+        if self.hook_buttons: self.add_hook(self.adaptor.buttons())
+        for rhook in self.registered_hooks:
+            rhook.hook_instance.start()
+        
+    def _stop_action(self):
+        for rhook in self.registered_hooks:
+            rhook.hook_instance.stop()
+
+
+    def _timeout_action(self):
+        warn("Timeout after %s seconds: Stopping TriggerManager %s." % (
+            self.timeout,self))
+    
+    
+    
+
+
+
+   
     
     
     
