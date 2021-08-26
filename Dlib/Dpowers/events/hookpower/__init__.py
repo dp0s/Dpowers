@@ -17,7 +17,7 @@
 #
 #
 from .. import Adaptor, adaptionmethod
-from .baseclasses import CallbackHook
+from .baseclasses import CallbackHook, KeyhookBase, ButtonhookBase
 
 class HookAdaptor(Adaptor):
     

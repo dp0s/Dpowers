@@ -761,7 +761,8 @@ class AdaptiveClass:
         if cls.__doc__: doc += cls.__doc__ + "\n\n"
         doc += f".. data:: adaptor\n\n\t*Class attribute.* An instance of " \
                f"{aclss_ref}, as explained in :attr:`AdaptiveClass.adaptor`.\n\n"
-        doc += ".. automethod:: adapt\n\n\tSee :func:`AdaptiveClass.adapt`." \
+        doc += ".. automethod:: adapt\n\n\tChoose the backend for this " \
+               "class. See :func:`AdaptiveClass.adapt`." \
                " For parameters see :func:`Dpowers.Adaptor.adapt`."
         cls.__doc__ = doc
     

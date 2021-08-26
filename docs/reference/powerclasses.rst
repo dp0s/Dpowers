@@ -56,6 +56,11 @@ Icon
 .. autoclass:: Dpowers.Icon
 
 
+TriggerManager
+------------------
+
+.. autoclass:: Dpowers.TriggerManager
+
 
 
 

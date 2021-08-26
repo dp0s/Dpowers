@@ -20,12 +20,12 @@ from warnings import warn
 from . import NamedKey, keyb, NamedButton
 from .event_classes import StringAnalyzer, EventCombination, EventSequence, \
     StringEvent
-from .hookpower import HookAdaptor, CallbackHook
+from .hookpower import HookAdaptor, CallbackHook, KeyhookBase, ButtonhookBase
 from Dhelpers.launcher import launch
-from Dhelpers.baseclasses import TimedObject
+from Dhelpers.baseclasses import TimedObject, KeepInstanceRefs
 from Dhelpers.arghandling import check_type
 from Dhelpers.counting import dpress
-import collections, functools
+import collections
 
 
 class PatternListener:
@@ -35,9 +35,10 @@ class PatternListener:
         self.recent_events = collections.deque()
         self.buffer = buffer
         self.blocked_hks = []
-        self.stringevent_analyzer = NamedKey.Event
+        self.stringevent_analyzer = StringAnalyzer(NamedKey, NamedButton)
 
     def event(self, k):
+        if not self.eventdict: return
         # _print(k)
         self.recent_events.append(k)
         if len(self.recent_events) > self.buffer: self.recent_events.popleft()
@@ -99,7 +100,7 @@ class PatternListener:
         self.add_event(event, action)
 
     # A decorator
-    def triggersequence(self, *strings):
+    def sequence(self, *strings):
         def decorator(decorated_func):
             for string in strings: self.add_sequence(string, decorated_func)
             return decorated_func
@@ -121,15 +122,6 @@ class PatternListener:
             self.add_sequence(eventstring, action)
 
     
-    def reinject_func(self, event_obj):
-        if event_obj in self.blocked_hks: return False
-        return True
-
-
-
-
-
-
 
     active_blocks = 0
 
@@ -160,64 +152,104 @@ class PatternListener:
 
 class RegisteredHook(PatternListener):
     
-    def __init__(self, buffer, hook_instance, container_triggerman=None,
-            timeout=False, reinject_func=None):
+    def __init__(self, buffer, hook_instance, container_triggerman=None):
         super().__init__(buffer)
         check_type(CallbackHook, hook_instance)
-        kwargs = {}
-        if timeout is not False: kwargs["timeout"] = timeout
-        if reinject_func is not None: kwargs["reinject_func"] = reinject_func
-        self.hook_instance = hook_instance(self.event,**kwargs)
+        if isinstance(hook_instance, KeyhookBase):
+            self.stringevent_analyzer = NamedKey.Event
+        elif isinstance(hook_instance, ButtonhookBase):
+            self.stringevent_analyzer = NamedButton.Event
+        self.hook_instance = hook_instance(self.event)
         self.triggerman_instance = container_triggerman
         
     def event(self, k):
         super().event(k)
         if self.triggerman_instance: self.triggerman_instance.event(k)
         
+    def start(self):
+        if self.blocked_hks or self.triggerman_instance and \
+                self.triggerman_instance.blocked_hks:
+            try:
+                self.hook_instance = self.hook_instance(reinject_func =
+                                self.reinject_func )
+            except NotImplementedError:
+                if self.blocked_hks: raise
+        return self.hook_instance.start()
+    
+    def stop(self):
+        return self.hook_instance.stop()
+
+    def reinject_func(self, event_obj):
+        if event_obj in self.blocked_hks: return False
+        if self.triggerman_instance and event_obj in \
+                self.triggerman_instance.blocked_hks: return False
+        return True
+        
 
 
-class TriggerManager(PatternListener,TimedObject, HookAdaptor.AdaptiveClass):
+class TriggerManager(PatternListener,TimedObject, HookAdaptor.AdaptiveClass,
+        KeepInstanceRefs):
     
     adaptor = HookAdaptor(group="triggerman", _primary=True)
     
-    def __init__(self, hook_adaptor=None, timeout=60, hook_keys=True,
-        hook_buttons=False, buffer=4):
+    
+    def __init__(self, timeout=60, buffer=4):
         PatternListener.__init__(self,buffer=buffer)
         TimedObject.__init__(self,timeout=timeout)
-        if hook_adaptor is not None: self.adaptor = hook_adaptor
-        check_type(HookAdaptor, self.adaptor)
+        KeepInstanceRefs.__init__(self)
         self.registered_hooks = []
-        self.hook_buttons = hook_buttons
-        self.hook_keys=hook_keys
-        if hook_buttons:
-            self.stringevent_analyzer = StringAnalyzer(NamedKey, NamedButton)
+        self.was_started = False
+        
+    @classmethod
+    def start_all(cls):
+        for inst in cls.get_instances():
+            if inst.was_started is False: inst.start()
             
-    def add_hook(self, hook_instance, reinject=False):
+    def add_hook(self, hook_instance, buffer=None,**hook_kwargs):
         timeout = None if self.timeout is None else self.timeout + 5
-        reinject_func = self.reinject_func if reinject else None
-        new_registered_hook = RegisteredHook(self.buffer, hook_instance,
-                container_triggerman=self, timeout=timeout,
-                reinject_func=reinject_func)
+        hook_instance = hook_instance(timeout=timeout, **hook_kwargs)
+        buffer = self.buffer if buffer is None else buffer
+        new_registered_hook = RegisteredHook(buffer, hook_instance,
+                container_triggerman=self)
         self.registered_hooks.append(new_registered_hook)
-       
+        return new_registered_hook
+    
+    def hook_keys(self, backend=None, **hook_kwargs):
+        if backend:
+            adaptor = self.adaptor_class(keys=backend)
+        else:
+            adaptor = self.adaptor
+        return self.add_hook(adaptor.keys(),**hook_kwargs)
+        
+    def hook_buttons(self,backend=None,**hook_kwargs):
+        if backend:
+            adaptor = self.adaptor_class(buttons=backend)
+        else:
+            adaptor = self.adaptor
+        return self.add_hook(adaptor.buttons(), **hook_kwargs)
+    
+    def hook_custom(self, backend=None,**hook_kwargs):
+        if backend:
+            adaptor = self.adaptor_class(custom=backend)
+        else:
+            adaptor = self.adaptor
+        return self.add_hook(adaptor.custom(), **hook_kwargs)
+    
     def _start_action(self):
-        if self.hook_keys:
-            reinject = True if self.blocked_hks else False
-            self.add_hook(self.adaptor.keys(), reinject=reinject)
-        if self.hook_buttons: self.add_hook(self.adaptor.buttons())
-        for rhook in self.registered_hooks:
-            rhook.hook_instance.start()
+        self.was_started = True
+        for rhook in self.registered_hooks: rhook.start()
         
     def _stop_action(self):
         for rhook in self.registered_hooks:
-            rhook.hook_instance.stop()
+            try:
+                rhook.stop()
+            except Exception as e:
+                warn(e)
 
 
     def _timeout_action(self):
         warn("Timeout after %s seconds: Stopping TriggerManager %s." % (
             self.timeout,self))
-    
-    
     
 
 
@@ -238,17 +270,3 @@ class PauseObject(TimedObject):
         self.cls.unblock(delay=0.1)
         # delaying the unblock is necessary because when the user types,
         # the key up events are often catched without intention otherwise
-        
-        
-        
-class CustomTriggerMan(TriggerManager):
-    
-    
-    
-    def __init__(self, hook_adaptor=None, timeout=60, hook_keys=False,
-            hook_buttons=False, buffer=2, reinject=False, **custom_hook_kwargs):
-        super().__init__(hook_adaptor, timeout, hook_keys, hook_buttons, buffer)
-        assert bool(custom_hook_kwargs)
-        self.add_hook(self.adaptor.custom(**custom_hook_kwargs),
-                reinject=reinject)
-        
