@@ -28,6 +28,8 @@ AdaptiveClasses
 - :class:`Dpowers.Icon`: Create and display tray icons, including context menu.
 - :class:`Dpowers.Image`: Edit and assemble image files.
 - :class:`Dpowers.KeyWaiter`: Collect key events until a condition is fullfilled.
+- :class:`Dpowers.TriggerManager`: Define event patterns (such as key or
+  button sequences) to trigger your own functions.
 
 An AdaptiveClass is a subclass of the common baseclass
 :class:`Dpowers.AdaptiveClass`. All instances created by this class will share
@@ -59,10 +61,61 @@ Reference:
     myicon.start()
 
 
+Define a key sequence to trigger a function
+-------------------------------------------
+
+Reference:
+:class:`Dpowers.TriggerManager`
+
+.. code::
+
+    from Dpowers import TriggerManager, sleep
+    TriggerManager.adapt()
+    MyTriggers = TriggerManager().hook_keys()
+
+    @MyTriggers.sequence("ctrl d d_rls")
+    def myfunction():
+        print("Control + d was pressed")
+
+    MyTriggers.start()
+    sleep(30)
+    MyTriggers.stop()
+
+
+Define a combined key / button sequence as trigger
+--------------------------------------------------
+
+Reference:
+:class:`Dpowers.TriggerManager`
+
+.. code::
+
+    from Dpowers import TriggerManager
+    TriggerManager.adapt(keys="evdev", buttons="pynput")
+
+    CombinedTriggers = TriggerManager(timeout = None)
+    Keys = CombinedTriggers.hook_keys()
+    Buttons = CombinedTriggers.hook_buttons()
+
+    @Keys.sequence("ctrl d")
+    def myfunction():
+        print("Control + d was pressed")
+
+    @Buttons.sequence("mleft")
+    def myfunction2():
+        print("Left mouse button was pressed.")
+
+    @CombinedTriggers.sequence("Ctrl mleft")
+    def myfunction3():
+        print("Ctrl + left mouse button was pressed")
+
+    CombinedTriggers.start()
+    # this will run in background until CombinedTriggers.stop()
 
 
 Advanced Examples
 ********************
+
 
 
 

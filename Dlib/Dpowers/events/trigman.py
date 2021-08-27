@@ -16,6 +16,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
+import inspect
 from warnings import warn
 from . import NamedKey, keyb, NamedButton
 from .event_classes import StringAnalyzer, EventCombination, EventSequence, \
@@ -63,15 +64,15 @@ class PatternListener:
         if type(action) is str:
             if action.startswith("[dkeys]"):
                 if dpress(hk, 0.15):
-                    keyb.send("<BackSpace>"*2 + action[7:], delay=1)
+                    keyb.send(action[7:], delay=1)
             else:
                 keyb.send(action)
         elif callable(action):
             # the following makes sure that the hk_func is accepting 1
             # argument even if the underlying func does not
-            if action.__code__.co_argcount >= 1:
+            try:
                 return action(hk)
-            else:
+            except TypeError:
                 return action()
         else:
             raise TypeError

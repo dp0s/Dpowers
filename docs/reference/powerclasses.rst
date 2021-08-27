@@ -59,6 +59,12 @@ Icon
 TriggerManager
 ------------------
 
+.. topic:: Examples
+
+    - :ref:`quickstart:Define a key sequence to trigger a function`
+    - :ref:`quickstart:Define a combined key / button sequence as trigger`
+
+
 .. autoclass:: Dpowers.TriggerManager
 
 
