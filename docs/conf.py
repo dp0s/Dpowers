@@ -95,7 +95,7 @@ def my_skip_member(app, what, name, obj, skip, options):
 
 
 from Dhelpers.sphinx import ExecDirective, CustomTextDirective, ActiveCode,\
-    Example_to_Ref, Ref_to_Examples
+    Example_with_Refs, Ref_to_Examples
 from Dhelpers.adaptor import AdaptiveClassDirective, AdaptorDirective
 
 ExecDirective.get_globals(globals())
@@ -107,7 +107,7 @@ def setup(app):
     app.connect('autodoc-skip-member', my_skip_member)
     app.add_directive('exec', ExecDirective)
     app.add_directive('activecode', ActiveCode)
-    app.add_directive("example", Example_to_Ref)
+    app.add_directive("example", Example_with_Refs)
     app.add_directive("refexamples", Ref_to_Examples)
     app.add_directive("adaptiveclass", AdaptiveClassDirective)
     app.add_directive("adaptor", AdaptorDirective)

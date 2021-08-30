@@ -20,6 +20,7 @@ An Adaptor is an instance of the common baseclass :class:`Dpowers.Adaptor`.
 Each Adaptor provides a collection of methods which automatically call the
 corresponding backend's functions.
 
+.. _AdaptiveClass label:
 
 AdaptiveClasses
 ----------------

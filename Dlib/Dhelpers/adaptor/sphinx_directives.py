@@ -11,7 +11,7 @@ class AdaptiveClassDirective(CustomTextDirective):
         text += ".. autoclass:: " + name + "\n"
         for line in rest:
             text += "\t" + line
-        return text + "\n"
+        return text
     
     
 class AdaptorDirective(CustomTextDirective):

@@ -79,7 +79,8 @@ class CustomTextDirective(Directive):
                 self.lineno - self.state_machine.input_offset - 1)
         tab_width = self.options.get('tab-width',
                 self.state.document.settings.tab_width)
-        text = self.create_text()
+        text = self.create_text() + "\n"
+                #always good to have another blank line
         lines = statemachine.string2lines(text, tab_width,
                 convert_whitespace=True)
         self.state_machine.insert_input(lines, source)
@@ -126,14 +127,15 @@ class ActiveCode(CustomTextDirective):
     
     
     
-class Example_to_Ref(CustomTextDirective):
+class Example_with_Refs(CustomTextDirective):
     
     saved_examples = defaultdict(list)
     
     def create_text(self):
         heading,reference_objects = self.content[0], self.content[1:]
-        text = heading + "\n" + "-"*len(heading)
-        text+= "\n\nReference:\n"
+        text = f".. _{heading}:\n\n"
+        text += heading + "\n" + "-"*len(heading)
+        text += "\nReference:\n"
         for ref_obj in reference_objects:
             ref_obj = ref_obj.strip()
             text += f":data:`{ref_obj}`\n"
@@ -147,15 +149,14 @@ class Ref_to_Examples(CustomTextDirective):
     
     @staticmethod
     def create_example_refs(name):
-        dic = Example_to_Ref.saved_examples
+        dic = Example_with_Refs.saved_examples
         if name not in dic: return ""
-        refs = dic[name]
+        headings = dic[name]
         text = ".. topic :: Examples\n\n"
-        for ref in refs:
-            text += f"\t- :ref:`quickstart:{ref}`\n"
-        return text + "\n"
+        for heading in headings:
+            text += f"\t- :ref:`{heading}`\n"
+        return text
     
     def create_text(self):
         assert len(self.content) == 1
         return self.create_example_refs(self.content[0].strip())
-        
