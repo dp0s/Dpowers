@@ -30,12 +30,7 @@ Adaptive Classes
 Win / Win.Search
 ----------------
 
-.. topic:: Examples
-
-    - :ref:`quickstart:Click on a window to paste its properties to the clipboard`
-    - :ref:`quickstart:Launch the browser and simultaneously redirect key presses`
-
-.. autoclass:: Dpowers.Win
+.. adaptiveclass:: Dpowers.Win
     :exclude-members: Search
 
 .. class:: Dpowers.Win.Search
@@ -46,26 +41,18 @@ Win / Win.Search
 .. autoclass:: Dpowers.windowpower.windowobjects.WindowSearch
     :no-inherited-members:
 
+
 Icon
 ----
 
-.. topic:: Examples
-
-    - :ref:`quickstart:Display a tray icon with customized menu`
-
-.. autoclass:: Dpowers.Icon
+.. adaptiveclass:: Dpowers.Icon
 
 
 TriggerManager
 ------------------
 
-.. topic:: Examples
 
-    - :ref:`quickstart:Define a key sequence to trigger a function`
-    - :ref:`quickstart:Define a combined key / button sequence as trigger`
-
-
-.. autoclass:: Dpowers.TriggerManager
+.. adaptiveclass:: Dpowers.TriggerManager
 
 
 
@@ -73,15 +60,10 @@ TriggerManager
 KeyWaiter
 -------------------
 
-.. topic:: Examples
-
-    - :ref:`quickstart:Launch the browser and simultaneously redirect key presses`
-
-.. autoclass:: Dpowers.KeyWaiter
+.. adaptiveclass:: Dpowers.KeyWaiter
 
 
 
 Image
 ----------------------------------------
-.. autoclass:: Dpowers.Image
-
+.. adaptiveclass:: Dpowers.Image

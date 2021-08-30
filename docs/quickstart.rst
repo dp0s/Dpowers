@@ -42,12 +42,9 @@ Basic Examples
 
 
 
-Display a tray icon with customized menu
------------------------------------------
-
-Reference:
-:data:`Dpowers.ntfy`
-:class:`Dpowers.Icon`
+.. example:: Display a tray icon with customized menu
+    Dpowers.ntfy
+    Dpowers.Icon
 
 .. code::
 
@@ -61,11 +58,11 @@ Reference:
     myicon.start()
 
 
-Define a key sequence to trigger a function
--------------------------------------------
 
-Reference:
-:class:`Dpowers.TriggerManager`
+
+
+.. example:: Define a key sequence to trigger a function
+    Dpowers.TriggerManager
 
 .. code::
 
@@ -82,11 +79,10 @@ Reference:
     MyTriggers.stop()
 
 
-Define a combined key / button sequence as trigger
---------------------------------------------------
 
-Reference:
-:class:`Dpowers.TriggerManager`
+
+.. example:: Define a combined key / button sequence as trigger
+    Dpowers.TriggerManager
 
 .. code::
 
@@ -119,14 +115,11 @@ Advanced Examples
 
 
 
-Click on a window to paste its properties to the clipboard
-----------------------------------------------------------
-
-Reference:
-:data:`Dpowers.ntfy`
-:data:`Dpowers.dlg`
-:data:`Dpowers.clip`
-:class:`Dpowers.Win`
+.. example:: Click on a window to paste its properties to the clipboard
+    Dpowers.ntfy
+    Dpowers.dlg
+    Dpowers.clip
+    Dpowers.Win
 
 
 .. code::
@@ -166,13 +159,11 @@ This function is pre-defined in the module `Dpowers.Dfuncs.py
 
 
 
-Launch the browser and simultaneously redirect key presses
-------------------------------------------------------------
 
-Reference:
-:data:`Dpowers.launch`
-:class:`Dpowers.Win`
-:class:`Dpowers.KeyWaiter`
+.. example:: Launch the browser and simultaneously redirect key presses
+    Dpowers.launch
+    Dpowers.Win
+    Dpowers.KeyWaiter
 
 .. code::
 

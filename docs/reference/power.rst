@@ -9,67 +9,44 @@ Adaptors
 keyb (KeyboardAdaptor)
 ______________________
 
-.. exec::
-
-    Dpowers.KeyboardAdaptor._print_sphinx_docs()
+.. adaptor:: Dpowers.KeyboardAdaptor
 
 
 
 mouse (MouseAdaptor)
 ____________________
 
-.. exec::
-
-    Dpowers.MouseAdaptor._print_sphinx_docs()
+.. adaptor:: Dpowers.MouseAdaptor
 
 
 
 clip (ClipboardAdaptor)
 _______________________
 
-.. topic:: Examples
 
-    - :ref:`quickstart:Click on a window to paste its properties to the clipboard`
-
-.. exec::
-
-    Dpowers.ClipboardAdaptor._print_sphinx_docs()
+.. adaptor:: Dpowers.ClipboardAdaptor
 
 
 
 ntfy (NotificationAdaptor)
 __________________________
 
-.. topic:: Examples
-
-    - :ref:`quickstart:Click on a window to paste its properties to the clipboard`
-    - :ref:`quickstart:Display a tray icon with customized menu`
-
-.. exec::
-
-    Dpowers.NotificationAdaptor._print_sphinx_docs()
+.. adaptor:: Dpowers.NotificationAdaptor
 
 
 
 dlg (DialogAdaptor)
 ___________________
 
-.. topic:: Examples
 
-    - :ref:`quickstart:Click on a window to paste its properties to the clipboard`
-
-.. exec::
-
-    Dpowers.DialogAdaptor._print_sphinx_docs()
+.. adaptor:: Dpowers.DialogAdaptor
 
 
 
 hook (HookAdaptor)
 __________________
 
-.. exec::
-
-    Dpowers.HookAdaptor._print_sphinx_docs()
+.. adaptor:: Dpowers.HookAdaptor
 
 
 

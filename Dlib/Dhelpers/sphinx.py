@@ -19,6 +19,7 @@
 
 import sys
 from os.path import basename
+from collections import defaultdict
 
 try:
     from StringIO import StringIO
@@ -65,7 +66,8 @@ class ExecDirective(Directive):
 
 
 
-class ImprovedExecDirective(Directive):
+class CustomTextDirective(Directive):
+    has_content = True
     
     @classmethod
     def get_globals(cls, globals):
@@ -87,8 +89,7 @@ class ImprovedExecDirective(Directive):
         raise NotImplementedError
     
 
-class ActiveCode(ImprovedExecDirective):
-    has_content = True
+class ActiveCode(CustomTextDirective):
     
     def create_text(self):
         text = ".. code::\n\n"
@@ -121,4 +122,40 @@ class ActiveCode(ImprovedExecDirective):
             #print("append_lines", append_lines)
             for line in append_lines: text += "\t" + line + "\n"
         return text
+    
+    
+    
+    
+class Example_to_Ref(CustomTextDirective):
+    
+    saved_examples = defaultdict(list)
+    
+    def create_text(self):
+        heading,reference_objects = self.content[0], self.content[1:]
+        text = heading + "\n" + "-"*len(heading)
+        text+= "\n\nReference:\n"
+        for ref_obj in reference_objects:
+            ref_obj = ref_obj.strip()
+            text += f":data:`{ref_obj}`\n"
+            self.saved_examples[ref_obj].append(heading)
+        return text
+    
+
+
+class Ref_to_Examples(CustomTextDirective):
+    
+    
+    @staticmethod
+    def create_example_refs(name):
+        dic = Example_to_Ref.saved_examples
+        if name not in dic: return ""
+        refs = dic[name]
+        text = ".. topic :: Examples\n\n"
+        for ref in refs:
+            text += f"\t- :ref:`quickstart:{ref}`\n"
+        return text + "\n"
+    
+    def create_text(self):
+        assert len(self.content) == 1
+        return self.create_example_refs(self.content[0].strip())
         
