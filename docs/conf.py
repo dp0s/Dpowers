@@ -96,7 +96,7 @@ def my_skip_member(app, what, name, obj, skip, options):
 
 from Dhelpers.sphinx import ExecDirective, CustomTextDirective, ActiveCode,\
     Example_with_Refs, Ref_to_Examples
-from Dhelpers.adaptor import AdaptiveClassDirective, AdaptorDirective
+from Dhelpers.adaptor.sphinx_directives import AdaptiveClassDirective, AdaptorDirective
 
 ExecDirective.get_globals(globals())
 CustomTextDirective.get_globals(globals())
