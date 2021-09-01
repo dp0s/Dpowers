@@ -219,6 +219,8 @@ class CallbackHook(AdditionContainer.Addend, TimedObject):
             callback_func = lambda *args: None
         elif not callable(callback_func) and callback_func is not False:
             raise TypeError("callback_func must be callable, False or None")
+        else:
+            argcount = callback_func
         check_type(int, priority)
         check_type(bool, capture)
         self.callback_func = callback_func

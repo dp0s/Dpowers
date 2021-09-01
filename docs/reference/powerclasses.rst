@@ -30,11 +30,7 @@ Adaptive Classes
 Win / Win.Search
 ----------------
 
-.. topic:: Examples
-
-    - :ref:`quickstart:Click on a window to paste its properties to the clipboard`
-
-.. autoclass:: Dpowers.Win
+.. adaptiveclass:: Dpowers.Win
     :exclude-members: Search
 
 .. class:: Dpowers.Win.Search
@@ -45,26 +41,29 @@ Win / Win.Search
 .. autoclass:: Dpowers.windowpower.windowobjects.WindowSearch
     :no-inherited-members:
 
+
 Icon
 ----
 
-.. topic:: Examples
-
-    - :ref:`quickstart:Display a tray icon with customized menu`
-
-.. autoclass:: Dpowers.Icon
+.. adaptiveclass:: Dpowers.Icon
 
 
+TriggerManager
+------------------
 
-Image
-----------------------------------------
-.. autoclass:: Dpowers.Image
+
+.. adaptiveclass:: Dpowers.TriggerManager
+
 
 
 
 KeyWaiter
 -------------------
 
+.. adaptiveclass:: Dpowers.KeyWaiter
 
-.. autoclass:: Dpowers.KeyWaiter
 
+
+Image
+----------------------------------------
+.. adaptiveclass:: Dpowers.Image

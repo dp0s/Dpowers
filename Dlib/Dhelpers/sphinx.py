@@ -19,6 +19,7 @@
 
 import sys
 from os.path import basename
+from collections import defaultdict
 
 try:
     from StringIO import StringIO
@@ -65,7 +66,8 @@ class ExecDirective(Directive):
 
 
 
-class ImprovedExecDirective(Directive):
+class CustomTextDirective(Directive):
+    has_content = True
     
     @classmethod
     def get_globals(cls, globals):
@@ -77,7 +79,8 @@ class ImprovedExecDirective(Directive):
                 self.lineno - self.state_machine.input_offset - 1)
         tab_width = self.options.get('tab-width',
                 self.state.document.settings.tab_width)
-        text = self.create_text()
+        text = self.create_text() + "\n"
+                #always good to have another blank line
         lines = statemachine.string2lines(text, tab_width,
                 convert_whitespace=True)
         self.state_machine.insert_input(lines, source)
@@ -87,8 +90,7 @@ class ImprovedExecDirective(Directive):
         raise NotImplementedError
     
 
-class ActiveCode(ImprovedExecDirective):
-    has_content = True
+class ActiveCode(CustomTextDirective):
     
     def create_text(self):
         text = ".. code::\n\n"
@@ -121,4 +123,40 @@ class ActiveCode(ImprovedExecDirective):
             #print("append_lines", append_lines)
             for line in append_lines: text += "\t" + line + "\n"
         return text
-        
+    
+    
+    
+    
+class Example_with_Refs(CustomTextDirective):
+    
+    saved_examples = defaultdict(list)
+    
+    def create_text(self):
+        heading,reference_objects = self.content[0], self.content[1:]
+        text = f".. _{heading}:\n\n"
+        text += heading + "\n" + "-"*len(heading)
+        text += "\nReference:\n"
+        for ref_obj in reference_objects:
+            ref_obj = ref_obj.strip()
+            text += f":data:`{ref_obj}`\n"
+            self.saved_examples[ref_obj].append(heading)
+        return text
+    
+
+
+class Ref_to_Examples(CustomTextDirective):
+    
+    
+    @staticmethod
+    def create_example_refs(name):
+        dic = Example_with_Refs.saved_examples
+        if name not in dic: return ""
+        headings = dic[name]
+        text = ".. topic :: Examples\n\n"
+        for heading in headings:
+            text += f"\t- :ref:`{heading}`\n"
+        return text
+    
+    def create_text(self):
+        assert len(self.content) == 1
+        return self.create_example_refs(self.content[0].strip())

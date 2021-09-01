@@ -315,6 +315,7 @@ class KeyboardAdaptor(AdaptivePRSenderShifted):
         key belongs to it:
 
         .. activecode::
+        
             > keyb.key.group.arrow_keys
             keyb.key.group.arrow_keys
             > "up" in keyb.key.group.arrow_keys
@@ -323,5 +324,6 @@ class KeyboardAdaptor(AdaptivePRSenderShifted):
             False
             > 0 in keyb.key.group.digits
             True
+            
         """
         return self.NamedKeyClass.NameContainer

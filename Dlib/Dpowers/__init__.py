@@ -19,7 +19,8 @@
 
 
 __all__ = ["autoadapt", "keyb", "mouse", "ntfy", "dlg", "hook", "Icon", "Win",
-    "sendwait", "nfsendwait", "clip", "Dfuncs", "events", "KeyWaiter", "Image",
+    "sendwait", "nfsendwait", "clip", "Dfuncs", "events", "KeyWaiter",
+    "TriggerManager", "Image",
     "mp3tag", "sleep", "hotkeys","launch", "Layout","Dpowers", "Dhelpers"]
 
 import os, sys
@@ -85,7 +86,7 @@ try:
 
     from . import events
     from .events import keyb,mouse,hotkeys,hook, KeyWaiter, \
-        KeyboardAdaptor, MouseAdaptor, HookAdaptor, SenderAdaptor
+        KeyboardAdaptor, MouseAdaptor, HookAdaptor, SenderAdaptor, TriggerManager
 
     from .clipboardpower import ClipboardAdaptor
     clip = ClipboardAdaptor(_primary=True)

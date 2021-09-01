@@ -651,23 +651,6 @@ class AdaptorBase(KeepInstanceRefs):
         if global_instructions: print(global_instructions)
 
     @classmethod
-    def _print_sphinx_docs(cls):
-            cls.adapt.__doc__ = "Choose the backend for this instance. See " \
-                               ":func:`Adaptor.adapt`."
-            name = cls._get_primary_instance().creation_name
-            print(".. autodata:: Dpowers." + name)
-            print("\t:no-value:")
-            print(".. autoclass:: Dpowers." + cls.__name__)
-            print()
-            print("\t.. automethod:: adapt")
-            print()
-            print(f".. class:: Dpowers.{cls.__name__}.AdaptiveClass")
-            print()
-            print("\t\tA baseclass to create your own AdaptiveClasses. See \
-                :class:`Dpowers.AdaptiveClass`.")
-            print()
-
-    @classmethod
     def _create_import_instr(cls, name):
         doc =  "How to import::\n\n\tfrom Dpowers import "+name
         default_backends = cls._get_from_backend_source()
@@ -698,6 +681,7 @@ class AdaptorBase(KeepInstanceRefs):
                     if obj is subcls:
                         subcls.__visible_module__ = modname
                         subcls.__visible_name__  = name
+                        subcls.__visible_fullname__ = modname + "." + name
                         break
             except:
                 pass
@@ -755,13 +739,14 @@ class AdaptiveClass:
             aclss_ref += f"`{aclss.__visible_module__}.{aclss.__visible_name__}`"
         else:
             aclss_ref += f"`{aclss.__module__}.{aclss.__name__}`"
-        doc = "Subclass of :class:`Dpowers.AdaptiveClass`.\n\n" \
-              f"Adaptor subclass used internally: {aclss_ref}\n\n"
+        doc = f"Subclass of :class:`Dpowers.AdaptiveClass`.\n\n" \
+              f"Associated Adaptor class: {aclss_ref}\n\n"
         doc += aclss._create_import_instr(cls.__name__)
         if cls.__doc__: doc += cls.__doc__ + "\n\n"
         doc += f".. data:: adaptor\n\n\t*Class attribute.* An instance of " \
                f"{aclss_ref}, as explained in :attr:`AdaptiveClass.adaptor`.\n\n"
-        doc += ".. automethod:: adapt\n\n\tSee :func:`AdaptiveClass.adapt`." \
+        doc += ".. automethod:: adapt\n\n\tChoose the backend for this " \
+               "class. See :func:`AdaptiveClass.adapt`." \
                " For parameters see :func:`Dpowers.Adaptor.adapt`."
         cls.__doc__ = doc
     

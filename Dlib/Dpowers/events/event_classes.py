@@ -318,7 +318,8 @@ class PressReleaseMixin:
 class PressReleaseEvent(PressReleaseMixin, StringEvent):
     pass
     #__slots__ = ["press"]
-  
+
+@PressReleaseEvent.register
 class NamedPressReleaseEvent(PressReleaseMixin, NamedEvent):
     #__slots__ = ["press"]
     

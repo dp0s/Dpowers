@@ -31,8 +31,8 @@ class backends:
         
     class MouseAdaptor:
         default = pynput
-        Dfuncs = pynput
-        keywait = pynput
+        Dfuncs = default
+        keywait = default
         
     class WindowAdaptor:
         default = "xtools_bash"
