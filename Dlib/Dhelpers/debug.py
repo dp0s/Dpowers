@@ -52,7 +52,7 @@ class ThreadNode:
 def replace_threading_start():
   start_original = threading.Thread.start
   def start(self):
-    self.parent_node = ThreadNode(threading.current_thread(),self)
     self.child_nodes = []
+    self.parent_node = ThreadNode(threading.current_thread(),self)
     return start_original(self)
   threading.Thread.start = start
