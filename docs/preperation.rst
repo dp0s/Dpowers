@@ -3,12 +3,12 @@ Installation and Dependencies
 
 Install from PyPI::
 
-    $ pip install Dpowers
+    $ pip install -U Dpowers
 
 (This will automatically install the package 'Dhelpers' as a
 necessary dependency. All of Dhelpers' functions and classes can be used
 independently for your own projects, i.e. without the Dpowers package
-installed, via ``pip install Dhelpers``.)
+installed, via ``pip install -U Dhelpers``.)
 
 After first installation, you should try::
 

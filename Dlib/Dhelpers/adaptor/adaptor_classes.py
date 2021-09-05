@@ -20,9 +20,9 @@
 
 
 ### TODO: activate_autoadapt and exception handling.
-import importlib
 import inspect, functools, types, os, pkgutil, warnings
-from ..baseclasses import RememberInstanceCreationInfo, KeepInstanceRefs
+from ..baseclasses import RememberInstanceCreationInfo, KeepInstanceRefs, \
+    iter_all_vars
 from ..arghandling import (check_type, remove_first_arg, ArgSaver)
 from types import FunctionType
 from collections import defaultdict
@@ -269,15 +269,7 @@ class AdaptionMethod:
 
 
 def _get_AdaptionFuncPlaceholders(cls):
-    for name, obj in vars(cls).items():
-        if hasattr(obj,"_placeholder"): yield name
-    for basecls in cls.__bases__:
-        for name in _get_AdaptionFuncPlaceholders(basecls):
-            try:
-                obj = getattr(cls, name)
-            except AttributeError:
-                continue
-            if hasattr(obj,"_placeholder"): yield name
+    return set(iter_all_vars(cls,lambda obj: hasattr(obj, "_placeholder")))
                 
 
 class AdaptorBase(KeepInstanceRefs):
@@ -297,13 +289,13 @@ class AdaptorBase(KeepInstanceRefs):
         cls._subclass_level += 1
         cls.__visible_module__ = None
         cls.__visible_name__ = None
-        l = tuple(_get_AdaptionFuncPlaceholders(cls))
-        if l:
+        amethod_names = _get_AdaptionFuncPlaceholders(cls)
+        if amethod_names:
             # this means that this subclass can actually create instances
             if cls._subclass_level < 2:
                 raise SyntaxError("First-level Subclass of AdaptorBase is  "
                                   "not allowed to have adaptionmethods.")
-            cls.adaptionmethod_names = set(l)
+            cls.adaptionmethod_names = amethod_names
                 #this will inherit names already defined
             #cls.backend_classes = None
             cls.added_backend_names = {}

@@ -24,6 +24,20 @@ from Dhelpers.launcher import launch
 from abc import ABC, abstractmethod
 from inspect import signature
 
+
+def iter_all_vars(cls, condition):
+    for name, obj in vars(cls).items():
+        if condition(obj): yield name
+    for basecls in cls.__bases__:
+        if basecls is object: continue
+        for name in iter_all_vars(basecls, condition):
+            try:
+                obj = getattr(cls, name)
+            except AttributeError:
+                continue
+            if condition(obj): yield name
+    
+
 class KeepInstanceRefs:
     
     __instance_ref_dict__ = collections.defaultdict(list)

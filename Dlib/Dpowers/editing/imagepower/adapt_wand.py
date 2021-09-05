@@ -71,6 +71,10 @@ def size(obj, value):
 def colortype(obj, value):
     if value is None: return obj.type
     obj.type = value
+    
+def resample(obj, value_x, value_y):
+    return obj.resample(value_x, value_y)
+
 
 # def set_value(backend_obj, name, value = None):
 #     val_before = getattr(backend_obj, name)

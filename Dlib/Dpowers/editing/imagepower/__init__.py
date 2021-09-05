@@ -17,7 +17,7 @@
 #
 #
 from ..ressource_classes import EditorAdaptor, adaptionmethod, \
-    SingleResource, MultiResource
+    SingleResource, MultiResource, resource_property, resource_func
 from types import GeneratorType
 iter_types = (list,tuple,GeneratorType)
 
@@ -45,20 +45,29 @@ class ImageAdaptor(EditorAdaptor):
     @adaptionmethod
     def colortype(self, backend_obj, value=None):
         return self.colortype.target_with_args()
+    
+    @adaptionmethod
+    def resample(self, backend_obj, value_x, value_y=None):
+        if value_y is None: value_y = value_x
+        return self.resample.target(backend_obj, value_x, value_y)
 
 
 
 class ImageBase(SingleResource, ImageAdaptor.AdaptiveClass):
-    pass
-
-
-ImageBase.set_prop("compression", "compr")
-ImageBase.set_prop("compr_quality", "compression_quality", "comprqu",
-        "compr_q", "compr_qu", "comprq")
-ImageBase.set_prop("size")
-ImageBase.set_prop("resolution", "res")
-ImageBase.set_prop("colortype", "color","type")
-
+    
+    resolution = resource_property("resolution")
+    res = resolution
+    
+    compression = resource_property("compression")
+    compr = compression
+    
+    compr_quality = resource_property("compr_quality")
+    
+    size = resource_property("size")
+    
+    colortype = resource_property("colortype")
+    
+    resample = resource_func("resample")
 
 @ImageBase.make_multi_base
 class MultiImage(MultiResource):

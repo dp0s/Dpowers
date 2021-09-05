@@ -16,7 +16,8 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from ..ressource_classes import EditorAdaptor, adaptionmethod, SingleResource
+from ..ressource_classes import EditorAdaptor, adaptionmethod, \
+    SingleResource, resource_property, resource_func
 
 
 class mp3tagAdaptor(EditorAdaptor):
@@ -29,6 +30,5 @@ class mp3tagAdaptor(EditorAdaptor):
     
 class mp3tagBase(SingleResource, mp3tagAdaptor.AdaptiveClass):
     allowed_file_extensions = [".mp3"]
-
-
-mp3tagBase.set_prop("genre")
+    
+    genre = resource_property("genre")

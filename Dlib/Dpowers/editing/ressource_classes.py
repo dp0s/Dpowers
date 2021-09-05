@@ -18,8 +18,9 @@
 #
 from .. import Adaptor, adaptionmethod
 from types import GeneratorType
-import os
+import os, functools
 from Dhelpers.file_iteration import FileIterator
+from Dhelpers.baseclasses import iter_all_vars
 
 path = os.path
 
@@ -75,6 +76,34 @@ class EditorAdaptor(Adaptor):
     def close(self, backend_obj):
         self._check(backend_obj)
         self.close.target_with_args()
+        
+    #@adaptionmethod
+    #def forward_property(self, name, backend_obj, ):
+        
+
+
+def resource_property(name):
+    func = lambda self: self._get_rprop_val(name)
+    func.__name__ = name
+    func._resource = True
+    func = property(func)
+    @func.setter
+    def func(self, val):
+        return self._set_rprop_val(name, val)
+    return func
+
+
+def is_resource_property(obj):
+    return isinstance(obj, property) and hasattr(obj.fget,"_resource")
+
+def resource_func(name):
+    def func(self,*args,**kwargs): return self._rfunc(name,*args,**kwargs)
+    func.__name__ = name
+    func._resource = True
+    return func
+
+def is_resource_func(obj):
+    return callable(obj) and hasattr(obj,"_resource") and obj._resource is True
 
 
 
@@ -86,6 +115,14 @@ class Resource:
     
     allowed_file_extensions = None
 
+    
+    @classmethod
+    def list_resource_properties(cls):
+        return set(iter_all_vars(cls,is_resource_property))
+    
+    @classmethod
+    def list_resource_funcs(cls):
+        return set(iter_all_vars(cls, is_resource_func))
 
 
     def filepath_split(self):
@@ -152,17 +189,41 @@ class SingleResource(Resource):
     def make_multi_base(cls, MultiClass):
         """A decorator"""
         cls.multi_base = MultiClass
+        cls._set_multi(MultiClass)
         return MultiClass
-    
     
     def __init_subclass__(cls):
         super().__init_subclass__()
-        class multi(cls.multi_base):
+        cls._set_multi(cls.multi_base)
+        
+    @classmethod
+    def _set_multi(cls, multi_base):
+        class multi(multi_base):
             __qualname__ = f"{cls.__name__}.multi"
             __name__ = __qualname__
             __module__ = cls.__module__
             SingleClass = cls
+        for name in cls.list_resource_properties():
+            rp = resource_property(name)
+            setattr(multi,name,rp)
+        for name in cls.list_resource_funcs():
+            rf = resource_func(name)
+            setattr(multi,name,rf)
         cls.multi = multi
+        
+        
+    def _get_rprop_val(self, name):
+        amethod = getattr(self.adaptor, name)
+        return amethod(self.backend_obj)
+
+    def _set_rprop_val(self, name, val):
+        amethod = getattr(self.adaptor, name)
+        amethod(self.backend_obj, val)
+
+    def _rfunc(self, name, *args, **kwargs):
+        amethod = getattr(self.adaptor, name)
+        return amethod(self.backend_obj, *args, **kwargs)
+        
 
     def __init__(self, file=None, backend_obj=None, **load_kwargs):
         if isinstance(file, iter_types) or isinstance(backend_obj, iter_types):
@@ -197,7 +258,7 @@ class SingleResource(Resource):
     
     
     def close(self):
-        """Close the ressource"""
+        """Close the resource"""
         if self.backend_obj: self.adaptor.close(self.backend_obj)
         self.backend_obj = ClosedResource
     
@@ -213,65 +274,7 @@ class SingleResource(Resource):
     #         pass
     #     return NotImplemented
     
-    # def __getattr__(self, item):
-    #     try:
-    #         ret = getattr(self.backend_obj, item)
-    #     except AttributeError as e:
-    #         raise AttributeError(item, self)
-    #     warn(f"Using attr {item} of backend_obj instead of {self}.")
-    #     return ret
     
-    
-    
-
-    def _wrapper_func(self, adaptionmethod_name, *args, **kwargs):
-        amethod = getattr(self.adaptor, adaptionmethod_name)
-        return amethod(self.backend_obj, *args, **kwargs)
-    
-    # def _sequence_wrapper_func(self, adaptionmethod_name, *args, **kwargs):
-    #     amethod = getattr(self.adaptor, adaptionmethod_name)
-    #     val = amethod(self.backend_obj, *args,
-    #             **kwargs) if self.backend_obj else None
-    #     vals = tuple(amethod(single.backend_obj, *args, **kwargs) for single in
-    #         self.sequence)
-    #     return val, vals
-    
-    
-    @classmethod
-    def set_prop(cls, *names):
-        amethod_name = names[0]
-        assert hasattr(cls.adaptor_class, amethod_name)
-        @property
-        def wrapper_prop(self):
-            return self._wrapper_func(amethod_name)
-        @wrapper_prop.setter
-        def wrapper_prop(self,value):
-            return self._wrapper_func(amethod_name, value)
-        # @property
-        # def sequence_wrapper_prop(self):
-        #     return self._sequence_wrapper_prop(amethod_name)
-        # @sequence_wrapper_prop.setter
-        # def sequence_wrapper_prop(self, value):
-        #     return self._sequence_wrapper_prop(amethod_name, value)
-        for name in names:
-            setattr(cls, name, wrapper_prop)
-            #setattr(cls.Sequence, name, sequence_wrapper_prop)
-        
-        
-    
-    @classmethod
-    def set_func(cls, *names):
-        amethod_name = names[0]
-        assert hasattr(cls.adaptor_class, amethod_name)
-        def wrapper_func(self,*args,**kwargs):
-            return self._wrapper_func(amethod_name,*args,**kwargs)
-        def sequence_wrapper_func(self,*args,**kwargs):
-            return self._sequence_wrapper_func(amethod_name,*args,**kwargs)
-        wrapper_func.__name__ = amethod_name
-        sequence_wrapper_func.__name__ = amethod_name
-        for name in names:
-            setattr(cls, name, wrapper_func)
-            setattr(cls.Sequence, name, sequence_wrapper_func)
 
 
 
@@ -280,6 +283,18 @@ class MultiResource(Resource):
     
     SingleClass = None  # set by init subclass form Image class
     allowed_file_extensions = None #might differ from SingleClass
+    
+    
+    def _get_rprop_val(self, name):
+        return tuple(getattr(single,name) for single in self.sequence)
+
+    def _set_rprop_val(self, name, val):
+        for single in self.sequence: setattr(single,name,val)
+
+    def _rfunc(self, name, *args, **kwargs):
+        return tuple(getattr(single,name)(*args,**kwargs) for single in
+            self.sequence)
+        
     
     def __init__(self, file=None, **load_kwargs):
         self.file = file
@@ -363,29 +378,7 @@ class MultiResource(Resource):
         for im in self.sequence: im.close()
     
     
-    # def __getattr__(self, item):
-    #     if self.backend_obj:
-    #         return super().__getattr__(item)
-    #     else:
-    #         attrs = []
-    #         for im in self.sequence:
-    #             try:
-    #                 attrs.append(getattr(im,item))
-    #             except AttributeError:
-    #                 warn(f"Subimage {im} of ImageSequence {self} does not "
-    #                           f"have attr {item}.")
-    #         if not attrs: raise AttributeError(item)
-    #         if all(callable(a) for a in attrs):
-    #             def func(*args,**kwargs):
-    #                 ret = []
-    #                 for attr in attrs: ret.append(attr(*args,**kwargs))
-    #                 if all(r==ret[0] for r in ret): return ret[0]
-    #                 return ret
-    #             return func
-    #         elif all(a==attrs[0] for a in attrs):
-    #             return attrs[0]
-    #         else:
-    #             return attrs
+
     
     # def __getitem__(self, item):
     #     ims = self.sequence[item]
