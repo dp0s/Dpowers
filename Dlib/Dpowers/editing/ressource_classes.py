@@ -17,10 +17,12 @@
 #
 #
 from .. import Adaptor, adaptionmethod
+from Dhelpers.adaptor import AdaptionMethod
 from types import GeneratorType
 import os, functools
 from Dhelpers.file_iteration import FileIterator
 from Dhelpers.baseclasses import iter_all_vars
+from Dhelpers.named import NamedObj
 
 path = os.path
 
@@ -32,10 +34,48 @@ class ClosedResourceError(Exception): pass
 edit_tag = "__edit"
 
 
+class NamedResourceAttribute(NamedObj):
+    @classmethod
+    def _get_resource_objs(cls):
+        for inst in cls.get_instances():
+            rp = inst._get_resource_obj()
+            for name in inst.names: yield name, rp
+    def _get_resource_obj(self):
+        raise NotImplementedError
+
+
+class NamedProperty(NamedResourceAttribute):
+    def _get_resource_obj(self):
+        return resource_property(self.name)
+    
+
+class NamedFunc(NamedResourceAttribute):
+    def _get_resource_obj(self):
+        return resource_func(self.name)
+    
 
 class EditorAdaptor(Adaptor):
-    baseclass = True
-    save_in_place = False
+    
+    baseclass = True  #for Adaptor mechanism
+    
+    def __init_subclass__(cls):
+        super().__init_subclass__()
+        cls.NamedProperty = type(f"{cls.__name__}.NamedProperty",
+                (NamedProperty,),{})
+        cls.NamedFunc = type(f"{cls.__name__}.NamedFunc",
+                (NamedFunc,),{})
+    
+    save_in_place = False  #if False, automatically rename before saving
+    
+    @classmethod
+    def property_name_class(cls, decorated_class):
+        return cls.NamedProperty.update_names(decorated_class)
+
+    @classmethod
+    def func_name_class(cls, decorated_class):
+        return cls.NamedFunc.update_names(decorated_class)
+    
+    
     
     def _check(self, obj):
         if isinstance(obj, iter_types):
@@ -77,27 +117,81 @@ class EditorAdaptor(Adaptor):
         self._check(backend_obj)
         self.close.target_with_args()
         
-    #@adaptionmethod
-    #def forward_property(self, name, backend_obj, ):
+
+        
+    
+    def forward_property(self, name, backend_obj, value = None):
+        try:
+            name = self.NamedProperty.get_stnd_name(name)
+        except KeyError:
+            pass
+        try:
+            amethod = getattr(self,name)
+        except AttributeError:
+            pass
+        else:
+            if isinstance(amethod,AdaptionMethod):
+                return amethod(backend_obj, value)
+        if value is None: return getattr(backend_obj, name)
+        setattr(backend_obj, name, value)
+    
+    
+    def forward_func_call(self, name, backend_obj, *args, **kwargs):
+        try:
+            name = self.NamedFunc.get_stnd_name(name)
+        except KeyError:
+            pass
+        try:
+            amethod = getattr(self,name)
+        except AttributeError:
+            pass
+        else:
+            if isinstance(amethod,AdaptionMethod):
+                return amethod(backend_obj, *args,**kwargs)
+        return getattr(backend_obj, name)(*args,**kwargs)
         
 
 
+
+
+
 def resource_property(name):
-    func = lambda self: self._get_rprop_val(name)
+    func = lambda self: self.adaptor.forward_property(name,self.backend_obj)
     func.__name__ = name
     func._resource = True
     func = property(func)
     @func.setter
     def func(self, val):
-        return self._set_rprop_val(name, val)
+        return self.adaptor.forward_property(name,self.backend_obj, val)
     return func
 
+def multi_resource_property(name):
+    func = lambda self: tuple(getattr(single,name) for single in self.sequence)
+    func.__name__ = name
+    func._resource = True
+    func = property(func)
+    @func.setter
+    def func(self, val):
+        for single in self.sequence: setattr(single,name,val)
+    return func
 
 def is_resource_property(obj):
     return isinstance(obj, property) and hasattr(obj.fget,"_resource")
 
+
+
 def resource_func(name):
-    def func(self,*args,**kwargs): return self._rfunc(name,*args,**kwargs)
+    def func(self,*args,**kwargs):
+        return self.adaptor.forward_func_call(name,self.backend_obj, *args,
+                **kwargs)
+    func.__name__ = name
+    func._resource = True
+    return func
+
+def multi_resource_func(name):
+    def func(self,*args,**kwargs):
+        return tuple(getattr(single,name)(*args,**kwargs) for single in
+            self.sequence)
     func.__name__ = name
     func._resource = True
     return func
@@ -110,9 +204,8 @@ def is_resource_func(obj):
 class Resource:
     
     file = None
-    adaptor = None
-    adaptor_cls = None
-    
+    adaptor = None  #inherited as AdaptiveClass subclass
+
     allowed_file_extensions = None
 
     
@@ -194,8 +287,14 @@ class SingleResource(Resource):
     
     def __init_subclass__(cls):
         super().__init_subclass__()
+        acls = cls.adaptor_class
+        for name, res_prop in acls.NamedProperty._get_resource_objs():
+            setattr(cls,name,res_prop)
+        for name, res_func in acls.NamedFunc._get_resource_objs():
+            setattr(cls,name,res_func)
         cls._set_multi(cls.multi_base)
-        
+
+
     @classmethod
     def _set_multi(cls, multi_base):
         class multi(multi_base):
@@ -204,25 +303,12 @@ class SingleResource(Resource):
             __module__ = cls.__module__
             SingleClass = cls
         for name in cls.list_resource_properties():
-            rp = resource_property(name)
+            rp = multi_resource_property(name)
             setattr(multi,name,rp)
         for name in cls.list_resource_funcs():
-            rf = resource_func(name)
+            rf = multi_resource_func(name)
             setattr(multi,name,rf)
         cls.multi = multi
-        
-        
-    def _get_rprop_val(self, name):
-        amethod = getattr(self.adaptor, name)
-        return amethod(self.backend_obj)
-
-    def _set_rprop_val(self, name, val):
-        amethod = getattr(self.adaptor, name)
-        amethod(self.backend_obj, val)
-
-    def _rfunc(self, name, *args, **kwargs):
-        amethod = getattr(self.adaptor, name)
-        return amethod(self.backend_obj, *args, **kwargs)
         
 
     def __init__(self, file=None, backend_obj=None, **load_kwargs):
@@ -283,17 +369,6 @@ class MultiResource(Resource):
     
     SingleClass = None  # set by init subclass form Image class
     allowed_file_extensions = None #might differ from SingleClass
-    
-    
-    def _get_rprop_val(self, name):
-        return tuple(getattr(single,name) for single in self.sequence)
-
-    def _set_rprop_val(self, name, val):
-        for single in self.sequence: setattr(single,name,val)
-
-    def _rfunc(self, name, *args, **kwargs):
-        return tuple(getattr(single,name)(*args,**kwargs) for single in
-            self.sequence)
         
     
     def __init__(self, file=None, **load_kwargs):
