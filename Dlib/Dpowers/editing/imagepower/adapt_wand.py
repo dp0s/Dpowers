@@ -24,7 +24,7 @@ with DependencyManager(__name__) as manager:
 Image = im_mod.Image
 
 obj_class = Image
-
+names = ["compression", "compression_quality", "resolution", "size", "type"]
 
 def load(file, **kwargs):
     with Image(filename=file, **kwargs) as im:
@@ -52,31 +52,28 @@ def save(obj, destination):
 def close(obj):
     obj.destroy()
 
-def compression(obj, value):
-    if value is None: return obj.compression
-    obj.compression = value
-
-def compr_quality(obj, value):
-    if value is None: return obj.compression_quality
-    obj.compression_quality = value
-    
-def resolution(obj, value):
-    if value is None: return obj.resolution
-    obj.resolution = value
-
-def size(obj, value):
-    if value is None: return obj.size
-    obj.size = value
-    
-def colortype(obj, value):
-    if value is None: return obj.type
-    obj.type = value
-    
-def resample(obj, value_x, value_y):
-    return obj.resample(value_x, value_y)
 
 
-# def set_value(backend_obj, name, value = None):
-#     val_before = getattr(backend_obj, name)
-#     if value is None: return val_before
-#     return setattr(backend_obj, name, value)
+
+# def compression(obj, value):
+#     if value is None: return obj.compression
+#     obj.compression = value
+#
+# def compr_quality(obj, value):
+#     if value is None: return obj.compression_quality
+#     obj.compression_quality = value
+#
+# def resolution(obj, value):
+#     if value is None: return obj.resolution
+#     obj.resolution = value
+#
+# def size(obj, value):
+#     if value is None: return obj.size
+#     obj.size = value
+#
+# def colortype(obj, value):
+#     if value is None: return obj.type
+#     obj.type = value
+#
+# def resample(obj, value_x, value_y):
+#     return obj.resample(value_x, value_y)

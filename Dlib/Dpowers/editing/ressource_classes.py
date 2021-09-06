@@ -34,25 +34,11 @@ class ClosedResourceError(Exception): pass
 edit_tag = "__edit"
 
 
-class NamedResourceAttribute(NamedObj):
-    @classmethod
-    def _get_resource_objs(cls):
-        for inst in cls.get_instances():
-            rp = inst._get_resource_obj()
-            for name in inst.names: yield name, rp
-    def _get_resource_obj(self):
-        raise NotImplementedError
-
-
-class NamedProperty(NamedResourceAttribute):
-    def _get_resource_obj(self):
-        return resource_property(self.name)
+class NamedAttribute(NamedObj):
+    pass
     
 
-class NamedFunc(NamedResourceAttribute):
-    def _get_resource_obj(self):
-        return resource_func(self.name)
-    
+
 
 class EditorAdaptor(Adaptor):
     
@@ -60,22 +46,20 @@ class EditorAdaptor(Adaptor):
     
     def __init_subclass__(cls):
         super().__init_subclass__()
-        cls.NamedProperty = type(f"{cls.__name__}.NamedProperty",
-                (NamedProperty,),{})
-        cls.NamedFunc = type(f"{cls.__name__}.NamedFunc",
-                (NamedFunc,),{})
+        cls.NamedAttribute = type(f"{cls.__name__}.NamedAttribute",
+                (NamedAttribute,),{})
     
     save_in_place = False  #if False, automatically rename before saving
     
-    @classmethod
-    def property_name_class(cls, decorated_class):
-        return cls.NamedProperty.update_names(decorated_class)
-
-    @classmethod
-    def func_name_class(cls, decorated_class):
-        return cls.NamedFunc.update_names(decorated_class)
+    # @classmethod
+    # def property_name_class(cls, decorated_class):
+    #     return cls.NamedProperty.update_names(decorated_class)
+    #
+    # @classmethod
+    # def func_name_class(cls, decorated_class):
+    #     return cls.NamedFunc.update_names(decorated_class)
     
-    
+    _effective_dict = {}
     
     def _check(self, obj):
         if isinstance(obj, iter_types):
@@ -91,6 +75,16 @@ class EditorAdaptor(Adaptor):
         return backend_object
     
     obj_class = load.adaptive_property("obj_class", NotImplementedError)
+    names = load.adaptive_property("names", default={}, ty=(dict, list, tuple))
+    
+    @load.target_modifier
+    def _load_tm(self, target):
+        self.create_effective_dict()
+        return target
+    
+    def create_effective_dict(self):
+        self._effective_dict = self.NamedAttribute.StandardizingDict(
+                self.names)
     
     @adaptionmethod
     def load_multi(self, file, **load_kwargs):
@@ -116,8 +110,26 @@ class EditorAdaptor(Adaptor):
     def close(self, backend_obj):
         self._check(backend_obj)
         self.close.target_with_args()
-        
-
+    
+    
+    def get_obj(self, name):
+        try:
+            name = self.NamedAttribute.instance(name)
+        except KeyError:
+            pass
+        try:
+            amethod = getattr(self,name)
+        except AttributeError:
+            pass
+        else:
+            if isinstance(amethod,AdaptionMethod): return amethod
+        backend_name = self._effective_dict.apply(name)
+        try:
+            obj = getattr(self.obj_class,backend_name)
+        except AttributeError:
+            return False
+        if callable(obj): return obj
+        return True
         
     
     def forward_property(self, name, backend_obj, value = None):
@@ -155,10 +167,11 @@ class EditorAdaptor(Adaptor):
 
 
 
-def resource_property(name):
+def resource_property(name, *names):
     func = lambda self: self.adaptor.forward_property(name,self.backend_obj)
     func.__name__ = name
     func._resource = True
+    func._names = names
     func = property(func)
     @func.setter
     def func(self, val):
@@ -207,7 +220,6 @@ class Resource:
     adaptor = None  #inherited as AdaptiveClass subclass
 
     allowed_file_extensions = None
-
     
     @classmethod
     def list_resource_properties(cls):
@@ -288,10 +300,6 @@ class SingleResource(Resource):
     def __init_subclass__(cls):
         super().__init_subclass__()
         acls = cls.adaptor_class
-        for name, res_prop in acls.NamedProperty._get_resource_objs():
-            setattr(cls,name,res_prop)
-        for name, res_func in acls.NamedFunc._get_resource_objs():
-            setattr(cls,name,res_func)
         cls._set_multi(cls.multi_base)
 
 
@@ -347,6 +355,13 @@ class SingleResource(Resource):
         """Close the resource"""
         if self.backend_obj: self.adaptor.close(self.backend_obj)
         self.backend_obj = ClosedResource
+        
+        
+
+    def __getattr__(self, item):
+        obj = self.adaptor.get_obj(item)
+        if obj is False :raise AttributeError(item)
+        return getattr(self.backend_obj,item)
     
     
     # def __add__(self, other):

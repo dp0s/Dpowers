@@ -20,7 +20,6 @@ from ..ressource_classes import EditorAdaptor, adaptionmethod, \
     SingleResource, MultiResource, resource_property, resource_func
 from types import GeneratorType
 iter_types = (list,tuple,GeneratorType)
-from .names import ImageProperties
 
 
 
@@ -32,14 +31,18 @@ class ImageAdaptor(EditorAdaptor):
         return self.resample.target(backend_obj, value_x, value_y)
 
 
-ImageAdaptor.property_name_class(ImageProperties)
-
-
 
 
 class ImageBase(SingleResource, ImageAdaptor.AdaptiveClass):
-    
-    resample = resource_func("resample")
+    pass
+    # compression = resource_property("compression", "compr")
+    # compr_quality = "compr_quality", "compression_quality"
+    # resolution = "resolution", "res"
+    # colortype = "type", "colortype"
+    # size = "size"
+    #
+    #
+    # resample = resource_func("resample")
     
 
 
