@@ -34,8 +34,8 @@ class ClosedResourceError(Exception): pass
 edit_tag = "__edit"
 
 
-class NamedAttribute(NamedObj):
-    pass
+# class NamedAttribute(NamedObj):
+#     pass
     
 
 
@@ -44,10 +44,10 @@ class EditorAdaptor(Adaptor):
     
     baseclass = True  #for Adaptor mechanism
     
-    def __init_subclass__(cls):
-        super().__init_subclass__()
-        cls.NamedAttribute = type(f"{cls.__name__}.NamedAttribute",
-                (NamedAttribute,),{})
+    # def __init_subclass__(cls):
+    #     super().__init_subclass__()
+    #     cls.NamedAttribute = type(f"{cls.__name__}.NamedAttribute",
+    #             (NamedAttribute,),{})
     
     save_in_place = False  #if False, automatically rename before saving
     
@@ -59,7 +59,6 @@ class EditorAdaptor(Adaptor):
     # def func_name_class(cls, decorated_class):
     #     return cls.NamedFunc.update_names(decorated_class)
     
-    _effective_dict = {}
     
     def _check(self, obj):
         if isinstance(obj, iter_types):
@@ -75,16 +74,16 @@ class EditorAdaptor(Adaptor):
         return backend_object
     
     obj_class = load.adaptive_property("obj_class", NotImplementedError)
-    names = load.adaptive_property("names", default={}, ty=(dict, list, tuple))
+    names = load.adaptive_property("names", default={}, ty=dict)
     
-    @load.target_modifier
-    def _load_tm(self, target):
-        self.create_effective_dict()
-        return target
-    
-    def create_effective_dict(self):
-        self._effective_dict = self.NamedAttribute.StandardizingDict(
-                self.names)
+    # @load.target_modifier
+    # def _load_tm(self, target):
+    #     self.create_effective_dict()
+    #     return target
+    #
+    # def create_effective_dict(self):
+    #     self._effective_dict = self.NamedAttribute.StandardizingDict(
+    #             self.names)
     
     @adaptionmethod
     def load_multi(self, file, **load_kwargs):
@@ -110,33 +109,9 @@ class EditorAdaptor(Adaptor):
     def close(self, backend_obj):
         self._check(backend_obj)
         self.close.target_with_args()
-    
-    
-    def get_obj(self, name):
-        try:
-            name = self.NamedAttribute.instance(name)
-        except KeyError:
-            pass
-        try:
-            amethod = getattr(self,name)
-        except AttributeError:
-            pass
-        else:
-            if isinstance(amethod,AdaptionMethod): return amethod
-        backend_name = self._effective_dict.apply(name)
-        try:
-            obj = getattr(self.obj_class,backend_name)
-        except AttributeError:
-            return False
-        if callable(obj): return obj
-        return True
         
     
     def forward_property(self, name, backend_obj, value = None):
-        try:
-            name = self.NamedProperty.get_stnd_name(name)
-        except KeyError:
-            pass
         try:
             amethod = getattr(self,name)
         except AttributeError:
@@ -144,15 +119,12 @@ class EditorAdaptor(Adaptor):
         else:
             if isinstance(amethod,AdaptionMethod):
                 return amethod(backend_obj, value)
-        if value is None: return getattr(backend_obj, name)
-        setattr(backend_obj, name, value)
+        backend_name = self.names.get(name, name)
+        if value is None: return getattr(backend_obj, backend_name)
+        setattr(backend_obj, backend_name, value)
     
     
     def forward_func_call(self, name, backend_obj, *args, **kwargs):
-        try:
-            name = self.NamedFunc.get_stnd_name(name)
-        except KeyError:
-            pass
         try:
             amethod = getattr(self,name)
         except AttributeError:
@@ -160,7 +132,8 @@ class EditorAdaptor(Adaptor):
         else:
             if isinstance(amethod,AdaptionMethod):
                 return amethod(backend_obj, *args,**kwargs)
-        return getattr(backend_obj, name)(*args,**kwargs)
+        backend_name = self.names.get(name, name)
+        return getattr(backend_obj, backend_name)(*args,**kwargs)
         
 
 
@@ -170,6 +143,7 @@ class EditorAdaptor(Adaptor):
 def resource_property(name, *names):
     func = lambda self: self.adaptor.forward_property(name,self.backend_obj)
     func.__name__ = name
+    func.__qualname__ = name
     func._resource = True
     func._names = names
     func = property(func)
@@ -181,6 +155,7 @@ def resource_property(name, *names):
 def multi_resource_property(name):
     func = lambda self: tuple(getattr(single,name) for single in self.sequence)
     func.__name__ = name
+    func.__qualname__ = name
     func._resource = True
     func = property(func)
     @func.setter
@@ -193,12 +168,14 @@ def is_resource_property(obj):
 
 
 
-def resource_func(name):
+def resource_func(name, *names):
     def func(self,*args,**kwargs):
         return self.adaptor.forward_func_call(name,self.backend_obj, *args,
                 **kwargs)
     func.__name__ = name
+    func.__qualname__ = name
     func._resource = True
+    func._names = names
     return func
 
 def multi_resource_func(name):
@@ -206,11 +183,14 @@ def multi_resource_func(name):
         return tuple(getattr(single,name)(*args,**kwargs) for single in
             self.sequence)
     func.__name__ = name
+    func.__qualname__ = name
     func._resource = True
     return func
 
 def is_resource_func(obj):
     return callable(obj) and hasattr(obj,"_resource") and obj._resource is True
+
+
 
 
 
@@ -220,6 +200,7 @@ class Resource:
     adaptor = None  #inherited as AdaptiveClass subclass
 
     allowed_file_extensions = None
+    attr_redirections = None
     
     @classmethod
     def list_resource_properties(cls):
@@ -229,6 +210,18 @@ class Resource:
     def list_resource_funcs(cls):
         return set(iter_all_vars(cls, is_resource_func))
 
+    @classmethod
+    def _update_redirections(cls):
+        cls.attr_redirections = {}
+        for name in cls.list_resource_properties():
+            cls.attr_redirections[name] = name
+            names = getattr(cls,name).fget._names
+            for n in names: cls.attr_redirections[n] = name
+        for name in cls.list_resource_funcs():
+            cls.attr_redirections[name] = name
+            names = getattr(cls,name)._names
+            for n in names: cls.attr_redirections[n] = name
+        return cls.attr_redirections
 
     def filepath_split(self):
         folder, filename = path.split(self.file)
@@ -285,6 +278,21 @@ class Resource:
         raise NotImplementedError
     
     
+    def __getattr__(self, item):
+        try:
+            redirected = self.attr_redirections[item]
+        except KeyError:
+            raise AttributeError(item)
+        return self.__getattribute__(redirected)
+    
+    def __setattr__(self, key, value):
+        try:
+            key = self.attr_redirections[key]
+        except KeyError:
+            pass
+        super().__setattr__(key,value)
+
+    
     
 class SingleResource(Resource):
     
@@ -299,9 +307,10 @@ class SingleResource(Resource):
     
     def __init_subclass__(cls):
         super().__init_subclass__()
-        acls = cls.adaptor_class
+        cls._update_redirections()
         cls._set_multi(cls.multi_base)
-
+    
+    
 
     @classmethod
     def _set_multi(cls, multi_base):
@@ -310,6 +319,7 @@ class SingleResource(Resource):
             __name__ = __qualname__
             __module__ = cls.__module__
             SingleClass = cls
+            attr_redirections = cls.attr_redirections
         for name in cls.list_resource_properties():
             rp = multi_resource_property(name)
             setattr(multi,name,rp)
@@ -355,13 +365,6 @@ class SingleResource(Resource):
         """Close the resource"""
         if self.backend_obj: self.adaptor.close(self.backend_obj)
         self.backend_obj = ClosedResource
-        
-        
-
-    def __getattr__(self, item):
-        obj = self.adaptor.get_obj(item)
-        if obj is False :raise AttributeError(item)
-        return getattr(self.backend_obj,item)
     
     
     # def __add__(self, other):

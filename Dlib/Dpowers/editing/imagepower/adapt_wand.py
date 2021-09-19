@@ -24,7 +24,7 @@ with DependencyManager(__name__) as manager:
 Image = im_mod.Image
 
 obj_class = Image
-names = ["compression", "compression_quality", "resolution", "size", "type"]
+names = {"compr_quality": "compression_quality", "colortype":"type"}
 
 def load(file, **kwargs):
     with Image(filename=file, **kwargs) as im:

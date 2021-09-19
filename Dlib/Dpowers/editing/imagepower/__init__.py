@@ -34,15 +34,15 @@ class ImageAdaptor(EditorAdaptor):
 
 
 class ImageBase(SingleResource, ImageAdaptor.AdaptiveClass):
-    pass
-    # compression = resource_property("compression", "compr")
-    # compr_quality = "compr_quality", "compression_quality"
-    # resolution = "resolution", "res"
-    # colortype = "type", "colortype"
-    # size = "size"
-    #
-    #
-    # resample = resource_func("resample")
+    
+    compression = resource_property("compression", "compr")
+    compr_quality = resource_property("compr_quality", "compression_quality")
+    resolution = resource_property("resolution", "res")
+    colortype = resource_property("colortype", "ctype")
+    size = resource_property("size")
+
+
+    resample = resource_func("resample")
     
 
 
