@@ -29,21 +29,30 @@ class ImageAdaptor(EditorAdaptor):
     def resample(self, backend_obj, value_x, value_y=None):
         if value_y is None: value_y = value_x
         return self.resample.target(backend_obj, value_x, value_y)
+    
+    
 
-
-
+@ImageAdaptor.Values_for_Property("colortype")
+class ColortypeNames:
+    gray = "gray", "grayscale"
+    
 
 class ImageBase(SingleResource, ImageAdaptor.AdaptiveClass):
     
     compression = resource_property("compression", "compr")
-    compr_quality = resource_property("compr_quality", "compression_quality")
+    compr_quality = resource_property("compr_quality", "compression_quality",
+            "quality", "qual")
     resolution = resource_property("resolution", "res")
-    colortype = resource_property("colortype", "ctype")
+    colortype = resource_property("colortype", "ctype", "color")
     size = resource_property("size")
-
 
     resample = resource_func("resample")
     
+
+
+
+
+
 
 
 @ImageBase.make_multi_base

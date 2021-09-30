@@ -34,30 +34,34 @@ class ClosedResourceError(Exception): pass
 edit_tag = "__edit"
 
 
-# class NamedAttribute(NamedObj):
-#     pass
+class NamedValue(NamedObj):
+     pass
     
 
 
 
 class EditorAdaptor(Adaptor):
     
+    property_value_dict = None
+    named_classes = dict()
+    
+    
+    @classmethod
+    def Values_for_Property(cls, property_name):
+        NamedClass = type(f"NamedValue_for_property_{property_name}",
+                (NamedValue,), {})
+        cls.named_classes[property_name] = NamedClass
+        def decorator(container_class):
+            NamedClass.update_names(container_class)
+        return decorator
+    
     baseclass = True  #for Adaptor mechanism
     
     # def __init_subclass__(cls):
     #     super().__init_subclass__()
-    #     cls.NamedAttribute = type(f"{cls.__name__}.NamedAttribute",
-    #             (NamedAttribute,),{})
+    #     cls.NamedValue = type(f"{cls.__name__}.NamedValue", (NamedValueBase,),{})
     
     save_in_place = False  #if False, automatically rename before saving
-    
-    # @classmethod
-    # def property_name_class(cls, decorated_class):
-    #     return cls.NamedProperty.update_names(decorated_class)
-    #
-    # @classmethod
-    # def func_name_class(cls, decorated_class):
-    #     return cls.NamedFunc.update_names(decorated_class)
     
     
     def _check(self, obj):
@@ -75,16 +79,25 @@ class EditorAdaptor(Adaptor):
     
     obj_class = load.adaptive_property("obj_class", NotImplementedError)
     names = load.adaptive_property("names", default={}, ty=dict)
-    
-    # @load.target_modifier
-    # def _load_tm(self, target):
-    #     self.create_effective_dict()
-    #     return target
-    #
-    # def create_effective_dict(self):
-    #     self._effective_dict = self.NamedAttribute.StandardizingDict(
-    #             self.names)
-    
+    value_names = load.adaptive_property("value_names", {}, dict)
+
+    @load.target_modifier
+    def _load_tm(self, target):
+        self.create_effective_dict()
+        return target
+
+    def create_effective_dict(self):
+        self.property_value_dict = dict()
+        for prop_name, NamedCls in self.named_classes.items():
+            stand_dict = NamedCls.StandardizingDict()
+            try:
+                value_list = self.value_names[prop_name]
+            except KeyError:
+                pass
+            else:
+                stand_dict.update(value_list)
+            self.property_value_dict[prop_name] = stand_dict
+
     @adaptionmethod
     def load_multi(self, file, **load_kwargs):
         backend_objects = self._check(self.load_multi.target_with_args())
@@ -112,6 +125,13 @@ class EditorAdaptor(Adaptor):
         
     
     def forward_property(self, name, backend_obj, value = None):
+        if self.property_value_dict and value is not None:
+            try:
+                stand_dict = self.property_value_dict[name]
+            except KeyError:
+                pass
+            else:
+                value = stand_dict.apply(value)
         try:
             amethod = getattr(self,name)
         except AttributeError:
@@ -120,7 +140,18 @@ class EditorAdaptor(Adaptor):
             if isinstance(amethod,AdaptionMethod):
                 return amethod(backend_obj, value)
         backend_name = self.names.get(name, name)
-        if value is None: return getattr(backend_obj, backend_name)
+        if value is None:
+            ret = getattr(backend_obj, backend_name)
+            try:
+                NamedCls = self.named_classes[name]
+            except KeyError:
+                pass
+            else:
+                try:
+                    ret = NamedCls.get_stnd_name(ret)
+                except KeyError:
+                    pass
+            return ret
         setattr(backend_obj, backend_name, value)
     
     
@@ -134,18 +165,18 @@ class EditorAdaptor(Adaptor):
                 return amethod(backend_obj, *args,**kwargs)
         backend_name = self.names.get(name, name)
         return getattr(backend_obj, backend_name)(*args,**kwargs)
-        
+    
 
 
 
 
-
-def resource_property(name, *names):
-    func = lambda self: self.adaptor.forward_property(name,self.backend_obj)
+def resource_property(name, *name_alias):
+    def func(self):
+        return self.adaptor.forward_property(name,self.backend_obj)
     func.__name__ = name
     func.__qualname__ = name
     func._resource = True
-    func._names = names
+    func._names = name_alias
     func = property(func)
     @func.setter
     def func(self, val):
@@ -153,7 +184,15 @@ def resource_property(name, *names):
     return func
 
 def multi_resource_property(name):
-    func = lambda self: tuple(getattr(single,name) for single in self.sequence)
+    def func(self):
+        ret = []
+        same = True
+        for single in self.sequence:
+            this = getattr(single,name)
+            ret.append(this)
+            if this is not ret[0]: same=False
+        if same: return ret[0]
+        return ret
     func.__name__ = name
     func.__qualname__ = name
     func._resource = True
@@ -180,8 +219,14 @@ def resource_func(name, *names):
 
 def multi_resource_func(name):
     def func(self,*args,**kwargs):
-        return tuple(getattr(single,name)(*args,**kwargs) for single in
-            self.sequence)
+        ret = []
+        same = True
+        for single in self.sequence:
+            this = getattr(single, name)(*args,**kwargs)
+            ret.append(this)
+            if this is not ret[0]: same = False
+        if same: return ret[0]
+        return ret
     func.__name__ = name
     func.__qualname__ = name
     func._resource = True
