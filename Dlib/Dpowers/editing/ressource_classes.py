@@ -20,6 +20,7 @@ from .. import Adaptor, adaptionmethod
 from Dhelpers.adaptor import AdaptionMethod
 from types import GeneratorType
 import os, functools, warnings
+from types import FunctionType
 from Dhelpers.file_iteration import FileIterator
 from Dhelpers.baseclasses import iter_all_vars
 from Dhelpers.named import NamedObj
@@ -213,15 +214,7 @@ def resource_property(name, *name_alias):
     return func
 
 def multi_resource_property(name):
-    def func(self):
-        ret = []
-        same = True
-        for single in self.sequence:
-            this = getattr(single,name)
-            ret.append(this)
-            if this is not ret[0]: same=False
-        if same: return ret[0]
-        return ret
+    func = lambda self: self.get_from_single(name)
     func.__name__ = name
     func.__qualname__ = name
     func._resource = True
@@ -236,26 +229,31 @@ def is_resource_property(obj):
 
 
 
-def resource_func(name, *names):
-    def func(self,*args,**kwargs):
-        return self.adaptor.forward_func_call(name,self.backend_obj, *args,
-                **kwargs)
-    func.__name__ = name
-    func.__qualname__ = name
-    func._resource = True
-    func._names = names
-    return func
+def resource_func(name_or_func, *names):
+    """A decorator to create resource_funcs"""
+    if isinstance(name_or_func, FunctionType):
+        inp_func = name_or_func
+        name = inp_func.__name__
+        def func(self, *args, **kwargs):
+            args, kwargs = inp_func(self,*args,**kwargs)
+            return self.adaptor.forward_func_call(name, self.backend_obj, *args,
+                    **kwargs)
+        func.__name__ = name
+        func.__qualname__ = name
+        func._resource = True
+        func._names = names
+        func._inp_func = inp_func
+        return func
+    if isinstance(name_or_func, str):
+        def decorator(inp_func):
+            return resource_func(inp_func, name_or_func,*names)
+        return decorator
+    raise TypeError
+    
 
 def multi_resource_func(name):
     def func(self,*args,**kwargs):
-        ret = []
-        same = True
-        for single in self.sequence:
-            this = getattr(single, name)(*args,**kwargs)
-            ret.append(this)
-            if this is not ret[0]: same = False
-        if same: return ret[0]
-        return ret
+        return self.get_from_single(name,True,*args,**kwargs)
     func.__name__ = name
     func.__qualname__ = name
     func._resource = True
@@ -472,6 +470,7 @@ class MultiResource(Resource):
     
     SingleClass = None  # set by init subclass form Image class
     allowed_file_extensions = None #might differ from SingleClass
+    _inst_attributes = "file", "sequence", "backend_obj"
         
     
     def __init__(self, file=None, **load_kwargs):
@@ -522,23 +521,6 @@ class MultiResource(Resource):
                     raise ValueError("Could not find destination name.")
             destinations.append(single._save(dest))
         return destinations
-        
-    
-    
-    
-    # def __init__(self, files=None, images=None, **load_kwargs):
-    #     self.files = files
-    #     if files:
-    #         check_type(iter_types, files)
-    #         assert images is None
-    #         self.sequence = tuple(
-    #                 self.SingleClass(file=f, **load_kwargs) for f in files)
-    #     elif images:
-    #         assert files is None
-    #         assert load_kwargs == {}
-    #         check_type(CollectionWithProps(self.SingleClass, minlen=1), images)
-    #         self.sequence = images
-    #     self.backend_obj = self.construct_backend_obj()
     
     
     @property
@@ -554,23 +536,26 @@ class MultiResource(Resource):
     
     def close(self):
         for im in self.sequence: im.close()
+        
+    def get_from_single(self, name, func = False, *args, **kwargs):
+        ret = []
+        same = True
+        for single in self.sequence:
+            this = getattr(single,name)
+            if func: this = this(*args, **kwargs)
+            ret.append(this)
+            if this is not ret[0]: same=False
+        if same: return ret[0]
+        return ret
     
     
-
+    def __getattr__(self, key):
+        if key not in self._inst_attributes:
+            try:
+                ret = self.get_from_single(key)
+            except AttributeError:
+                pass
+            else:
+                return ret
+        raise AttributeError(key)
     
-    # def __getitem__(self, item):
-    #     ims = self.sequence[item]
-    #     if isinstance(item, int):
-    #         check_type(self.SingleClass, ims)
-    #         return ims
-    #     if isinstance(item, slice):
-    #         return self.__class__(images=ims)
-    #     raise NotImplementedError
-    #
-    # def __eq__(self, other):
-    #     if isinstance(other, self.__class__):
-    #         return self.sequence == other.sequence
-    #     return NotImplemented
-    #
-    # def __hash__(self):
-    #     return hash(self.sequence)

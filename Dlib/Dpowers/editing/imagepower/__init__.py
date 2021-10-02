@@ -25,10 +25,7 @@ iter_types = (list,tuple,GeneratorType)
 
 class ImageAdaptor(EditorAdaptor):
     
-    @adaptionmethod
-    def resample(self, backend_obj, value_x, value_y=None):
-        if value_y is None: value_y = value_x
-        return self.resample.target(backend_obj, value_x, value_y)
+    pass
 
 
 
@@ -40,9 +37,12 @@ class ImageBase(SingleResource, ImageAdaptor.AdaptiveClass):
     resolution = resource_property("resolution", "res")
     colortype = resource_property("colortype", "ctype", "type")
     size = resource_property("size")
-    colorspace = resource_property("colorspace", "cspace")
+    colorspace = resource_property("colorspace", "cspace", "color")
 
-    resample = resource_func("resample")
+    @resource_func("res")
+    def resample(self,value_x, value_y=None, *args,**kwargs):
+        if value_y is None: value_y = value_x
+        return (value_x, value_y, *args), kwargs
 
 
 
