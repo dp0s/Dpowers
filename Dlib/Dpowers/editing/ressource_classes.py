@@ -16,6 +16,8 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
+import inspect
+
 from .. import Adaptor, adaptionmethod
 from Dhelpers.adaptor import AdaptionMethod
 from types import GeneratorType
@@ -127,14 +129,24 @@ class EditorAdaptor(Adaptor):
         self._check(backend_obj)
         self.close.target_with_args()
     
-    def _check_amethod(self, name):
+    def _check_method(self, name):
+        method = None
         try:
             amethod = getattr(self,name)
         except AttributeError:
             pass
         else:
-            if isinstance(amethod,AdaptionMethod): return amethod
-        return False
+            if isinstance(amethod,AdaptionMethod): method = amethod
+        if method is None:
+            target_space = self.load.target_space
+            try:
+                method = getattr(target_space, name)
+            except AttributeError:
+                return False, False
+        if not callable(method): return False, False
+        argnum = len(inspect.signature(method).parameters)
+        if argnum < 2: raise TypeError
+        return method, argnum
     
     def forward_property(self, name, backend_obj, value = None):
         if self.property_value_dict and value is not None:
@@ -144,8 +156,10 @@ class EditorAdaptor(Adaptor):
                 pass
             else:
                 value = stand_dict.apply(value)
-        amethod = self._check_amethod(name)
-        if amethod: return amethod(backend_obj, value)
+        method, argnum = self._check_method(name)
+        if method:
+            assert argnum == 2
+            return method(backend_obj, value)
         backend_name = self.names.get(name, name)
         if value is None:
             ret = getattr(backend_obj, backend_name)
@@ -163,8 +177,8 @@ class EditorAdaptor(Adaptor):
     
     
     def forward_func_call(self, name, backend_obj, *args, **kwargs):
-        amethod = self._check_amethod(name)
-        if amethod: return amethod(backend_obj, *args,**kwargs)
+        method, argnum = self._check_method(name)
+        if method: return method(backend_obj, *args,**kwargs)
         backend_name = self.names.get(name, name)
         return getattr(backend_obj, backend_name)(*args,**kwargs)
     
@@ -182,6 +196,10 @@ class EditorAdaptor(Adaptor):
         return backend_name, attr_type
 
     def get_unknown(self, name, backend_obj):
+        method, argnum = self._check_method(name)
+        if method:
+            if argnum == 2: return method(backend_obj, None)
+            return functools.partial(method,backend_obj)
         backend_name, attr_type = self._inspect_unkown(name)
         return getattr(backend_obj, backend_name)
             #this might raise Attribute error
@@ -189,6 +207,10 @@ class EditorAdaptor(Adaptor):
             # property
         
     def set_unknown(self, name, backend_obj, value):
+        method, argnum = self._check_method(name)
+        if method:
+            method(backend_obj, value)
+            return True
         try:
             backend_name, attr_type = self._inspect_unkown(name)
         except AttributeError:

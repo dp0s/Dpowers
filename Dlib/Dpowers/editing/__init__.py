@@ -38,8 +38,3 @@ class playlist_creator(FileSelector):
     editor_class = mp3tag
     file_extension = ".m3u"
     file_start = "#EXTM3U"
-    
-    @staticmethod
-    def default_selection_func(obj, genre=None, case_sensitive=False):
-        if case_sensitive: return genre in obj.genre
-        return genre.lower() in obj.genre.lower()

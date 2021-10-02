@@ -21,14 +21,14 @@ from ..ressource_classes import EditorAdaptor, adaptionmethod, \
 
 
 class mp3tagAdaptor(EditorAdaptor):
-    
-    @adaptionmethod
-    def genre(self, backend_obj, value=None):
-        return self.genre.target_with_args()
-    
+    pass
     
     
 class mp3tagBase(SingleResource, mp3tagAdaptor.AdaptiveClass):
     allowed_file_extensions = [".mp3"]
     
+    
+    title = resource_property("title")
     genre = resource_property("genre")
+    artist = resource_property("artist")
+    album = resource_property("album")

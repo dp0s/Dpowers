@@ -91,10 +91,21 @@ class FileSelector:
     
     def add(self, name, func=None, **kwargs):
         self.playlists[name] = (func, kwargs)
-    
+
     @staticmethod
-    def default_selection_func(obj, kwargs):
-        raise NotImplementedError
+    def default_selection_func(obj, case_sensitive=False, exact_match=False,
+            **kwargs):
+        for attr_name, value in kwargs.items():
+            string = str(getattr(obj, attr_name))
+            value = str(value)
+            if not case_sensitive:
+                value = value.lower()
+                string = string.lower()
+            if exact_match:
+                if value != string: return False
+            else:
+                if value not in string: return False
+        return True
     
     def find_files(self, *names, suppress_error=False, warn=True):
         for dirpath, _, files in os.walk(self.basepath):
