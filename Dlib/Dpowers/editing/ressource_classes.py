@@ -19,7 +19,7 @@
 from .. import Adaptor, adaptionmethod
 from Dhelpers.adaptor import AdaptionMethod
 from types import GeneratorType
-import os, functools
+import os, functools, warnings
 from Dhelpers.file_iteration import FileIterator
 from Dhelpers.baseclasses import iter_all_vars
 from Dhelpers.named import NamedObj
@@ -95,7 +95,10 @@ class EditorAdaptor(Adaptor):
             except KeyError:
                 pass
             else:
+                assert isinstance(value_list, (list,tuple))
                 stand_dict.update(value_list)
+                stand_dict.other_dict.clear() #this only contains mappings on
+                # itself anyway
             self.property_value_dict[prop_name] = stand_dict
 
     @adaptionmethod
@@ -122,7 +125,15 @@ class EditorAdaptor(Adaptor):
     def close(self, backend_obj):
         self._check(backend_obj)
         self.close.target_with_args()
-        
+    
+    def _check_amethod(self, name):
+        try:
+            amethod = getattr(self,name)
+        except AttributeError:
+            pass
+        else:
+            if isinstance(amethod,AdaptionMethod): return amethod
+        return False
     
     def forward_property(self, name, backend_obj, value = None):
         if self.property_value_dict and value is not None:
@@ -132,13 +143,8 @@ class EditorAdaptor(Adaptor):
                 pass
             else:
                 value = stand_dict.apply(value)
-        try:
-            amethod = getattr(self,name)
-        except AttributeError:
-            pass
-        else:
-            if isinstance(amethod,AdaptionMethod):
-                return amethod(backend_obj, value)
+        amethod = self._check_amethod(name)
+        if amethod: return amethod(backend_obj, value)
         backend_name = self.names.get(name, name)
         if value is None:
             ret = getattr(backend_obj, backend_name)
@@ -156,18 +162,41 @@ class EditorAdaptor(Adaptor):
     
     
     def forward_func_call(self, name, backend_obj, *args, **kwargs):
-        try:
-            amethod = getattr(self,name)
-        except AttributeError:
-            pass
-        else:
-            if isinstance(amethod,AdaptionMethod):
-                return amethod(backend_obj, *args,**kwargs)
+        amethod = self._check_amethod(name)
+        if amethod: return amethod(backend_obj, *args,**kwargs)
         backend_name = self.names.get(name, name)
         return getattr(backend_obj, backend_name)(*args,**kwargs)
     
+    
+    def _inspect_unkown(self, name):
+        backend_name = self.names.get(name, name)
+        obj = getattr(self.obj_class, backend_name)
+            # this might raise AttributeError!
+        if callable(obj):
+            attr_type = 1
+        elif isinstance(obj, property):
+            attr_type = 2
+        else:
+            raise AttributeError(obj)
+        return backend_name, attr_type
 
-
+    def get_unknown(self, name, backend_obj):
+        backend_name, attr_type = self._inspect_unkown(name)
+        return getattr(backend_obj, backend_name)
+            #this might raise Attribute error
+            # otherwise this is a callable object, or the result of a
+            # property
+        
+    def set_unknown(self, name, backend_obj, value):
+        try:
+            backend_name, attr_type = self._inspect_unkown(name)
+        except AttributeError:
+            return
+        if attr_type is 1: return #ignore forwarding if its a callable
+        setattr(backend_obj, backend_name , value) #only happens for properties
+        return True
+        
+        
 
 
 def resource_property(name, *name_alias):
@@ -323,25 +352,11 @@ class Resource:
         raise NotImplementedError
     
     
-    def __getattr__(self, item):
-        try:
-            redirected = self.attr_redirections[item]
-        except KeyError:
-            raise AttributeError(item)
-        return self.__getattribute__(redirected)
-    
-    def __setattr__(self, key, value):
-        try:
-            key = self.attr_redirections[key]
-        except KeyError:
-            pass
-        super().__setattr__(key,value)
-
-    
-    
 class SingleResource(Resource):
     
     multi_base = None
+    _backend_obj = None
+    _inst_attributes = "file", "sequence", "backend_obj"
     
     @classmethod
     def make_multi_base(cls, MultiClass):
@@ -422,8 +437,33 @@ class SingleResource(Resource):
     #     except AttributeError:
     #         pass
     #     return NotImplemented
-    
-    
+
+    def __getattr__(self, key):
+        try:
+            redirected = self.attr_redirections[key]
+        except KeyError:
+            try:
+                obj = self.adaptor.get_unknown(key,self.backend_obj)
+            except AttributeError:
+                pass
+            else:
+                _print(f"WARNING: Attribute '{key}' used from backend "
+                     f"'{self.adaptor.backend}'. Undefined in " f"Dpowers")
+                return obj
+        else:
+            return self.__getattribute__(redirected)
+        raise AttributeError(key)
+
+    def __setattr__(self, key, value):
+        if key not in self._inst_attributes:
+            try:
+                key = self.attr_redirections[key]
+            except KeyError:
+                if self.adaptor.set_unknown(key,self.backend_obj,value):
+                    _print(f"WARNING: Attribute '{key}' used from backend "
+                     f"'{self.adaptor.backend}'. Undefined in " f"Dpowers.")
+                    return
+        super().__setattr__(key, value)
 
 
 

@@ -29,29 +29,20 @@ class ImageAdaptor(EditorAdaptor):
     def resample(self, backend_obj, value_x, value_y=None):
         if value_y is None: value_y = value_x
         return self.resample.target(backend_obj, value_x, value_y)
-    
-    
 
-@ImageAdaptor.Values_for_Property("colortype")
-class ColortypeNames:
-    gray = "gray", "grayscale"
-    
+
 
 class ImageBase(SingleResource, ImageAdaptor.AdaptiveClass):
     
     compression = resource_property("compression", "compr")
     compr_quality = resource_property("compr_quality", "compression_quality",
-            "quality", "qual")
+            "cquality", "cqu", "cqual")
     resolution = resource_property("resolution", "res")
-    colortype = resource_property("colortype", "ctype", "color")
+    colortype = resource_property("colortype", "ctype", "type")
     size = resource_property("size")
+    colorspace = resource_property("colorspace", "cspace")
 
     resample = resource_func("resample")
-    
-
-
-
-
 
 
 
@@ -62,3 +53,27 @@ class MultiImage(MultiResource):
     
     def __init__(self, file=None, resolution=300, **load_kwargs):
         super().__init__(file,resolution=resolution,**load_kwargs)
+        
+        
+        
+        
+        
+Values_for_Property = ImageAdaptor.Values_for_Property
+
+
+class CommonColorTypeNames:
+    gray = "gray", "grayscale", "g"
+    
+@Values_for_Property("colortype")
+class ColortypeNames(CommonColorTypeNames):
+    pass
+
+@Values_for_Property("colorspace")
+class ColorspaceNames(CommonColorTypeNames):
+    pass
+
+
+@Values_for_Property("compression")
+class CompressionNames:
+    jpg = "jpg", "jpeg", "j"
+    zip = "zip", "z"

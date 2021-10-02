@@ -432,7 +432,6 @@ class NameContainer:
                     for name in names:
                         n = self.NamedClass.make_comparable(name)
                         if n not in inst.names_comparable:
-                            
                             raise NameError(f"multiple defined attribute {attr}")
                 setattr(self, attr, inst)
                 if group_name: inst.add_to_group(group_name)

@@ -25,7 +25,8 @@ Image = im_mod.Image
 
 obj_class = Image
 names = {"compr_quality": "compression_quality", "colortype":"type"}
-value_names = {"colortype": im_mod.IMAGE_TYPES}
+value_names = {"colortype": im_mod.IMAGE_TYPES, "colorspace":
+    im_mod.COLORSPACE_TYPES, "compression": im_mod.COMPRESSION_TYPES}
 
 def load(file, **kwargs):
     with Image(filename=file, **kwargs) as im:
