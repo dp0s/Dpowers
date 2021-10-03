@@ -171,8 +171,8 @@ class EvdevhookMixin:
 class Keyhook(EvdevhookMixin, KeyhookBase):
     handler = KeyHandler(category="keyboard")
 
-    name_translation_dict = {"braceleft": "bracketleft", "braceright":
-        "bracketright"}
+    #name_translation_dict = {"braceleft": "bracketleft", "braceright":
+     #   "bracketright"}
     
 
 class Buttonhook(EvdevhookMixin, ButtonhookBase):

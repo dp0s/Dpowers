@@ -197,5 +197,4 @@ class XKBLayout(Layout_from_klfc):
     json_savefolder = xkb_imported_folder
     folders = ["/usr/share/X11/xkb/symbols"]
     klfc_option = "from-xkb"
-
     

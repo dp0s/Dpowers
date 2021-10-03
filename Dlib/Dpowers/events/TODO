@@ -2,4 +2,3 @@
 4.  Enforce Using one global NamedClass for keyb/hook
 6. Enable source and device attribute of events -- usually this is problamatic
     as NamedEvents shouldn't be recreated everytime. Maybe second attribute?
-7  HEADSET INCLUDED?
