@@ -251,8 +251,6 @@ class TriggerManager(PatternListener,TimedObject, HookAdaptor.AdaptiveClass,
     def _timeout_action(self):
         warn("Timeout after %s seconds: Stopping TriggerManager %s." % (
             self.timeout,self))
-    
-
 
 
    

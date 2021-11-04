@@ -10,7 +10,7 @@ class AdaptiveClassDirective(CustomTextDirective):
         text = Ref_to_Examples.create_example_refs(name)
         text += ".. autoclass:: " + name + "\n"
         for line in rest:
-            text += "\t" + line
+            text += "\t" + line +"\n"
         return text
     
     

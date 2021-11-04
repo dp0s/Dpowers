@@ -61,3 +61,6 @@ class backends:
         
     class mp3tagAdaptor:
         default ="eyed3"
+        
+    class TextToSpeechAdaptor:
+        default = "ttsx3"

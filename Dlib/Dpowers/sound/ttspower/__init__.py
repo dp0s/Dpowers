@@ -16,10 +16,27 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from .. import Adaptor, adaptionmethod
+from ... import Adaptor, adaptionmethod
 import time
 
 
-class SoundAdaptor(Adaptor):
+class TextToSpeechAdaptor(Adaptor):
     
-    def
+    def __call__(self, text):
+        return self.call(text)
+    
+    @adaptionmethod
+    def call(self, text):
+        return self.call.target_with_args()#
+    
+    @property
+    def volume(self):
+        return self.set_volume()
+    
+    @volume.setter
+    def volume(self, val):
+        self.set_volume(val)
+    
+    @adaptionmethod
+    def set_volume(self, value=None):
+        return self.set_volume.target_with_args()

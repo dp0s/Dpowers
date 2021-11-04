@@ -16,19 +16,19 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from .. import DependencyManager, launch
+from ... import DependencyManager, launch
 
 with DependencyManager(__name__) as manager:
-    manager.test_shellcommand("xclip", pkg="xclip")
+    pyttsx3 = manager.import_module("pyttsx3")
 
-xclip_names = {0: "c", 1: "p", 2: "s"}
+engine = pyttsx3.init()
 
-def get(selection=0) -> str:
-    try:
-        return launch.get("xclip", "-o", "-selection", xclip_names[selection])
-    except launch.SubprocessError:
-        return ""
 
-def fill(content: str, selection=0):
-    launch.wait("xclip", "-i", "-selection", xclip_names[selection],
-            input=content)
+def call(text):
+    engine.say(text)
+    engine.runAndWait()
+    
+def set_volume(val):
+    if val is None:
+        return engine.getProperty('volume')
+    engine.setProperty('volume', val)

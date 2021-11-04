@@ -20,8 +20,8 @@
 
 __all__ = ["autoadapt", "keyb", "mouse", "ntfy", "dlg", "hook", "Icon", "Win",
     "sendwait", "nfsendwait", "clip", "Dfuncs", "events", "KeyWaiter",
-    "TriggerManager", "Image",
-    "mp3tag", "sleep", "hotkeys","launch", "Layout","Dpowers", "Dhelpers"]
+    "TriggerManager", "Image", "mp3tag", "sleep", "sound","hotkeys","launch",
+    "Layout","Dpowers", "Dhelpers"]
 
 import os, sys
 from time import sleep
@@ -99,6 +99,7 @@ try:
     from . import editing
     from .editing import Image, ImageAdaptor, mp3tag, mp3tagAdaptor
     
+    from . import sound
 
     from . import Dfuncs
     from .Dfuncs import sendwait, nfsendwait
