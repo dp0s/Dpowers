@@ -16,7 +16,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-import inspect
 from warnings import warn
 from . import NamedKey, keyb, NamedButton
 from .event_classes import StringAnalyzer, EventCombination, EventSequence, \
@@ -26,10 +25,12 @@ from Dhelpers.launcher import launch
 from Dhelpers.baseclasses import TimedObject, KeepInstanceRefs
 from Dhelpers.arghandling import check_type
 from Dhelpers.counting import dpress
-import collections
-
+import collections, inspect
+from os import path
 
 class PatternListener:
+    
+    max_thread_num = 1
     
     def __init__(self, buffer = 4):
         self.eventdict = dict()
@@ -37,10 +38,14 @@ class PatternListener:
         self.buffer = buffer
         self.blocked_hks = []
         self.stringevent_analyzer = StringAnalyzer(NamedKey, NamedButton)
-
+        self.reset_analyzefunc()
+        self.active_thread_num = 0
+        
+    
     def event(self, k):
         if not self.eventdict: return
         # _print(k)
+        if self.active_thread_num >= self.max_thread_num: return
         self.recent_events.append(k)
         if len(self.recent_events) > self.buffer: self.recent_events.popleft()
         recent_events = self.recent_events.copy()
@@ -59,23 +64,42 @@ class PatternListener:
 
     def runscript(self, action, hk):
         if self.active_blocks: return
-        # print(hk_func)
-        # print(hk,hk_func,type(hk_func))
-        if type(action) is str:
-            if action.startswith("[dkeys]"):
-                if dpress(hk, 0.15):
-                    keyb.send(action[7:], delay=1)
+        if self.analyze_func:
+            if self.analyze_func(action, hk) is True: self.reset_analyzefunc()
+            return
+        assert self.active_thread_num >= 0
+        if self.active_thread_num >= self.max_thread_num: return
+        self.active_thread_num += 1
+        try:
+            # print(hk_func)
+            # print(hk,hk_func,type(hk_func))
+            if type(action) is str:
+                if action.startswith("[dkeys]"):
+                    if dpress(hk, 0.15):
+                        keyb.send(action[7:], delay=1)
+                else:
+                    keyb.send(action)
+            elif callable(action):
+                # the following makes sure that the hk_func is accepting 1
+                # argument even if the underlying func does not
+                try:
+                    return action(hk)
+                except TypeError:
+                    return action()
             else:
-                keyb.send(action)
-        elif callable(action):
-            # the following makes sure that the hk_func is accepting 1
-            # argument even if the underlying func does not
-            try:
-                return action(hk)
-            except TypeError:
-                return action()
-        else:
-            raise TypeError
+                raise TypeError
+        finally:
+            self.active_thread_num -= 1
+        
+        
+    def set_analyzefunc(self, func, timeout=5):
+        assert callable(func)
+        self.analyze_func = func
+        launch.thread(self.reset_analyzefunc, initial_time_delay=timeout)
+        
+    def reset_analyzefunc(self):
+        self.analyze_func = None
+    
 
     def add_event(self, event, action):
         if event in self.eventdict:
@@ -185,8 +209,24 @@ class RegisteredHook(PatternListener):
         if self.triggerman_instance and event_obj in \
                 self.triggerman_instance.blocked_hks: return False
         return True
+    
+    @property
+    def analyze_func(self):
+        if self._analyze_func: return self._analyze_func
+        if self.triggerman_instance: return self.triggerman_instance.analyze_func
         
-
+    @analyze_func.setter
+    def analyze_func(self, val):
+        self._analyze_func = val
+        
+    def reset_analyzefunc(self):
+        try:
+            if self._analyze_func is None:
+                if self.triggerman_instance and self.triggerman_instance.analyze_func:
+                    self.triggerman_instance.analyze_func = None
+        except AttributeError:
+            pass
+        self.analyze_func = None
 
 class TriggerManager(PatternListener,TimedObject, HookAdaptor.AdaptiveClass,
         KeepInstanceRefs):
@@ -200,7 +240,9 @@ class TriggerManager(PatternListener,TimedObject, HookAdaptor.AdaptiveClass,
         KeepInstanceRefs.__init__(self)
         self.registered_hooks = []
         self.was_started = False
-        
+        self.max_thread_num = TriggerManager.max_thread_num
+
+
     @classmethod
     def start_all(cls):
         for inst in cls.get_instances():
@@ -253,10 +295,18 @@ class TriggerManager(PatternListener,TimedObject, HookAdaptor.AdaptiveClass,
             self.timeout,self))
 
 
-   
+
+    @property
+    def max_thread_num(self):
+        return self._max_thread_num
     
-    
-    
+    @max_thread_num.setter
+    def max_thread_num(self, val):
+        self._max_thread_num = val
+        for rhook in self.registered_hooks:
+            rhook.max_thread_num = val
+
+
 class PauseObject(TimedObject):
     def __init__(self, timeout, cls):
         super().__init__(timeout=timeout)
