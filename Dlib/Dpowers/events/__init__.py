@@ -21,7 +21,9 @@ from .. import Adaptor, AdaptionError, adaptionmethod, Layout, DependencyManager
 
 _evdev_infos = {"pkg": "evdev_prepared",
         "instruction": "Before using, please follow steps at "
-                        "https://github.com/dp0s/evdev_prepared#install"}
+                        "https://github.com/dp0s/evdev_prepared#install",
+        "platform": "linux"
+         }
 
 DependencyManager.save_dependency_info("evdev_prepared.device_control",
         **_evdev_infos)

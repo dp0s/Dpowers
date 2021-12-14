@@ -50,6 +50,11 @@ from Dhelpers.launcher import launch
 from Dhelpers.customprint import always_print_traceback, restore_print_func
 from Dhelpers.arghandling import ArgSaver
 from Dhelpers.KeyboardLayouts import Layout
+from Dhelpers.platform import Platform
+
+current_platform = Platform()
+current_platform.update()
+DependencyManager.platform_info = current_platform
 
     
 try:

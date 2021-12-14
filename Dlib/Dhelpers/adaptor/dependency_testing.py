@@ -19,6 +19,7 @@
 import importlib, sys, warnings
 from collections import defaultdict
 from ..launcher import launch
+from ..platform import
 
 
 class ReturnFromModule(Exception):
@@ -108,6 +109,7 @@ class DependencyManager:
     check_dependency = True
     instances = {}
     saved_dependency_infos = dict()
+    platform_info = None
     
     def __init__(self, module_name) -> None:
         if self.instances.get(module_name) is not None:
@@ -191,11 +193,16 @@ class Dependency:
         
     
     def process_kwargs(self, pkg=None, instruction=None,
-            install_tool=None, system=""):
+            install_tool=None, platform=""):
         if instruction:
-            self.add_instruction(pkg, instruction, system=system)
+            self.add_instruction(pkg, instruction, platform=platform)
         if pkg:
-            self.add_pkg(pkg, install_tool=install_tool, system=system)
+            self.add_pkg(pkg, install_tool=install_tool, platform=platform)
+        if platform and self.perform_check:
+            state = self.manager.platform_info.effective_vals.get(platform)
+            if state is not True: warnings.warn(f"Dependency {self} requires "
+                    f"platform {platform}.")
+        
     
     
     def __repr__(self) -> str:
@@ -206,12 +213,12 @@ class Dependency:
     def perform_check(self):
         return self.manager.check_dependency
     
-    def add_pkg(self,*pkgs,install_tool=None,system=""):
+    def add_pkg(self,*pkgs,install_tool=None,platform=""):
         if not install_tool: install_tool = self.default_install_tool
-        self.install_instructions[system].add_names(install_tool,*pkgs)
+        self.install_instructions[platform].add_names(install_tool,*pkgs)
     
-    def add_instruction(self,name, instruction,system=""):
-        self.install_instructions[system].add_instructions(name, instruction)
+    def add_instruction(self,name, instruction,platform=""):
+        self.install_instructions[platform].add_instructions(name, instruction)
         
     def raise_BackendDependencyError(self, caused_by=None):
         self.error = BackendDependencyError(self,caused_by)
