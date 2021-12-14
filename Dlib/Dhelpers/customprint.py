@@ -79,7 +79,7 @@ def execute_after_print(func):
             fun(*args, **kwargs)
     builtins.print = _custom_print
     traceback.print = original_print  # this avoids problems with showing
-    # errors
+    return func #allow execution as decorator
 
 
 def print_last_traceback(*ignore, tb_lines=1, print_traceback=True, end="\n",

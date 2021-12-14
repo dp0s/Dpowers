@@ -130,8 +130,9 @@ def _not_if_tty(func):
         return func(*args, **kwargs)
     return new_func
 
+
 @_not_if_tty
-def notify_about_errors(timeout=10):
+def execute_after_error(func):
     #    Workaround for `sys.excepthook` thread bug from:
     #    http://bugs.python.org/issue1230540
     #
@@ -154,15 +155,16 @@ def notify_about_errors(timeout=10):
         # this function allows to perform an action in case of an exception,
         # before the
         # standard action takes place
-        printable_traceback = "".join(traceback.format_tb(error_traceback))
-        info = "%s:\n%s\n\nTraceback:\n%s"%(
-            error_type.__name__, error_message, printable_traceback)
-        container.set_temp_store_key("error_info", info, timeout)
-        ntfy(error_type.__name__ + " occured in TriggerEngine.", timeout,
-                str(error_message) + "\nPress F12 to see traceback.")
-        sys.__excepthook__(error_type, error_message, traceback)
+        # print(error_traceback.tb_lineno, error_traceback.tb_frame.f_lineno,
+        #        error_traceback.tb_frame.f_code.co_filename)
+        # last_tb_line = traceback.extract_tb(error_traceback)[-1]
+        # printable_traceback = "".join(traceback.format_tb(error_traceback))
+        func(error_type, error_message, error_traceback)
+        sys.__excepthook__(error_type, error_message, error_traceback)
     
     sys.excepthook = my_excepthook
+    return func  #allow use as decorator
+    
 
 @_not_if_tty
 def notify_about_warnings(timeout=10):
@@ -176,6 +178,7 @@ def notify_about_warnings(timeout=10):
 
 @_not_if_tty
 def notify_about_print(timeout=5):
+    @execute_after_print
     def ntfy_after_print(*args, sep=" ", end="\n", notify=True, **ignore):
         if not notify: return
         file, line, func, text = traceback.extract_stack(limit=3)[-3]
@@ -185,7 +188,6 @@ def notify_about_print(timeout=5):
         print_message = sep.join([str(arg) for arg in args])
         if end != "\n": print_message += end
         ntfy(print_message, timeout, "Printed on line %s in:\n%s"%(line, file))
-    execute_after_print(ntfy_after_print)
     
 
 

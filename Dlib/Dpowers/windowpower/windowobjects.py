@@ -74,7 +74,7 @@ class WindowObject(ABC):
     def titles_(self):
         for ID in self.IDs():
             x = self.adaptor.property_from_ID(ID, "title")
-            check_type(str, x)
+            check_type(str, x, allowed=(None,))
             yield x
     def titles(self):
         return tuple(self.titles_())
