@@ -333,6 +333,15 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
         self.creation_kwargs = winkwargs
         self.process_args(*winargs, **winkwargs)
     
+    def matches_win(self, *winargs,**winkwargs):
+        new_instance = self.__class__(*winargs, **winkwargs)
+        for attr in ("location", "fixed_IDs"):
+            if getattr(self,attr) != getattr(new_instance, attr):
+                return False
+        for key, val in self._properties.items():
+            if new_instance._properties[key] != val: return False
+        return True
+    
     def IDs(self):
         if self.location and not self.fixed_IDs:
             return (self.adaptor._ID_from_location(self.location),)
@@ -376,6 +385,7 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
     def wait_num_change(self, *args, **kwargs):
         return self.find().wait_num_change(*args,**kwargs)
 
+    
 
 
 
@@ -387,7 +397,16 @@ class WindowSearchContainer(AdditionContainer, WindowSearch,
         for winsearch in self.members: ids |= set(winsearch.IDs())
         # create the union of all found window IDs
         return tuple(ids)
-
+    
+    @property
+    def _FoundWinClass(self):
+        return self.members[0]._FoundWinClass
+    
+    def matches_win(self, *winargs,**winkwargs):
+        for member in self.members:
+            if member.check_args(*winargs, **winkwargs):
+                return True
+        return False
 
 
 class FoundWindows(WindowObject):
@@ -406,7 +425,9 @@ class FoundWindows(WindowObject):
     def __init__(self, *winargs, at_least_one=False, **winkwargs):
         if len(winargs) == 1 and not winkwargs and isinstance(winargs[0], WindowSearch):
             WinSearch_instance = winargs[0]
-            if WinSearch_instance.adaptor is not self.adaptor: raise TypeError
+            if not isinstance(WinSearch_instance, WindowSearchContainer):
+                if WinSearch_instance.adaptor is not self.adaptor:
+                    raise TypeError
             self.winsearch_object = WinSearch_instance
             # reuse the WindwoSearch object
         else:

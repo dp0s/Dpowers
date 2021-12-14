@@ -103,6 +103,8 @@ try:
 
     from . import Dfuncs
     from .Dfuncs import sendwait, nfsendwait
+    
+    from . import commands
 
 finally:
     restore_print_func()
