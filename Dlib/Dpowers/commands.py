@@ -6,10 +6,20 @@ class CustomCommand:
     
     Win = Win
     
-    def __init__(self, base=None, check_installed=False):
+    def __init__(self, base=NotImplemented, check_installed=False):
         self.base = base
         self.winsearch = None
         if base and check_installed: pass #tba
+        
+    @property
+    def base(self):
+        if self._base is NotImplemented:
+            raise NotImplementedError(f"No base command defined for {self}.")
+            
+    @base.setter
+    def base(self, val):
+        self._base = val
+        
         
     def set_winprops(self, *winargs,**winkwargs):
         if winargs:
@@ -25,8 +35,8 @@ class CustomCommand:
     def find_win(self):
         return self.winsearch.find()
     
-    def matches_win(self, *winargs,**winkwargs):
-        self.winsearch.match_win(*winargs,**winkwargs)
+    def compare_win(self, *winargs,**winkwargs):
+        self.winsearch.compare_win(*winargs,**winkwargs)
     
     def add_method(self, func):
         method = types.MethodType(func, self)

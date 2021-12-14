@@ -333,7 +333,7 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
         self.creation_kwargs = winkwargs
         self.process_args(*winargs, **winkwargs)
     
-    def matches_win(self, *winargs,**winkwargs):
+    def compare_win(self, *winargs,**winkwargs):
         new_instance = self.__class__(*winargs, **winkwargs)
         for attr in ("location", "fixed_IDs"):
             if getattr(self,attr) != getattr(new_instance, attr):
@@ -402,7 +402,7 @@ class WindowSearchContainer(AdditionContainer, WindowSearch,
     def _FoundWinClass(self):
         return self.members[0]._FoundWinClass
     
-    def matches_win(self, *winargs,**winkwargs):
+    def compare_win(self, *winargs,**winkwargs):
         for member in self.members:
             if member.check_args(*winargs, **winkwargs):
                 return True

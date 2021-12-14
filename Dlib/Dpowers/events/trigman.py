@@ -18,6 +18,7 @@
 #
 from warnings import warn
 from . import NamedKey, keyb, NamedButton
+from ..commands import pythoneditor
 from .event_classes import StringAnalyzer, EventCombination, EventSequence, \
     StringEvent
 from .hookpower import HookAdaptor, CallbackHook, KeyhookBase, ButtonhookBase
@@ -99,6 +100,16 @@ class PatternListener:
         
     def reset_analyzefunc(self):
         self.analyze_func = None
+        
+    def show_source_code(self, timeout=5):
+        self.set_analyzefunc(self._jump_to_action, timeout=timeout)
+    
+    @staticmethod
+    def _jump_to_action(action, hk):
+        file = path.abspath(inspect.getsourcefile(action))
+        linenumber = inspect.getsourcelines(action)[-1]
+        pythoneditor.jump_to_line(file, linenumber)
+        return True
     
 
     def add_event(self, event, action):
