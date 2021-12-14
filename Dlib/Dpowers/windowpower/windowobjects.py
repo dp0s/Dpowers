@@ -404,7 +404,7 @@ class WindowSearchContainer(AdditionContainer, WindowSearch,
     
     def compare_win(self, *winargs,**winkwargs):
         for member in self.members:
-            if member.check_args(*winargs, **winkwargs):
+            if member.compare_win(*winargs, **winkwargs):
                 return True
         return False
 
