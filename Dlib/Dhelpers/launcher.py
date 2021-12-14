@@ -17,7 +17,7 @@
 #
 #
 from warnings import warn
-import time, threading, subprocess, multiprocessing
+import time, threading, subprocess, multiprocessing, types
 from .psutil_fix import psutil
 from .arghandling import PositiveInt
 
@@ -287,3 +287,34 @@ class LaunchFuncs:
 
 
 launch = LaunchFuncs()
+
+
+
+class Application:
+    
+    def __init__(self, command=NotImplemented, check_installed=False):
+        self.used_inst = None
+        self.command = command
+        if command and check_installed: pass  # tba
+    
+    @property
+    def command(self):
+        command = self.used_inst.command if self.used_inst else self._command
+        if command is NotImplemented:
+            raise NotImplementedError(f"No command command defined for {self}.")
+        return command
+    
+    @command.setter
+    def command(self, val):
+        if self.used_inst:
+            if val is self.used_inst.command: return
+            self.used_inst = None
+        self._command = val
+    
+    def define_method(self, func):
+        method = types.MethodType(func, self)
+        setattr(self, func.__name__, method)
+    
+    def use_instance(self, inst):
+        assert isinstance(inst, Application)
+        self.used_inst = inst

@@ -18,7 +18,7 @@
 #
 from warnings import warn
 from . import NamedKey, keyb, NamedButton
-from ..commands import pythoneditor
+from ..winapps import pythoneditor
 from .event_classes import StringAnalyzer, EventCombination, EventSequence, \
     StringEvent
 from .hookpower import HookAdaptor, CallbackHook, KeyhookBase, ButtonhookBase

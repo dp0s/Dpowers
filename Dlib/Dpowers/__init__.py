@@ -104,7 +104,7 @@ try:
     from . import Dfuncs
     from .Dfuncs import sendwait, nfsendwait
     
-    from . import commands
+    from . import winapps
 
 finally:
     restore_print_func()
