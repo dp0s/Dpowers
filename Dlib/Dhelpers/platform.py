@@ -17,25 +17,31 @@
 #
 #
 from .launcher import launch
+import platform
 
 
-class Platform:
+class PlatformInfo:
     
     def __init__(self):
         self.effective_vals = dict()
         self.preset_vals = dict()
         
+    def __repr__(self):
+        sup = super().__repr__()[:-1]
+        sup += " with values:"
+        for key,val in self.effective_vals.items():
+            if val is True: sup += f" {key},"
+        sup = sup[:-1] + ">"
+        return sup
+        
     def update(self, use_platform_checks=True, **platform_kwargs):
         self.preset_vals.update(platform_kwargs)
         effective_vals = self.preset_vals.copy()
         if use_platform_checks:
-            for platform_property, func in self.platform_property_checks().func_dir.items():
-                assert callable(func)
+            for platform_property, val in self.platform_property_checks(
+                    ).val_dir.items():
                 preset = self.preset_vals.get(platform_property)
-                if preset is None:
-                    val = func()
-                    assert val in (True,False)
-                    effective_vals[platform_property] = val
+                if preset is None: effective_vals[platform_property] = val
         self.effective_vals = effective_vals
         
         
@@ -63,18 +69,35 @@ class Platform:
 
     class platform_property_checks:
     
-        def __init__(self):
-            self.func_dir = dict((name, getattr(self, name)) for name in \
-                self.__class__.__dict__ if
-            not (name.startswith("__") and name.endswith("__")))
-    
-        @staticmethod
-        def termux():
-            return bool(
-                    launch.get("command -v termux-setup-storage", check=False))
+        def __init__(self, evaluate=True):
+            self.val_dir = None
+            if evaluate: self.__evaluate__()
+            
+        def __evaluate__(self):
+            self._system = platform.system().lower()
+            self._version = platform.version().lower()
+            val_dir = dict()
+            for name in self.__class__.__dict__:
+                if name.startswith("__") or name.endswith("__"): continue
+                func = getattr(self,name)
+                if not callable(func): continue
+                val = func()
+                assert val in (True,False)
+                val_dir[name] = val
+            self.val_dir = val_dir
     
         def linux(self):
-            return True
+            return self._system == "linux"
     
         def windows(self):
-            return False
+            return self._system == "windows"
+        
+        def mac(self):
+            return self._system == "darwin"
+        
+        def termux(self):
+            return self.linux() and bool(
+                    launch.get("command -v termux-setup-storage", check=False))
+        
+        def ubuntu(self):
+            return self.linux() and "ubuntu" in self._version

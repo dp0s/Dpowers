@@ -19,7 +19,7 @@
 import importlib, sys, warnings
 from collections import defaultdict
 from ..launcher import launch
-from ..platform import
+#from ..platform import Platform
 
 
 class ReturnFromModule(Exception):
