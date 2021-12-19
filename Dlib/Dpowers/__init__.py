@@ -55,15 +55,15 @@ from Dhelpers.KeyboardLayouts import Layout
 try:
     always_print_traceback()
 
-    from .default_backends import linux
+    from . import default_backends
 
     class Adaptor(AdaptorBase):
         """Abstract baseclass for all of Dpower's Adaption classes."""
         #dependency_folder = dependency_folder
-        backend_defaults = linux
         NamedKeyClass = None  #set later
         NamedButtonClass = None  #set later
     
+    Adaptor.set_default_backends(default_backends, evaluate_platform=True)
     
     DependencyManager = Adaptor.DependencyManager
     activate_autoadapt = Adaptor.activate_autoadapt

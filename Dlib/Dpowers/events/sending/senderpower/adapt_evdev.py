@@ -16,7 +16,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from Dhelpers.adaptor import DependencyManager
+from ... import DependencyManager
 
 with DependencyManager(__name__) as tester:
     uinput = tester.import_module("evdev_prepared.uinput")

@@ -318,6 +318,7 @@ class AdaptorBase(KeepInstanceRefs):
             cls.platform_info.update()
             cls.DependencyManager = type("DependencyManager",
                     (DependencyManagerBase,),{})
+            cls.DependencyManager.platform_info = cls.platform_info
             
                 
             
@@ -503,7 +504,20 @@ class AdaptorBase(KeepInstanceRefs):
         return missing_inst
     
     
-    
+    @classmethod
+    def set_default_backends(cls, module_or_class, evaluate_platform = False):
+        if not evaluate_platform:
+            cls.backend_defaults = module_or_class
+        if isinstance(evaluate_platform, PlatformInfo):
+            platform_info = evaluate_platform
+        else:
+            platform_info = cls.platform_info
+        platform_backends = platform_info.new_variable()
+        for var, val in vars(module_or_class).items():
+            if isinstance(val, type):
+                platform_backends.platform_kwargs[var] = val
+        cls.backend_defaults = platform_backends.evaluate()
+        
     
     
     @classmethod
@@ -553,12 +567,11 @@ class AdaptorBase(KeepInstanceRefs):
         else:
             group = group_or_instance
         check_type(str, group)
-        
         try:
             main_info = getattr(subclass_info_class, group)
         except AttributeError:
             return  # it's ok to return main_info as None
-        check_type((str, tuple, list, Backend, ArgSaver), main_info)
+        check_type((str, tuple, list, Backend, ArgSaver, dict), main_info)
         return main_info
     
     def get_group_instances(self):

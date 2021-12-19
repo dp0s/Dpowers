@@ -115,6 +115,9 @@ class Backend:
         # returns the resolved main_info, method_infos pair
         if isinstance(main_info, self.__class__):
             new1, new2 = main_info.main_info, main_info.method_infos
+        elif isinstance(main_info, dict):
+            new1 = main_info.pop("_", None)
+            new2 = main_info
         elif isinstance(main_info, ArgSaver):
             if len(main_info.args) == 1:
                 new1 = main_info.args[0]

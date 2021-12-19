@@ -27,6 +27,7 @@ class PlatformInfo:
     def __init__(self):
         self.effective_vals = dict()
         self.preset_vals = dict()
+        self.variables = list()
         
     def __repr__(self):
         sup = super().__repr__()[:-1]
@@ -57,7 +58,9 @@ class PlatformInfo:
     
     
     def new_variable(self, *args, **kwargs):
-        return self.PlatformVariable(self, *args, **kwargs)
+        var = self.PlatformVariable(self, *args, **kwargs)
+        self.variables.append(var)
+        return var
     
     
     class PlatformVariable:
@@ -66,10 +69,13 @@ class PlatformInfo:
             self.platform_inst = PlatformInfo_inst
             self.platform_kwargs = platform_kwargs
         
-        def __call__(self, allow_multiple = False):
+        def evaluate(self, allow_multiple = False, reverse_priority=True):
             if allow_multiple: result = []
-            for key, val in self.platform_kwargs.items():
+            l = list(self.platform_kwargs)
+            if reverse_priority: l.reverse()
+            for key in l:
                 if self.platform_inst.effective_vals.get(key) is True:
+                    val = self.platform_kwargs[key]
                     if allow_multiple:
                         result.append(val)
                     else:

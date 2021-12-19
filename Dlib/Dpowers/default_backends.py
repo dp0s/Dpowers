@@ -16,7 +16,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from Dhelpers.arghandling import ArgSaver
 
 
 pynput = "pynput"
@@ -28,7 +27,7 @@ class linux:
     class HookAdaptor:
         default  = pynput
         keywait = (evdev, pynput)
-        triggerman = ArgSaver(buttons = pynput, keys = evdev, custom=evdev)
+        triggerman = dict(buttons = pynput, keys = evdev, custom=evdev)
         
     class MouseAdaptor:
         default = pynput
@@ -55,7 +54,7 @@ class linux:
         waiter =  default
         
     class DialogAdaptor:
-        default = ArgSaver("zenity_bash",popup="tkinter")
+        default = dict(_="zenity_bash",popup="tkinter")
         
     class ImageAdaptor:
         default = "wand"
