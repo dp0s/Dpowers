@@ -16,6 +16,8 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
+from typing import Any
+
 from .launcher import launch
 import platform
 
@@ -52,18 +54,38 @@ class PlatformInfo:
         if new_inst.platform_property_checks != self.platform_property_checks:
             new_inst.platform_property_checks = self.platform_property_checks
         return new_inst
-            
     
-    def evaluate(self, allow_multiple=False,**platform_kwargs):
-        if allow_multiple: result = []
-        for key,val in platform_kwargs.items():
-            if self.effective_vals.get(key) is True:
-                if allow_multiple:
-                    result.append(val)
-                else:
-                    return val
-        if allow_multiple: return result
-        return NotImplemented
+    
+    def new_variable(self, *args, **kwargs):
+        return self.PlatformVariable(self, *args, **kwargs)
+    
+    
+    class PlatformVariable:
+        
+        def __init__(self, PlatformInfo_inst, **platform_kwargs):
+            self.platform_inst = PlatformInfo_inst
+            self.platform_kwargs = platform_kwargs
+        
+        def __call__(self, allow_multiple = False):
+            if allow_multiple: result = []
+            for key, val in self.platform_kwargs.items():
+                if self.platform_inst.effective_vals.get(key) is True:
+                    if allow_multiple:
+                        result.append(val)
+                    else:
+                        return val
+            if allow_multiple: return result
+            return NotImplemented
+        
+        def __getattr__(self, item):
+            return self.platform_kwargs[item]
+        
+        def __setattr__(self, name: str, value: Any) -> None:
+            if name not in ["platform_inst", "platform_kwargs"] \
+                and not name.startswith("__"):
+                self.platform_kwargs[name] = value
+                return
+            super().__setattr__(name, value)
 
 
 

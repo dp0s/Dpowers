@@ -17,7 +17,7 @@
 #
 #
 
-from Dhelpers.adaptor import DependencyManager
+from .. import DependencyManager
 
 with DependencyManager(__name__) as tester:
     pystray = tester.import_module("pystray", pkg="pystray")

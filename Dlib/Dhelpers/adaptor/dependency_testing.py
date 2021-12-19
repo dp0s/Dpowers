@@ -19,7 +19,6 @@
 import importlib, sys, warnings
 from collections import defaultdict
 from ..launcher import launch
-#from ..platform import Platform
 
 
 class ReturnFromModule(Exception):
@@ -28,59 +27,7 @@ class ReturnFromModule(Exception):
     # done in the get_module_dependencies function below.
     def __init__(self, manager_inst=None):
         self.manager_inst = manager_inst
-        
-
-def import_adapt_module(mod_full_name, dependency_folder=None):
-    if dependency_folder:
-        sys.path.insert(0, dependency_folder)
-        # this makes sure that packages inside the dependency folder are
-        # found first. Unless the module has already been imported.
-    save = DependencyManager.raise_errors
-    DependencyManager.raise_errors = BackendDependencyError
-    try:
-        mod = importlib.import_module(mod_full_name)
-    except BackendDependencyError as e:
-        e.handle()
-        raise
-    finally:
-        DependencyManager.raise_errors = save
-        if dependency_folder: sys.path.pop(0)
-    try:
-        manager_inst = DependencyManager.instances[mod_full_name]
-    except KeyError:
-        warnings.warn(f"Module {mod_full_name} did not define "
-                      f"DependencyManager instance.")
-        manager_inst = None
-    return mod, manager_inst
-
-
-def get_module_dependencies(mod_full_name,perform_check=False,**kwargs):
-    try:
-        return DependencyManager.instances[mod_full_name]
-    except KeyError:
-        pass
-    DependencyManager.exit_module_after_import = True
-    DependencyManager.check_dependency  = perform_check
-    try:
-        mod, manager_inst = import_adapt_module(mod_full_name,**kwargs)
-    except ReturnFromModule as e:
-        #this should happen if DependencyManager was used
-        manager_inst = e.manager_inst
-    else:
-        # this normally happens if DependencyManager was not defined
-        # otherwise the following warning will be triggered:
-        if manager_inst is not None:
-            warnings.warn(f"Failed to return from {mod_full_name} "
-                   f"although DependencyManager instance was defined. Please "
-                   f"use DependencyManager.exit() method.")
-    finally:
-        DependencyManager.exit_module_after_import = False
-        DependencyManager.check_dependency = True
-    return manager_inst
     
-    
-
-
 
 class BackendDependencyError(Exception):
     
@@ -103,7 +50,7 @@ class BackendDependencyError(Exception):
         return text
 
 
-class DependencyManager:
+class DependencyManagerBase:
     raise_errors = True  #this is set in Dependency class inside method raise_
     exit_module_after_import = False
     check_dependency = True
@@ -171,6 +118,59 @@ class DependencyManager:
     @classmethod
     def save_dependency_info(cls, name, **kwargs):
         cls.saved_dependency_infos[name] = kwargs
+
+
+    @classmethod
+    def import_adapt_module(cls, mod_full_name, dependency_folder=None):
+        if dependency_folder:
+            sys.path.insert(0,
+                    dependency_folder)  # this makes sure that packages
+            # inside the dependency folder are  # found first. Unless the
+            # module has already been imported.
+        save = cls.raise_errors
+        cls.raise_errors = BackendDependencyError
+        try:
+            mod = importlib.import_module(mod_full_name)
+        except BackendDependencyError as e:
+            e.handle()
+            raise
+        finally:
+            cls.raise_errors = save
+            if dependency_folder: sys.path.pop(0)
+        try:
+            manager_inst = cls.instances[mod_full_name]
+        except KeyError:
+            warnings.warn(f"Module {mod_full_name} did not define "
+                          f"DependencyManager instance.")
+            manager_inst = None
+        return mod, manager_inst
+
+    @classmethod
+    def get_module_dependencies(cls, mod_full_name, perform_check=False,
+            **kwargs):
+        try:
+            return cls.instances[mod_full_name]
+        except KeyError:
+            pass
+        cls.exit_module_after_import = True
+        cls.check_dependency = perform_check
+        try:
+            mod, manager_inst = cls.import_adapt_module(mod_full_name, **kwargs)
+        except ReturnFromModule as e:
+            # this should happen if DependencyManager was used
+            manager_inst = e.manager_inst
+        else:
+            # this normally happens if DependencyManager was not defined
+            # otherwise the following warning will be triggered:
+            if manager_inst is not None:
+                warnings.warn(f"Failed to return from {mod_full_name} "
+                              f"although DependencyManager instance was "
+                              f"defined. Please "
+                              f"use DependencyManager.exit() method.")
+        finally:
+            cls.exit_module_after_import = False
+            cls.check_dependency = True
+        return manager_inst
 
 
 class Dependency:

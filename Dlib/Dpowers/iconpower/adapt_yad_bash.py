@@ -17,7 +17,7 @@
 #
 #
 from Dhelpers.launcher import launch
-from Dhelpers.adaptor import DependencyManager
+from .. import DependencyManager
 
 
 with DependencyManager(__name__) as tester:

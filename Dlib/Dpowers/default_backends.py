@@ -21,8 +21,9 @@ from Dhelpers.arghandling import ArgSaver
 
 pynput = "pynput"
 evdev = "evdev"
+pystray = "pystray"
 
-class backends:
+class linux:
     
     class HookAdaptor:
         default  = pynput
@@ -44,7 +45,7 @@ class backends:
         hotstring = pynput
         
     class IconAdaptor:
-        default = "pystray"
+        default = (pystray, "yad_bash")
         
     class ClipboardAdaptor:
         default = "xclip_bash"
@@ -64,3 +65,33 @@ class backends:
         
     class TextToSpeechAdaptor:
         default = "ttsx3"
+        
+
+class termux:
+    class ImageAdaptor(linux.ImageAdaptor):
+        pass
+    
+    class mp3tagAdaptor(linux.mp3tagAdaptor):
+        pass
+    
+    
+class windows:
+    class KeyboardAdaptor:
+        default = pynput
+        Dfuncs = pynput
+        keywait = pynput
+        hotstring = pynput
+        
+    class IconAdaptor:
+        default = pystray
+        
+    class MouseAdaptor:
+        default = pynput
+        Dfuncs = default
+        keywait = default
+
+    class ImageAdaptor:
+        default = "wand"
+
+    class mp3tagAdaptor:
+        default = "eyed3"

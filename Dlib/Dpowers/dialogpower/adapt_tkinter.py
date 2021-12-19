@@ -19,7 +19,7 @@
 import functools
 
 
-from Dhelpers.adaptor import DependencyManager
+from .. import DependencyManager
 
 with DependencyManager(__name__) as tester:
     tk = tester.import_module("tkinter", pkg="python3-tk", install_tool ="apt")

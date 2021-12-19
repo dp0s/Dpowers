@@ -45,31 +45,27 @@ from Dhelpers import __version__  as Dhelpers_version
 if __version__ != Dhelpers_version: raise ValueError
 
 from Dhelpers.adaptor import (AdaptorBase, adaptionmethod, AdaptionError,
-    AdaptorBase, adaptionmethod, AdaptiveClass, DependencyManager)
+    AdaptorBase, adaptionmethod, AdaptiveClass)
 from Dhelpers.launcher import launch
 from Dhelpers.customprint import always_print_traceback, restore_print_func
 from Dhelpers.arghandling import ArgSaver
 from Dhelpers.KeyboardLayouts import Layout
-from Dhelpers.platform import PlatformInfo
-
-current_platform = PlatformInfo()
-current_platform.update()
-DependencyManager.platform_info = current_platform
 
     
 try:
     always_print_traceback()
 
-    from .default_backends import backends
+    from .default_backends import linux
 
     class Adaptor(AdaptorBase):
         """Abstract baseclass for all of Dpower's Adaption classes."""
         #dependency_folder = dependency_folder
-        backend_defaults = backends
+        backend_defaults = linux
         NamedKeyClass = None  #set later
         NamedButtonClass = None  #set later
     
-
+    
+    DependencyManager = Adaptor.DependencyManager
     activate_autoadapt = Adaptor.activate_autoadapt
     adapt_all = Adaptor.adapt_all
     deactivate_autoadapt = Adaptor.deactivate_autoadapt
@@ -116,6 +112,6 @@ finally:
 
 #clean up this namespace
 del os, AdaptorBase, adaptionmethod, always_print_traceback, \
-    restore_print_func, backends
+    restore_print_func
 
 Adaptor._set_effective_paths(globals(),__name__)

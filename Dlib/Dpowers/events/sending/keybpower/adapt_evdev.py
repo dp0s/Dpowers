@@ -17,7 +17,7 @@
 #
 #
 
-from Dhelpers.adaptor import DependencyManager
+from ... import DependencyManager
 
 with DependencyManager(__name__) as manager:
     uinput = manager.import_module("evdev_prepared.uinput")

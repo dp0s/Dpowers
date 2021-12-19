@@ -23,7 +23,7 @@ from .baseclasses import (InputEventHandler, KeyhookBase, ButtonhookBase,
     CursorhookBase, PressReleaseHook)
 from ..event_classes import PressReleaseEvent
 
-from Dhelpers.adaptor import DependencyManager
+from .. import DependencyManager
 
 with DependencyManager(__name__) as manager:
     device_control = manager.import_module("evdev_prepared.device_control")

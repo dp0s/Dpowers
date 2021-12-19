@@ -18,7 +18,7 @@
 #
 from .adaptor_classes import AdaptorBase, AdaptionError
 from ..arghandling import check_type, ArgSaver
-from .dependency_testing import BackendDependencyError, import_adapt_module, DependencyManager
+from .dependency_testing import BackendDependencyError
 import warnings
 
 class Backend:
@@ -163,8 +163,9 @@ class Backend:
             module_location = self.adaptorcls.__module__
             module_full_name = module_location + module_name
             try:
-                mod, manager = import_adapt_module(module_full_name,
-                        self.dependency_folder)
+                mod, manager = \
+                    self.adaptorcls.DependencyManager.import_adapt_module(
+                        module_full_name, self.dependency_folder)
             except Exception as e:
                 if isinstance(e, BackendDependencyError): raise
                 raise AdaptionError from e

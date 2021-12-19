@@ -24,8 +24,11 @@ import inspect, functools, types, os, pkgutil, warnings
 from ..baseclasses import RememberInstanceCreationInfo, KeepInstanceRefs, \
     iter_all_vars
 from ..arghandling import (check_type, remove_first_arg, ArgSaver)
+from ..platform import PlatformInfo
 from types import FunctionType
 from collections import defaultdict
+from .dependency_testing import DependencyManagerBase, InstallInstruction
+
 
 class AdaptionError(Exception):
     pass
@@ -283,6 +286,8 @@ class AdaptorBase(KeepInstanceRefs):
     baseclass = True
     AdaptiveClass = None
     _primary_instances = dict()
+    platform_info = None
+    DependencyManager = None
     
     
     def __init_subclass__(cls):
@@ -309,6 +314,11 @@ class AdaptorBase(KeepInstanceRefs):
                 cls.__doc__ = doc + "\n\n    " + add
         elif cls._subclass_level == 1:
             cls._first_level_subclass = cls
+            cls.platform_info = PlatformInfo()
+            cls.platform_info.update()
+            cls.DependencyManager = type("DependencyManager",
+                    (DependencyManagerBase,),{})
+            
                 
             
     
@@ -596,7 +606,8 @@ class AdaptorBase(KeepInstanceRefs):
         dependency_dict = defaultdict(list)
         for subclass in cls.iter_subclasses():
             for module_name in subclass.find_modules():
-                manager = get_module_dependencies(module_name, check)
+                manager = cls.DependencyManager.get_module_dependencies(
+                        module_name, check)
                 dependency_dict[subclass].append(manager)
         return dependency_dict
     
@@ -610,7 +621,7 @@ class AdaptorBase(KeepInstanceRefs):
         return global_instructions
     
     @classmethod
-    def print_all_infos(cls, check=True):
+    def _print_all_infos(cls, check=True):
         global_instructions = InstallInstruction()
         for subclass in cls.iter_subclasses():
             print("___________________________________________")
@@ -623,7 +634,8 @@ class AdaptorBase(KeepInstanceRefs):
                 print("backend:", name[6:])
                 full_name = subclass.__module__ + "." + name
                 # mod=sys.modules[subclass.__module__+"."+name]
-                manager = get_module_dependencies(full_name,
+                manager = cls.DependencyManager.get_module_dependencies(
+                        full_name,
                         perform_check=check)
                 for d in manager.dependencies:
                     print(d)
@@ -748,5 +760,3 @@ class AdaptiveClass:
 
 
 from .backend_class import Backend
-from .dependency_testing import BackendDependencyError, DependencyManager, \
-    get_module_dependencies, InstallInstruction
