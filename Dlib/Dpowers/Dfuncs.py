@@ -18,10 +18,11 @@
 #
 import time, os, sys, threading, traceback, warnings, functools
 from Dhelpers.container import container
-from Dhelpers.customprint import execute_after_print,\
-    restore_print_func, always_print_traceback
+from Dhelpers.builtin_manipulation import execute_after_print,\
+    execute_after_warnings, execute_after_error, always_print_traceback
 #the last two print functions should be imported via the Dfuncs module
 from Dhelpers.arghandling import PositiveInt
+from .winapps import pythoneditor
 
 from .events import KeyboardAdaptor, MouseAdaptor, KeyWaiter, HookAdaptor, CombinedSender
 from . import dlg, ntfy, clip, Win, launch
@@ -121,63 +122,35 @@ def sendwait(mandatory, *optional, winwaittime=10, notifytime=5,
 ### Catching messages to additionally show a notification
 # ========================================================
 
-
-def _not_if_tty(func):
-    @functools.wraps(func)
-    def new_func(*args, even_if_tty=False, **kwargs):
-        if sys.stdout.isatty() and not even_if_tty:
-            return "%s was ignored as stdout is a tty"%func.__name__
-        return func(*args, **kwargs)
-    return new_func
-
-
-@_not_if_tty
-def execute_after_error(func):
-    #    Workaround for `sys.excepthook` thread bug from:
-    #    http://bugs.python.org/issue1230540
-    #
-    #   Call once from the main thread before creating any threads.
-    # this is necessary so that the Threading module does not swallow all the
-    #  import
-    init_original = threading.Thread.__init__
-    def init(self, *args, **kwargs):
-        init_original(self, *args, **kwargs)
-        run_original = self.run
-        def run_with_except_hook(*args2, **kwargs2):
-            try:
-                run_original(*args2, **kwargs2)
-            except Exception:
-                sys.excepthook(*sys.exc_info())
-        self.run = run_with_except_hook
-    threading.Thread.__init__ = init
-    
-    def my_excepthook(error_type, error_message, error_traceback):
-        # this function allows to perform an action in case of an exception,
-        # before the
-        # standard action takes place
-        # print(error_traceback.tb_lineno, error_traceback.tb_frame.f_lineno,
-        #        error_traceback.tb_frame.f_code.co_filename)
-        # last_tb_line = traceback.extract_tb(error_traceback)[-1]
-        # printable_traceback = "".join(traceback.format_tb(error_traceback))
-        func(error_type, error_message, error_traceback)
-        sys.__excepthook__(error_type, error_message, error_traceback)
-    
-    sys.excepthook = my_excepthook
-    return func  #allow use as decorator
-    
-
-@_not_if_tty
-def notify_about_warnings(timeout=10):
-    save_showwarning = warnings.showwarning
-    def my_showwarning(msg, cat, filename, lineno, *args, **kwargs):
-        ntfy("Warning", timeout,
-                "file: %s \nline: %s\n%s"%(filename, str(lineno), msg))
-        save_showwarning(msg, cat, filename, lineno, *args, **kwargs)
-    warnings.showwarning = my_showwarning
+def notify_about_error(hotkey=None, timeout=10):
+    @execute_after_error
+    def error_notification(error_type, error_message, error_traceback):
+        source_msg = ""
+        if hotkey: source_msg += f"Press {hotkey} to see."
+        ntfy(f"{error_type.__name__}: {error_message}", timeout, source_msg)
+        def analyze_error():
+            options = traceback.format_tb(error_traceback)
+            text = f"{error_type}\n{error_message}\n\nTraeback:\n"
+            result = dlg.choose(options, options[-1], text=text, width=1000,
+                    height=1000)
+            i = options.index(result)
+            fs = traceback.extract_tb(error_traceback, i + 1)[i]
+            pythoneditor.jump_to_line(fs[0], fs[1])
+        container.set_temp_store_key("exec_func",analyze_error, timeout)
 
 
-@_not_if_tty
-def notify_about_print(timeout=5):
+
+def notify_about_warnings(hotkey=None,timeout=10):
+    @execute_after_warnings
+    def post_notifcation(msg,file,line):
+        source_msg = f"Printed on line {line} in: {file}."
+        if hotkey: source_msg+= f" Press {hotkey} to see."
+        ntfy(f"Warning: {msg}", timeout, source_msg)
+        container.set_temp_store_key("exec_func", functools.partial(
+                pythoneditor.jump_to_line,file, line), timeout)
+        
+
+def notify_about_print(hotkey=None, timeout=5):
     @execute_after_print
     def ntfy_after_print(*args, sep=" ", end="\n", notify=True, **ignore):
         if not notify: return
@@ -187,8 +160,11 @@ def notify_about_print(timeout=5):
         # we want to access the call of the print_func, so we use [-3]
         print_message = sep.join([str(arg) for arg in args])
         if end != "\n": print_message += end
-        ntfy(print_message, timeout, "Printed on line %s in:\n%s"%(line, file))
-    
+        source_msg = f"Printed on line {line} in: {file}."
+        if hotkey: source_msg += f" Press {hotkey} to see."
+        ntfy(print_message, timeout, source_msg)
+        container.set_temp_store_key("exec_func", functools.partial(
+                pythoneditor.jump_to_line, file, line), timeout*2)
 
 
 

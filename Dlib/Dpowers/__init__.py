@@ -47,7 +47,8 @@ if __version__ != Dhelpers_version: raise ValueError
 from Dhelpers.adaptor import (AdaptorBase, adaptionmethod, AdaptionError,
     AdaptorBase, adaptionmethod, AdaptiveClass)
 from Dhelpers.launcher import launch
-from Dhelpers.customprint import always_print_traceback, restore_print_func
+from Dhelpers.builtin_manipulation import always_print_traceback, \
+    restore_print_func
 from Dhelpers.arghandling import ArgSaver
 from Dhelpers.KeyboardLayouts import Layout
 

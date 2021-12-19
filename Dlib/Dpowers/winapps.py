@@ -24,13 +24,13 @@ class WindowApplication(Application):
         if self.used_inst:
             self._winsearch = self.used_inst.winsearch
             self.used_inst = None
-        if winargs:
-            if isinstance(winargs[0], (Application, self.Win.Search)):
+        if winargs and isinstance(winargs[0], (Application, self.Win.Search)):
                 assert not winkwargs
                 for obj in winargs:
                     if isinstance(obj,Application): obj = obj.winsearch
                     self._winsearch += obj
                 return
+        if "visible" not in winkwargs: winkwargs["visible"] = True
         self._winsearch += self.Win.Search(*winargs,**winkwargs)
     
     def __getattr__(self, item):
@@ -46,7 +46,7 @@ class WindowApplication(Application):
     
     def startwait(self, *options):
         launch(self.command,*options)
-        self.wait_active()
+        self.wait_exist_activate()
    
         
         
@@ -55,6 +55,7 @@ class EditorApp(WindowApplication):
     def jump_to_line(self, file, line=None):
         add = " --line " + str(line) if line else ""
         launch(self.command + add + f' "{file}"')
+        self.wait_exist_activate()
 
 
 pythoneditor = EditorApp()

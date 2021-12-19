@@ -113,8 +113,20 @@ class WindowObject(ABC):
         return tuple(self.geometries_())
     def geometry(self):
         return self._make_single_val(self.geometries_())
+    
+    def widths_(self):
+        for geom in self.geometries_(): yield geom[2] - geom[0]
+    def widths(self):
+        return tuple(self.widths_())
+    def width(self):
+        return self._make_single_val(self.widths_())
 
-        
+    def heights_(self):
+        for geom in self.geometries_(): yield geom[3] - geom[1]
+    def heights(self):
+        return tuple(self.widths_())
+    def height(self):
+        return self._make_single_val(self.widths_())
     
     def infos_(self):
         for a in zip(self.titles_(), self.wclasses_()): yield a
@@ -298,11 +310,13 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
         return self.__class__(*self.creation_args, **new_kwargs)
     
     def process_args(self, title_or_ID=None,*, loc=None, limit=None,
-            visible=None, **properties):
+            visible=None, selection_func=None, **properties):
         check_type(int, limit, allowed=(None,))
         self.visible = visible
         self.location = loc
         self.fixed_IDs = None
+        if selection_func: assert callable(selection_func)
+        self.selection_func = selection_func
         if loc is not None:
             if properties or title_or_ID or limit:
                 raise SyntaxError("Parameter loc cannot be combined with "
@@ -368,10 +382,17 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
                 out = out[l:]
             else:
                 raise ValueError(self.limit)
+        if self.selection_func:
+            out = tuple(ID for ID in out if self.selection_func(
+                    self._FoundWinClass(ID)))
         return out
+    
+    
     
     def existing_IDs(self):
         return self.IDs()
+    
+    
     
     
     # the following redefinitions are necessary because this way,
