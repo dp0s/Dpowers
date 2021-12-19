@@ -17,7 +17,8 @@
 #
 #
 import builtins, inspect, traceback
-from .container import container
+from ..container import container
+from . import _add_tty_disable_option
 
 # =======================================================================
 # Alternating the builtin print function
@@ -60,6 +61,7 @@ class print_func_replaced:
     def __exit__(self, exc_type, exc_val, exc_tb):
         builtins.print, container.execute_after_print = self.saved
 
+@_add_tty_disable_option
 def execute_after_print(func):
     original_print = find_original_print_func()
     if not callable(func):
@@ -80,6 +82,7 @@ def execute_after_print(func):
     builtins.print = _custom_print
     traceback.print = original_print  # this avoids problems with showing
     return func #allow execution as decorator
+
 
 
 def print_last_traceback(*ignore, tb_lines=1, print_traceback=True, end="\n",
@@ -106,6 +109,8 @@ def print_last_traceback(*ignore, tb_lines=1, print_traceback=True, end="\n",
         original_print(line)
     original_print()  # to create a newline at the very end
 
+@_add_tty_disable_option
 def always_print_traceback(default_tb_lines=1):
     container.default_tb_lines_to_print = default_tb_lines
     execute_after_print(print_last_traceback)
+
