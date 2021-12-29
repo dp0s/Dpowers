@@ -3,15 +3,15 @@ from Dhelpers.launcher import launch, Application
 from . import Win
 
 
-
-
 class WindowApplication(Application):
     
     Win = Win
+    mouse=NotImplemented
     
     def __init__(self, command=NotImplemented, check_installed=False):
         super().__init__(command, check_installed)
         self._winsearch = 0
+        self.last_found = None
 
 
     @property
@@ -34,27 +34,43 @@ class WindowApplication(Application):
         self._winsearch += self.Win.Search(*winargs,**winkwargs)
     
     def __getattr__(self, item):
-        winsearch = self.winsearch
-        if winsearch is not 0:
-            obj = getattr(winsearch, item)
+        winobj = self.last_found if self.last_found else self.winsearch
+        if winobj is not 0:
+            obj = getattr(winobj, item)
             if isinstance(obj,(types.FunctionType, types.MethodType)):
                 return obj
             raise AttributeError
         
-    def find_win(self):
-        return self.find()
+    def find(self):
+        found_win = self.winsearch.find()
+        if len(found_win) == 1: self.last_found = found_win
+        return found_win
+        
+    find_win = find
     
-    def startwait(self, *options):
-        launch(self.command,*options)
-        self.wait_exist_activate()
-   
+    def startwait(self, *args, timeout=10,**kwargs):
+        self._found = self.find()
+        launch(self.command,*args, **kwargs)
+        # capturing the pid of this process doesnt help, as windows might
+        # share same pid of the one that was first opened
+        new_win = self._found.wait_num_change(+1, timeout=10)
+        if not new_win: return
+        new_win.activate()
+        self.last_found = new_win
+        return new_win
+    
+    def center_mouse(self):
+        geom = self.geometry()
+        self.mouse.moveto(geom[0]+geom[2]/2, geom[1]+geom[3]/4)
         
         
 class EditorApp(WindowApplication):
     
     def jump_to_line(self, file, line=None):
-        add = " --line " + str(line) if line else ""
-        launch(self.command + add + f' "{file}"')
+        args = []
+        if line: args += ["--line", str(line)]
+        args += [str(file)]
+        launch(self.command, *args)
         self.wait_exist_activate()
 
 

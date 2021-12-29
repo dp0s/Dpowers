@@ -133,9 +133,10 @@ def notify_about_error(hotkey=None, timeout=10):
             text = f"{error_type}\n{error_message}\n\nTraeback:\n"
             result = dlg.choose(options, options[-1], text=text, width=1000,
                     height=1000)
-            i = options.index(result)
-            fs = traceback.extract_tb(error_traceback, i + 1)[i]
-            pythoneditor.jump_to_line(fs[0], fs[1])
+            if result:
+                i = options.index(result)
+                fs = traceback.extract_tb(error_traceback, i + 1)[i]
+                pythoneditor.jump_to_line(fs[0], fs[1])
         container.set_temp_store_key("exec_func",analyze_error, timeout)
 
 

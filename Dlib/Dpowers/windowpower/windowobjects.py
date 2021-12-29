@@ -85,7 +85,7 @@ class WindowObject(ABC):
     def wclasses_(self):
         for ID in self.IDs():
             x = self.adaptor.property_from_ID(ID, "wcls")
-            check_type(str, x)
+            check_type(str, x, allowed=(None,))
             yield x
     def wclasses(self):
         return tuple(self.wclasses_())
@@ -554,6 +554,9 @@ class FoundWindows(WindowObject):
         def iterator():
             for id in self.IDs(): yield self.__class__(id)
         return iterator()
+    
+    def __len__(self):
+        return len(self.IDs())
 
 
     def __eq__(self, other):
