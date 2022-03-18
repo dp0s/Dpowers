@@ -17,7 +17,7 @@
 #
 #
 from warnings import warn
-import time, threading, subprocess, multiprocessing, types
+import time, threading, subprocess, multiprocessing, types, os, signal
 from .psutil_fix import psutil
 from .arghandling import PositiveInt
 
@@ -282,7 +282,8 @@ class LaunchFuncs:
                     self.child.status() != psutil.STATUS_ZOMBIE:
                 time.sleep(self.checktime)
             #print(self.parent.status(), self.child.status())
-            kill_process(self.child, self.parent)
+            self.child.kill()
+            self.parent.kill()
 
 
 
