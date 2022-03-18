@@ -49,7 +49,7 @@ def yaml_write(obj, f):
 def yaml_read(f):
     if isinstance(f, str):
         if path.isfile(f):
-            with open(f) as fp: return yaml.load(fp)
+            with open(f) as fp: return yaml.safe_load(fp)
         else:
             raise FileNotFoundError
     else:

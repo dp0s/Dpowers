@@ -156,7 +156,11 @@ def property_from_ID(ID, prop_name):
     if prop_name == "title":
         return _xdo_get_from_single_id(ID, "getwindowname")
     elif prop_name == "wcls":
-        x = re.split('"', launch.get("xprop", "-id", ID, "WM_CLASS"))
+        y = launch.get("xprop", "-id", ID, "WM_CLASS")
+        x = re.split('"', y)
+        if len(x) < 4:
+            if y == "WM_CLASS:  not found.": return None
+            return y
         return x[-4] + '.' + x[-2]
     elif prop_name == "pid":
         p = _xdo_get_from_single_id(ID, "getwindowpid")

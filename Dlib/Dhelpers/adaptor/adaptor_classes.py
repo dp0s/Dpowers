@@ -625,12 +625,13 @@ class AdaptorBase(KeepInstanceRefs):
         return dependency_dict
     
     @classmethod
-    def install_instructions(cls):
+    def install_instructions(cls, as_str=True):
         global_instructions = InstallInstruction()
         for subcls, managerlist in cls.backend_dict(check=False).items():
             for m in managerlist:
                 for d in m.dependencies:
                     global_instructions.update(d.install_instructions[''])
+        if as_str: return str(global_instructions)
         return global_instructions
     
     @classmethod
