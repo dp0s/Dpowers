@@ -95,4 +95,5 @@ class SelectionSaver:
         return self.save
     
     def __exit__(self, *ignore_these_args):
+        time.sleep(0.2)
         self.clipboardadaptor.fill(self.save, self.selection)

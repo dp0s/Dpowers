@@ -34,7 +34,8 @@ class WindowApplication(Application):
         self._winsearch += self.Win.Search(*winargs,**winkwargs)
     
     def __getattr__(self, item):
-        winobj = self.last_found if self.last_found else self.winsearch
+        winobj = self.last_found.winsearch_object if self.last_found else \
+            self.winsearch
         if winobj is not 0:
             obj = getattr(winobj, item)
             if isinstance(obj,(types.FunctionType, types.MethodType)):
@@ -48,16 +49,22 @@ class WindowApplication(Application):
         
     find_win = find
     
-    def startwait(self, *args, timeout=10,**kwargs):
+    def startwait(self, *args, start=True, timeout=10,**kwargs):
+        return self.wait(*args,start=start,timeout=timeout, **kwargs)
+        
+    def wait(self, *args,start=False,timeout=10,**kwargs):
         self._found = self.find()
-        launch(self.command,*args, **kwargs)
+        if start:
+            cmd = start if isinstance(start, str) else self.command
+            launch(cmd,*args, **kwargs)
         # capturing the pid of this process doesnt help, as windows might
         # share same pid of the one that was first opened
-        new_win = self._found.wait_num_change(+1, timeout=10)
+        new_win = self._found.wait_num_change(+1, timeout=timeout)
         if not new_win: return
         new_win.activate()
         self.last_found = new_win
         return new_win
+        
     
     def center_mouse(self):
         geom = self.geometry()
