@@ -242,3 +242,21 @@ def monitor_input_events(timeout=10, implementation=None,**hookkwargs):
     with this_hook.keyboard_mouse(functools.partial(ntfy,timeout=1), **hookkwargs):
         time.sleep(timeout)
     ntfy("Done showing input events.")
+
+
+saved_patterns = []
+    
+def save_key_replay():
+    k = KeyWaiter(maxtime=600,endevents=("Esc",))
+    ntfy("Saving pressed keys",10, "Abort by pressing Esc")
+    saved_patterns.append(k)
+    k.start()
+    ntfy("Stop saving pressed keys")
+
+def replay_pressed_keys():
+    k = saved_patterns[-1]
+    ntfy("Press ShiftL to start")
+    if KeyWaiter.wait_for_key("ShiftL"):
+        ntfy("reinjecting")
+        k.reinject()
+        ntfy("reinjecting done")

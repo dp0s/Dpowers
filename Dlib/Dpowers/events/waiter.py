@@ -31,7 +31,7 @@ class Waiter(TimedObject):
     
     def __init__(self, callback_hook=None, maxlen = None, maxtime = 20, *,
             endevents=(), cond_func=None, eventmap=None,
-            wait=True, capture=False, notify=True):
+            wait=True, capture=False, notify=False):
         super().__init__(timeout=maxtime, wait=wait)
         check_type(CallbackHook, callback_hook)
         if callback_hook: raise ValueError(f"Arguments of callback hook "
@@ -161,6 +161,7 @@ class KeyWaiter(Waiter, HookAdaptor.AdaptiveClass):
         super().__init__(callback_hook, *args, eventmap=eventmap, **kwargs)
     
     def event_condition(self, event, ev_mapped):
+        #print(event)
         if self.join_events:
             self.joined_events += event
             if ev_mapped: self.joined_events_mapped += ev_mapped
@@ -181,12 +182,13 @@ class KeyWaiter(Waiter, HookAdaptor.AdaptiveClass):
 
     @classmethod
     def get1key(cls, maxtime = 2, wait = True, press=True, release=True,
-            capture=True, **options):
+            capture=True, notify=True, **options):
         if wait is not True:
             raise Exception("ERROR: get1 keyword arg 'wait' must be true")
         with hotkeys.paused(3):
             get1 = cls(maxlen=1, maxtime=maxtime, wait=True, press=press,
-                    release = release, capture=capture,**options).start()
+                release = release, capture=capture, notify=notify, **options)
+            get1.start()
         if get1.exitcode == "maxlen":
             key = get1.events[0]
             if not press and not key.press and not options.get("write_rls",
@@ -234,3 +236,11 @@ class KeyWaiter(Waiter, HookAdaptor.AdaptiveClass):
                 else:
                     cls.hotstring_keyb.send(string_dict[inp.joined_events])
         return inp
+    
+    @classmethod
+    def wait_for_key(cls, *keynames, timeout=20):
+        inp = cls(maxtime=timeout, endevents=keynames, press=False,
+                release=True, write_rls=False, wait=True)
+        inp.start()
+        if inp.exitcode == "timeout": return False
+        return inp.duration()
