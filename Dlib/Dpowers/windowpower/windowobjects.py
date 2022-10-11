@@ -19,7 +19,7 @@
 from Dhelpers.baseclasses import (check_type, AdditionContainer)
 from Dhelpers.arghandling import (PositiveInt, CollectionWithProps)
 
-import inspect, time
+import inspect, time, functools
 from abc import ABC, abstractmethod
 
 
@@ -288,9 +288,7 @@ class WindowObject(ABC):
             found_win.activate()
             found_win.wait_active()
             return found_win
-        
 
-import functools
 
 class WindowSearch(AdditionContainer.Addend, WindowObject):
     
@@ -315,7 +313,9 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
         self.visible = visible
         self.location = loc
         self.fixed_IDs = None
-        if selection_func: assert callable(selection_func)
+        if selection_func:
+            assert callable(selection_func)
+            raise ValueError("selection_func not yet implemented")
         self.selection_func = selection_func
         if loc is not None:
             if properties or title_or_ID or limit:
@@ -347,7 +347,7 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
         self.creation_kwargs = winkwargs
         self.process_args(*winargs, **winkwargs)
     
-    def compare_win(self, *winargs,**winkwargs):
+    def compare_args(self, *winargs,**winkwargs):
         new_instance = self.__class__(*winargs, **winkwargs)
         for attr in ("location", "fixed_IDs"):
             if getattr(self,attr) != getattr(new_instance, attr):
@@ -357,7 +357,7 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
         return True
     
     def IDs(self):
-        if self.location and not self.fixed_IDs:
+        if self.location:
             return (self.adaptor._ID_from_location(self.location),)
         
         winlist = None
@@ -382,12 +382,28 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
                 out = out[l:]
             else:
                 raise ValueError(self.limit)
-        if self.selection_func:
-            out = tuple(ID for ID in out if self.selection_func(
-                    self._FoundWinClass(ID)))
+        # if self.selection_func:
+        #     out = tuple(ID for ID in out if self.selection_func(
+        #             self._FoundWinClass(ID)))
         return out
     
     
+    def check_single(self, win):
+        # problem here: we don't know how to check whether win is visible..
+        # so self.visible has no effect inside here.
+        if isinstance(win, int):
+            id = win
+        elif isinstance(win,self._FoundWinClass):
+            id = win.ID()
+        else:
+            raise TypeError
+        if self.location: return id in self.IDs()
+        # in other cases we don't want to run self.IDs() because it scans for
+        # all possible matching IDs taking more time
+        if self.fixed_IDs and id not in self.fixed_IDs: return False
+        for prop, val in self.searched_properties.items():
+            if self.adaptor.property_from_ID(id,prop) != val: return False
+        return True
     
     def existing_IDs(self):
         return self.IDs()
@@ -423,10 +439,14 @@ class WindowSearchContainer(AdditionContainer, WindowSearch,
     def _FoundWinClass(self):
         return self.members[0]._FoundWinClass
     
-    def compare_win(self, *winargs,**winkwargs):
+    def compare_args(self, *winargs,**winkwargs):
         for member in self.members:
-            if member.compare_win(*winargs, **winkwargs):
-                return True
+            if member.compare_args(*winargs, **winkwargs): return True
+        return False
+
+    def check_single(self, win):
+        for member in self.members:
+            if member.check_single(win): return True
         return False
 
 
@@ -440,6 +460,7 @@ class FoundWindows(WindowObject):
         cls._FoundWinClass = cls
         cls._WinSearchClass = winsearch
         cls.Search = winsearch
+        cls._search_activewin = winsearch()
         super().__init_subclass__()
         
 
@@ -451,6 +472,8 @@ class FoundWindows(WindowObject):
                     raise TypeError
             self.winsearch_object = WinSearch_instance
             # reuse the WindwoSearch object
+        elif not winargs and not winkwargs:
+            self.winsearch_object = self._search_activewin
         else:
             self.winsearch_object = self._WinSearchClass(*winargs, **winkwargs)
             # this will initialize instance attributes according to
@@ -465,6 +488,12 @@ class FoundWindows(WindowObject):
     def IDs(self):
         # careful: these IDs might not be existing any more
         return self.found_IDs
+    
+    def check(self, *winsearch_objects):
+        assert len(self) == 1
+        for obj in winsearch_objects:
+            if winsearch_objects.check_single(self.ID()): return True
+        return False
     
     def update(self):
         self.found_IDs = self.winsearch_object.IDs()
