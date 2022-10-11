@@ -107,3 +107,4 @@ class WindowHandler(FoundWindows, WindowAdaptor.AdaptiveClass):
         return cls.adaptor.screen_res()
     
     
+    
