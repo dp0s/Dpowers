@@ -24,14 +24,22 @@ class WindowApplication(Application):
         if self.used_inst:
             self._winsearch = self.used_inst.winsearch
             self.used_inst = None
-        if winargs and isinstance(winargs[0], (Application, self.Win.Search)):
+        if winargs and isinstance(winargs[0], (self.__class__, self.Win.Search)):
                 assert not winkwargs
                 for obj in winargs:
-                    if isinstance(obj,Application): obj = obj.winsearch
+                    if isinstance(obj,self.__class__): obj = obj.winsearch
                     self._winsearch += obj
                 return
         if "visible" not in winkwargs: winkwargs["visible"] = True
         self._winsearch += self.Win.Search(*winargs,**winkwargs)
+
+    def __add__(self, other):
+        assert isinstance(other,(self.__class__, self.Win.Search))
+        combined = self.__class__()
+        combined.add_winprops(self)
+        combined.add_winprops(other)
+        return combined
+        
     
     def __getattr__(self, item):
         winobj = self.last_found.winsearch_object if self.last_found else \
@@ -81,4 +89,7 @@ class EditorApp(WindowApplication):
         self.wait_exist_activate()
 
 
-pythoneditor = EditorApp()
+
+pythoneditor = EditorApp()  #this instance is used in trigman.py
+# the actual windows behind it, need to be added via .add_winprops method
+# later on
