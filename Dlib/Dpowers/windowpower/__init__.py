@@ -67,14 +67,18 @@ class WindowAdaptor(Adaptor):
         except NotImplementedError as e:
             raise self._error(prop_name,self.IDs_from_property) from e
         if not i_list: i_list = set()
-        for id in i_list:
-            self.cached_properties[id][prop_name]=prop_val
+        for id in i_list: self.cached_properties[id][prop_name]=prop_val
         return i_list
     
     @adaptionmethod(require=True)
-    def property_from_ID(self, ID, prop_name):
+    def property_from_ID(self, ID, prop_name, query_cache=False):
+        if query_cache:
+            try:
+                return self.cached_properties[ID][prop_name]
+            except KeyError:
+                pass
         try:
-            val = self.property_from_ID.target_with_args()
+            val = self.property_from_ID.target(ID, prop_name)
         except NotImplementedError as e:
             raise self._error(prop_name,self.property_from_ID) from e
         if not val: val = None

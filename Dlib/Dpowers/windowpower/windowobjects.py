@@ -401,8 +401,9 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
         # in other cases we don't want to run self.IDs() because it scans for
         # all possible matching IDs taking more time
         if self.fixed_IDs and id not in self.fixed_IDs: return False
-        for prop, val in self.searched_properties.items():
-            if self.adaptor.property_from_ID(id,prop) != val: return False
+        for prop, val in self._properties.items():
+            if self.adaptor.property_from_ID(id,prop, query_cache=True) != val:
+                return False
         return True
     
     def existing_IDs(self):
@@ -489,10 +490,14 @@ class FoundWindows(WindowObject):
         # careful: these IDs might not be existing any more
         return self.found_IDs
     
+    @property
+    def cached_properties(self):
+        return self.adaptor.cached_properties
+    
     def check(self, *winsearch_objects):
         assert len(self) == 1
         for obj in winsearch_objects:
-            if winsearch_objects.check_single(self.ID()): return True
+            if obj.check_single(self.ID()): return True
         return False
     
     def update(self):
