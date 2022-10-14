@@ -19,9 +19,24 @@
 
 from .. import Adaptor, adaptionmethod
 from .windowobjects import FoundWindows, WindowSearch, WindowObject
+from collections import defaultdict
+import functools
 
 class WindowAdaptor(Adaptor):
     
+    
+    @functools.wraps(Adaptor.__init__)
+    def __init__(self, *args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.cached_properties = defaultdict(dict)
+        
+    @functools.wraps(Adaptor.adapt)
+    def adapt(self, *args,**kwargs):
+        self.cached_properties.clear()
+        return super().adapt(*args,**kwargs)
+
+
+
     @adaptionmethod
     def screen_res(self):
         return self.screen_res.target()
@@ -52,6 +67,8 @@ class WindowAdaptor(Adaptor):
         except NotImplementedError as e:
             raise self._error(prop_name,self.IDs_from_property) from e
         if not i_list: i_list = set()
+        for id in i_list:
+            self.cached_properties[id][prop_name]=prop_val
         return i_list
     
     @adaptionmethod(require=True)
@@ -60,7 +77,9 @@ class WindowAdaptor(Adaptor):
             val = self.property_from_ID.target_with_args()
         except NotImplementedError as e:
             raise self._error(prop_name,self.property_from_ID) from e
-        if val: return val
+        if not val: val = None
+        self.cached_properties[ID][prop_name]=val
+        return val
     
     def id_exists(self, ID):
         return bool(self.property_from_ID(ID, "title"))
