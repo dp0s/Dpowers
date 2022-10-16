@@ -1,8 +1,9 @@
 import types
 from Dhelpers.launcher import launch, Application
 from . import Win
+from .windowpower import WindowSearch
 
-
+@WindowSearch.register
 class WindowApplication(Application):
     
     Win = Win

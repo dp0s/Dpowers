@@ -494,11 +494,25 @@ class FoundWindows(WindowObject):
     def cached_properties(self):
         return self.adaptor.cached_properties
     
-    def check(self, *winsearch_objects):
+    def clear_cache(self):
+        for id in self.IDs():
+            try:
+                self.cached_properties.pop(id)
+            except KeyError:
+                pass
+            
+    
+    def check(self, *winargs, **winkwargs):
         assert len(self) == 1
-        for obj in winsearch_objects:
-            if obj.check_single(self.ID()): return True
-        return False
+        first = winargs[0]
+        id = self.ID()
+        if isinstance(first, WindowSearch):
+            assert not winkwargs
+            for obj in winargs:
+                if obj.check_single(id): return True
+            return False
+        search = self._WinSearchClass(*winargs,**winkwargs)
+        return search.check_single(id)
     
     def update(self):
         self.found_IDs = self.winsearch_object.IDs()

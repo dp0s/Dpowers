@@ -71,7 +71,7 @@ class WindowAdaptor(Adaptor):
         return i_list
     
     @adaptionmethod(require=True)
-    def property_from_ID(self, ID, prop_name, query_cache=False):
+    def property_from_ID(self, ID, prop_name, query_cache=True):
         if query_cache:
             try:
                 return self.cached_properties[ID][prop_name]
