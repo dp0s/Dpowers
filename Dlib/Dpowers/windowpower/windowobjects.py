@@ -353,7 +353,7 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
             if getattr(self,attr) != getattr(new_instance, attr):
                 return False
         for key, val in self._properties.items():
-            if new_instance._properties[key] != val: return False
+            if new_instance._properties.get(key) != val: return False
         return True
     
     def IDs(self):

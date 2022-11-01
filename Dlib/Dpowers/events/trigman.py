@@ -86,7 +86,8 @@ class PatternListener:
                 try:
                     return action(hk)
                 except TypeError:
-                    return action()
+                    pass
+                return action()
             else:
                 raise TypeError
         finally:
