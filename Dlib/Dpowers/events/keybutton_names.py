@@ -160,8 +160,9 @@ class StandardKeyNames:
         ShiftR = 'ShiftR', 'Shift_R', 'rightshift'
         ShiftL = 'ShiftL', 'Shift', 'Shift_L', 'leftshift'
         CtrlL = 'CtrlL', 'Control_L', 'Ctrl', 'Ctrl_L', 'Control', 'leftcontrol',\
-            'leftctrl'
-        CtrlR = 'CtrlR', 'Control_R', 'Ctrl_R', 'rightcontrol', 'rightctrl'
+            'leftctrl', "LCtrl", "L_Ctrl"
+        CtrlR = 'CtrlR', 'Control_R', 'Ctrl_R', 'rightcontrol', 'rightctrl', \
+            "RCtrl", "R_Ctrl"
         Alt = 'Alt', 'Alt_L', 'AltL', 'leftalt'
         AltGr = 'AltGr', 'Alt_R', 'AltR', 'rightalt', '65027'
         SControl = 'SControl', 'SCtrl'
