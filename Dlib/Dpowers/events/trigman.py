@@ -243,7 +243,8 @@ class RegisteredHook(PatternListener):
 class TriggerManager(PatternListener,TimedObject, HookAdaptor.AdaptiveClass,
         KeepInstanceRefs):
     
-    adaptor = HookAdaptor(group="triggerman", _primary=True)
+    adaptor = HookAdaptor(group="triggerman",
+            _primary_name="TriggerManager.adaptor")
     
     
     def __init__(self, timeout=60, buffer=4):

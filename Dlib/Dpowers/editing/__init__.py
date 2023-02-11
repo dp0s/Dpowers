@@ -23,11 +23,11 @@ from .mp3power import *
 
 
 class Image(ImageBase):
-    adaptor = ImageAdaptor(_primary=True)
+    adaptor = ImageAdaptor(_primary_name="Image.adaptor")
     
     
 class mp3tag(mp3tagBase):
-    adaptor = mp3tagAdaptor(_primary=True)
+    adaptor = mp3tagAdaptor(_primary_name="mp3tag.adaptor")
 
 
 

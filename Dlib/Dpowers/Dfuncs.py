@@ -32,8 +32,8 @@ from .windowpower import WindowObject
 # SENDWAIT function
 # =======================================================================
 
-keyb = KeyboardAdaptor(group="Dfuncs",_primary=True)
-mouse = MouseAdaptor(group="Dfuncs", _primary=True)
+keyb = KeyboardAdaptor(group="Dfuncs",_primary_name="keyb")
+mouse = MouseAdaptor(group="Dfuncs", _primary_name="mouse")
 event_sender = CombinedSender(keyb,mouse)
 
 class SendwaitError(Exception):

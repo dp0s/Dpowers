@@ -51,11 +51,9 @@ class KeepInstanceRefs:
         super().__init__() #remove?
         self.__instance_ref_dict__[self.__class__].append(weakref.ref(self))
         # self.__instance_ref_dict__[self.__class__] is the list containing
-        # all instance
-        # references for this given
-        # sub-class
-        # we need a weakref, so that we don't get errors if the instance
-        # object is deleted
+        # all instance references for this given
+        # sub-class we need a weakref, so that we don't get errors if the
+        # instance object is deleted
     
     @classmethod
     def get_instances(cls):
@@ -86,7 +84,7 @@ class KeepInstanceRefs:
     
     
     
-    
+
 class UniqueInstances(KeepInstanceRefs):
     
     _error_msg = None
@@ -119,60 +117,58 @@ class MultipleInstanceError(Exception):
         
         
 
-class InstanceCreationError(Exception):
-    pass
-
-class RememberInstanceCreationInfo:
-    def __init__(self):
-        for frame, line in traceback.walk_stack(None):
-            varnames = frame.f_code.co_varnames
-            if varnames is ():
-                break
-            if frame.f_locals[varnames[0]] not in (self, self.__class__):
-                break
-                # if the frame is inside a method of this instance,
-                # the first argument usually contains either the instance or
-                #  its class
-                # we want to find the first frame, where this is not the case
-        else:
-            raise InstanceCreationError("No suitable outer frame found.")
-        self.creation_module = frame.f_globals["__name__"]
-        self.creation_file, self.creation_line, self.creation_function, \
-            self.creation_text = \
-            traceback.extract_stack(frame, 1)[0]
-        self.creation_name = self.creation_text[
-        :self.creation_text.find('=')].strip()
-        threading.Thread(target=check_existence_after_creation,
-                args=(self, frame)).start()
-    
-    def __repr__(self):
-        try:
-            r = super().__repr__()
-        except TypeError:
-            # this happens if not used as BaseClass, but called directly
-            r = object.__repr__(self)
-        return r[:-1] + " with creation_name '%s'>" %self.creation_name
-
-
-def check_existence_after_creation(obj, frame):
-    time.sleep(0.1)
-    #while frame.f_lineno == obj.creation_line:
-    error = InstanceCreationError(
-            "\nCreation name not found in creation frame.\n"
-            "creation_file: %s \ncreation_line: %s \n"
-            "creation_text: %s\ncreation_name (might be wrong): "
-            "%s"%(obj.creation_file, obj.creation_line, obj.creation_text,
-            obj.creation_name))
-    nameparts = obj.creation_name.split(".")
-    try:
-        var = frame.f_locals[nameparts[0]]
-    except KeyError as k:
-        raise error from k
-    try:
-        for name in nameparts[1:]: var = getattr(var, name)
-    except AttributeError as a:
-        raise error from a
-    if var is not obj: raise error
+# class InstanceCreationError(Exception):
+#     pass
+#
+# class RememberInstanceCreationInfo:
+#     def __init__(self):
+#         for frame, line in traceback.walk_stack(None):
+#             varnames = frame.f_code.co_varnames
+#             if varnames == (): break
+#             if frame.f_locals[varnames[0]] not in (self, self.__class__):
+#                 break
+#                 # if the frame is inside a method of this instance,
+#                 # the first argument usually contains either the instance or
+#                 #  its class
+#                 # we want to find the first frame, where this is not the case
+#         else:
+#             raise InstanceCreationError("No suitable outer frame found.")
+#         self.creation_module = frame.f_globals["__name__"]
+#         self.creation_file, self.creation_line, self.creation_function, \
+#             self.creation_text = traceback.extract_stack(frame, 1)[0]
+#         self.creation_name = self.creation_text[
+#             :self.creation_text.find('=')].strip()
+#         threading.Thread(target=check_existence_after_creation,
+#                 args=(self, frame)).start()
+#
+#     def __repr__(self):
+#         try:
+#             r = super().__repr__()
+#         except TypeError:
+#             # this happens if not used as BaseClass, but called directly
+#             r = object.__repr__(self)
+#         return r[:-1] + " with creation_name '%s'>" %self.creation_name
+#
+#
+# def check_existence_after_creation(obj, frame):
+#     time.sleep(0.1)
+#     #while frame.f_lineno == obj.creation_line:
+#     error = InstanceCreationError(
+#             "\nCreation name not found in creation frame.\n"
+#             "creation_file: %s \ncreation_line: %s \n"
+#             "creation_text: %s\ncreation_name (might be wrong): "
+#             "%s"%(obj.creation_file, obj.creation_line, obj.creation_text,
+#             obj.creation_name))
+#     nameparts = obj.creation_name.split(".")
+#     try:
+#         var = frame.f_locals[nameparts[0]]
+#     except KeyError as k:
+#         raise error from k
+#     try:
+#         for name in nameparts[1:]: var = getattr(var, name)
+#     except AttributeError as a:
+#         raise error from a
+#     if var is not obj: raise error
 
 
 
@@ -304,7 +300,7 @@ class AdditionContainerAddend:
             return NotImplemented
 
     def __radd__(self, other):
-        if other is 0 or other is None: return self
+        if other == 0 or other is None: return self
         #0 necessary for using sum()
         try:
             return super().__radd__(other)
@@ -356,7 +352,7 @@ class AdditionContainer:
             return NotImplemented
 
     def __radd__(self, other):
-        if other is 0 or other is None: return self
+        if other == 0 or other is None: return self
         # 0 necessary for using sum()
         try:
             return super().__radd__(other)

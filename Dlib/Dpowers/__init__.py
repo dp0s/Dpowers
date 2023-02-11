@@ -74,16 +74,16 @@ try:
 
 
     from .notificationpower import NotificationAdaptor
-    ntfy = NotificationAdaptor(_primary=True)
+    ntfy = NotificationAdaptor(_primary_name="ntfy")
 
 
     from .windowpower import WindowAdaptor, WindowHandler
     class Win(WindowHandler):
-        adaptor = WindowAdaptor(_primary=True)
+        adaptor = WindowAdaptor(_primary_name="Win.adaptor")
 
     
     from .dialogpower import DialogAdaptor
-    dlg = DialogAdaptor(_primary=True)
+    dlg = DialogAdaptor(_primary_name="dlg")
 
 
     from . import events
@@ -91,12 +91,12 @@ try:
         KeyboardAdaptor, MouseAdaptor, HookAdaptor, SenderAdaptor, TriggerManager
 
     from .clipboardpower import ClipboardAdaptor
-    clip = ClipboardAdaptor(_primary=True)
+    clip = ClipboardAdaptor(_primary_name="clip")
 
 
     from .iconpower import IconAdaptor, IconHandler
     class Icon(IconHandler):
-        adaptor = IconAdaptor(_primary=True)
+        adaptor = IconAdaptor(_primary_name="Icon.adaptor")
     
     from . import editing
     from .editing import Image, ImageAdaptor, mp3tag, mp3tagAdaptor

@@ -21,8 +21,7 @@
 
 ### TODO: activate_autoadapt and exception handling.
 import inspect, functools, types, os, pkgutil, warnings
-from ..baseclasses import RememberInstanceCreationInfo, KeepInstanceRefs, \
-    iter_all_vars
+from ..baseclasses import KeepInstanceRefs, iter_all_vars
 from ..arghandling import (check_type, remove_first_arg, ArgSaver)
 from ..platform import PlatformInfo
 from types import FunctionType
@@ -323,7 +322,7 @@ class AdaptorBase(KeepInstanceRefs):
                 
             
     
-    def __init__(self, main_info=None, *, group="default", _primary=False,
+    def __init__(self, main_info=None, *, group="default", _primary_name=False,
             **method_infos):
         """
         Usually, you do not need to create Adaptor instances yourself as
@@ -335,7 +334,7 @@ class AdaptorBase(KeepInstanceRefs):
             :func:`adapt`.
         :param str group: Name of the instance group to which the new
             instance will belong.
-        :param _primary: Used only for internal documentation purposes. It
+        :param _primary_name: Used only for internal documentation purposes. It
             allows specifiying the primary/default instance for each instance group.
         :param method_infos: Passed on to :func:`adapt`.
         
@@ -361,14 +360,14 @@ class AdaptorBase(KeepInstanceRefs):
         self.primary = False
         self.instance_group = group
         
-        if _primary is True:
+        if _primary_name is not False:
             if group is None: raise ValueError
             prim_inst = self.get_primary_instance()
             if prim_inst:
                 raise ValueError(f"Primary instance for this instance group "
                                  "already set:\n{prim_inst}")
             # the following is a way of conditionally subclassing:
-            RememberInstanceCreationInfo.__init__(self)
+            self.creation_name = _primary_name
             self.primary = True
             self._primary_instances[self.creation_name]=self
             if group == "default":
@@ -452,12 +451,13 @@ class AdaptorBase(KeepInstanceRefs):
     
     
     def __repr__(self):
+        r = super().__repr__()[:-1]
         if self.primary:
-            r = RememberInstanceCreationInfo.__repr__(self)[
-                :-1] + ", primary instance of group '"
+            r += f" with creation_name {self.creation_name}, " \
+                 f"primary instance of group"
         else:
-            r = super().__repr__()[:-1] + ", instance group: '"
-        r += str(self.instance_group) + "', backend: " + str(
+            r += ", instance group:"
+        r += " '" + str(self.instance_group) + "', backend: " + str(
                 self.backend) + ">"
         return r
     

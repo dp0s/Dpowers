@@ -72,12 +72,12 @@ from .event_classes import *
 
 from .hookpower import *
 
-hook = HookAdaptor(_primary=True)
+hook = HookAdaptor(_primary_name="hook")
 
 from .sending import *
 
-mouse = MouseAdaptor(_primary=True)
-keyb = KeyboardAdaptor(_primary=True)
+mouse = MouseAdaptor(_primary_name="mouse")
+keyb = KeyboardAdaptor(_primary_name="keyb")
 
 from .event_classes import *
 

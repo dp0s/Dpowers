@@ -27,7 +27,7 @@ from .. import NotificationAdaptor
 
 
 class Waiter(TimedObject):
-    ntfy = NotificationAdaptor(group="waiter", _primary=True)
+    ntfy = NotificationAdaptor(group="waiter", _primary_name="ntfy")
     
     def __init__(self, callback_hook=None, maxlen = None, maxtime = 20, *,
             endevents=(), cond_func=None, eventmap=None,
@@ -125,10 +125,10 @@ class Waiter(TimedObject):
         
 class KeyWaiter(Waiter, HookAdaptor.AdaptiveClass):
     
-    adaptor = HookAdaptor(group="keywait", _primary=True)
+    adaptor = HookAdaptor(group="keywait", _primary_name="KeyWaiter.adaptor")
     hook = adaptor
-    keyb = KeyboardAdaptor(group="keywait",_primary=True)
-    mouse = MouseAdaptor(group="keywait", _primary=True)
+    keyb = KeyboardAdaptor(group="keywait",_primary_name="keyb")
+    mouse = MouseAdaptor(group="keywait", _primary_name="mouse")
     hotstring_keyb = KeyboardAdaptor(group="hotstring")
 
     def __init__(self, *args, eventmap=None, keys=True,  buttons=False,
