@@ -1,6 +1,6 @@
 #
 #
-# Copyright (c) 2020-2021 DPS, dps@my.mail.de
+# Copyright (c) 2020-2023 DPS, dps@my.mail.de
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -40,9 +40,11 @@ except ModuleNotFoundError:
     
 
 __version__ = "0.1.4"
-from Dhelpers import __version__  as Dhelpers_version
 #Dpowers and Dhelpers share version number
-if __version__ != Dhelpers_version: raise ValueError
+if __version__ != Dhelpers.__version__:
+    import warnings
+    warnings.warn("Dpowers and Dhelpers packages do not share same version "\
+                  "number")
 
 from Dhelpers.adaptor import (AdaptorBase, adaptionmethod, AdaptionError,
     AdaptorBase, adaptionmethod, AdaptiveClass)
