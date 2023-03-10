@@ -31,10 +31,10 @@ class mp3tag(mp3tagBase):
 
 
 
-from Dhelpers.file_iteration import FileSelector
+from Dhelpers.file_iteration import FilelistCreator
 
 
-class playlist_creator(FileSelector):
+class PlaylistCreator(FilelistCreator):
     editor_class = mp3tag
-    file_extension = ".m3u"
+    filelist_extension = ".m3u"
     file_start = "#EXTM3U"
