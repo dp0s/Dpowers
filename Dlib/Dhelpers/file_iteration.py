@@ -138,13 +138,21 @@ class FilelistCreator:
         filelist_cls.creator = self
         self.Filelist = filelist_cls
         self.basepath = basepath
-        if not destpath and basepath:
-            destpath = os.path.join(basepath, "__playlists")
-        if destpath: os.makedirs(destpath, exist_ok=True)
         self.destpath = destpath
         self.filelist_objs = {}
         self.file_paths = {}
         self.imported_lists = None
+        
+    @property
+    def destpath(self):
+        if not self._destpath and self.basepath:
+            return os.path.join(self.basepath, "__playlists")
+        return self._destpath
+        
+    @destpath.setter
+    def destpath(self, val):
+        self._destpath = val
+        
     
     def add(self, name, func=None, **kwargs):
         new_inst = self.Filelist(name,func=func, **kwargs)
@@ -206,6 +214,7 @@ class FilelistCreator:
     def write_paths(self, *names, assemble=True, **kwargs):
         if assemble: self.assemble_lists(*names, **kwargs)
         print("Creating playlists:")
+        os.makedirs(self.destpath, exist_ok=True)
         for name, file_path_list in self.file_paths.items():
             self._write_filelist(name,file_path_list, self.destpath)
             
