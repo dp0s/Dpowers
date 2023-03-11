@@ -16,10 +16,9 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-import os, warnings
+import os, warnings, sys, random, functools
 from collections import defaultdict
 from contextlib import contextmanager
-import random
 
 p = os.path
 
@@ -139,9 +138,10 @@ class FilelistCreator:
         filelist_cls.creator = self
         self.Filelist = filelist_cls
         self.basepath = basepath
-        self.destpath = destpath if destpath else os.path.join(basepath,
-                "__playlists")  #
-        os.makedirs(self.destpath, exist_ok=True)
+        if not destpath and basepath:
+            destpath = os.path.join(basepath, "__playlists")
+        if destpath: os.makedirs(destpath, exist_ok=True)
+        self.destpath = destpath
         self.filelist_objs = {}
         self.file_paths = {}
         self.imported_lists = None
@@ -207,12 +207,15 @@ class FilelistCreator:
         if assemble: self.assemble_lists(*names, **kwargs)
         print("Creating playlists:")
         for name, file_path_list in self.file_paths.items():
-            fpath = os.path.join(self.destpath, name + self.filelist_extension)
-            with open(fpath, "w") as new:
-                new.write(self.file_start + "\n")
-                for file in file_path_list:
-                    new.write(file + "\n")
-            print(f"{name}: {len(file_path_list)} songs in {fpath}")
+            self._write_filelist(name,file_path_list, self.destpath)
+            
+            
+    def _write_filelist(self, name, file_path_list, path):
+        fpath = os.path.join(path, name + self.filelist_extension)
+        with open(fpath, "w") as new:
+            new.write(self.file_start + "\n")
+            for file in file_path_list: new.write(file + "\n")
+        print(f"{name}: {len(file_path_list)} songs in {fpath}")
 
 
 
@@ -230,10 +233,16 @@ class FilelistCreator:
     
     def create_combination(self, *file_list_names, insert=None,
             from_imported=False):
-        lists = self.import_lists if from_imported else self.file_paths
+        lists = self.imported_lists if from_imported else self.file_paths
         for name in file_list_names:
             if isinstance(name,self.Filelist): name=name.name
             l = lists[name]
             yield random.choice(l)
             if insert: yield insert
-        
+    
+    @functools.wraps(create_combination)
+    def write_combination(self, *args, **kwargs):
+        filelist = tuple(self.create_combination(*args,**kwargs))
+        comb_path=os.path.join(self.destpath, "combinations")
+        os.makedirs(comb_path, exist_ok=True)
+        self._write_filelist("test_combination", filelist, comb_path)
