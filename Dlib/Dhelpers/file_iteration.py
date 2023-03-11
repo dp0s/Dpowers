@@ -18,6 +18,8 @@
 #
 import os, warnings
 from collections import defaultdict
+from contextlib import contextmanager
+import random
 
 p = os.path
 
@@ -54,43 +56,60 @@ class FileIterator:
 
 class BooleanFunction:
     
-    reset_cache_lvl = 0
+    _cache_lvl = False
+    _last_cache_lvl = 0
     
     @classmethod
     def getfunc(cls, func):
-        if hasattr(func, 'func'):
-            if isinstance(func.func, cls):
-                func = func.func.func
-            elif isinstance(func, cls):
-                func = func.func
+        if isinstance(func, cls): func = func._func
         assert callable(func)
-        return lambda *args, **kwargs: bool(func(*args,**kwargs))
-    def __init__(self, func):
-        self.func = self.getfunc(func)
+        return func
+
+    def __init__(self,name=None, func=None):
+        self.name = name
+        self._func = self.getfunc(func)
         self.cached_val=None
-    def __call__(self, *args, **kwargs):
-        return bool(self.func(*args, **kwargs))
+        
+    def func(self, *args, **kwargs):
+        cls_cache_lvl = self.__class__._cache_lvl
+        if cls_cache_lvl is False: return bool(self._func(*args,**kwargs))
+        if self.cached_val is None or self._cache_lvl <= cls_cache_lvl:
+            self.cached_val = bool(self._func(*args,**kwargs))
+            self._cache_lvl = cls_cache_lvl + 1
+        return self.cached_val
+    __call__ = func
+    
+    
+    @classmethod
+    @contextmanager
+    def use_cache(cls):
+        # Usage: see FilelistCreator.find_files method below
+        cls._cache_lvl = cls._last_cache_lvl + 1
+        try:
+            yield cls._forget_cached_vals
+        finally:
+            cls._last_cache_lvl = cls._cache_lvl
+            cls._cache_lvl = False
+    
+    @classmethod
+    def _forget_cached_vals(cls):
+        cls._cache_lvl += 1
+        
+    
+    
     def negate(self):
         return self.__class__(
                 func=lambda *args, **kwargs: not self.func(*args, **kwargs))
     def __and__(self, other):
-        otherfunc = self.getfunc(other)
+        assert callable(other)
         return self.__class__(func=lambda *args, **kwargs:
-                self.func(*args, **kwargs) & otherfunc(*args, **kwargs))
+                self.func(*args, **kwargs) & bool(other(*args, **kwargs)))
     def __or__(self, other):
-        otherfunc = self.getfunc(other)
+        assert callable(other)
         return self.__class__(func=lambda *args, **kwargs:  self.func(*args,
-                **kwargs) | otherfunc(*args, **kwargs))
-    def func_cached(self, *args, **kwargs):
-        cls_cache_lvl = self.__class__.reset_cache_lvl
-        if self.cached_val is None or self.reset_cache_lvl <= cls_cache_lvl:
-            self.cached_val = self.func(*args,**kwargs)
-            self.reset_cache_lvl = cls_cache_lvl+1
-        return self.cached_val
+                **kwargs) | bool(other(*args, **kwargs)))
     
-    @classmethod
-    def reset_cache(cls):
-        cls.reset_cache_lvl += 1
+    
     
 
 
@@ -98,14 +117,13 @@ class BooleanFunction:
 class Filelist(BooleanFunction):
     creator = None
     def __init__(self, name=None, func=None, add=True, **kwargs):
-        self.name = name
         self.last_found_paths=[]
         if name is None: add = False
         if not func:
             if not kwargs: raise ValueError
             func = lambda obj: self.creator.default_selection_func(obj,
                     **kwargs)
-        BooleanFunction.__init__(self, func)
+        BooleanFunction.__init__(self, name, func)
         if add: self.creator.add_inst(self)
 
 
@@ -158,22 +176,23 @@ class FilelistCreator:
             allowed_ext = self.allowed_file_extensions
             if allowed_ext == "inherit":
                 allowed_ext=self.editor_class.allowed_file_extensions
-            for file in files:
-                ext = os.path.splitext(file)[-1]
-                if ext not in allowed_ext: continue
-                file = os.path.realpath(os.path.join(dirpath, file))
-                try:
-                    with self.editor_class(file) as obj:
-                        for name in names:
-                            filelist_obj = self.filelist_objs[name]
-                            if filelist_obj.func(obj): yield name, file
-                except Exception as e:
-                    if not suppress_error: raise
-                    if warn:
-                        warnings.warn(f"\nerror with file {file}:\n{e}")
-                        print()
-                #finally:
-                 #   self.Filelist.reset_cache()
+            with self.Filelist.use_cache() as reset_cache:
+                for file in files:
+                    ext = os.path.splitext(file)[-1]
+                    if ext not in allowed_ext: continue
+                    file = os.path.realpath(os.path.join(dirpath, file))
+                    try:
+                        with self.editor_class(file) as obj:
+                            for name in names:
+                                filelist_obj = self.filelist_objs[name]
+                                if filelist_obj(obj): yield name, file
+                    except Exception as e:
+                        if not suppress_error: raise
+                        if warn:
+                            warnings.warn(f"\nerror with file {file}:\n{e}")
+                            print()
+                    finally:
+                        reset_cache()
     
     def assemble_lists(self, *names, **kwargs):
         if not names: names = self.file_paths.keys()
@@ -209,10 +228,12 @@ class FilelistCreator:
                     self.imported_lists[name].append(line.strip())
         return self.imported_lists
     
-    def create_combination(self, *file_list_names, from_imported=False):
+    def create_combination(self, *file_list_names, insert=None,
+            from_imported=False):
         lists = self.import_lists if from_imported else self.file_paths
         for name in file_list_names:
             if isinstance(name,self.Filelist): name=name.name
             l = lists[name]
-        
+            yield random.choice(l)
+            if insert: yield insert
         
