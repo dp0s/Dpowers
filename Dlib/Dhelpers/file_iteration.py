@@ -142,6 +142,8 @@ class FilelistCreator:
         self.filelist_objs = {}
         self.file_paths = {}
         self.imported_lists = None
+        self.filelist_combinations = list()
+        self._custom_file_func = NotImplemented
         
     @property
     def destpath(self):
@@ -219,8 +221,14 @@ class FilelistCreator:
             self._write_filelist(name,file_path_list, self.destpath)
             
             
-    def _write_filelist(self, name, file_path_list, path):
-        fpath = os.path.join(path, name + self.filelist_extension)
+    def _write_filelist(self, name, file_path_list, path, overwrite=True):
+        fpath_base = os.path.join(path, name)
+        fpath = fpath_base + self.filelist_extension
+        if overwrite is False:
+            num = 0
+            while os.path.isfile(fpath):
+                num += 1
+                fpath = fpath_base + "__" + str(num) + self.filelist_extension
         with open(fpath, "w") as new:
             new.write(self.file_start + "\n")
             for file in file_path_list: new.write(file + "\n")
@@ -240,18 +248,64 @@ class FilelistCreator:
                     self.imported_lists[name].append(line.strip())
         return self.imported_lists
     
-    def create_combination(self, *file_list_names, insert=None,
-            from_imported=False):
-        lists = self.imported_lists if from_imported else self.file_paths
-        for name in file_list_names:
-            if isinstance(name,self.Filelist): name=name.name
+    def define_combination(self, *args, **kwargs):
+        c = FilelistCombination(self, *args,**kwargs)
+        self.filelist_combinations.append(c)
+        return c
+    
+    def write_combinations(self, *args,**kwargs):
+        for c in self.filelist_combinations: c.write(*args,**kwargs)
+        
+    def get_custom_file(self, name_or_number, raise_error=True):
+        if self._custom_file_func is NotImplemented:
+            if raise_error: raise NotImplementedError
+            return name_or_number
+        return self._custom_file_func(self, name_or_number)
+    
+    """A decorator"""
+    def custom_file_finder(self, func):
+        self._custom_file_func = func
+        return func
+
+class FilelistCombination:
+    
+    def __init__(self, playlist_creator, name, file_list_names,*, insert=None,
+            from_imported=False, destpath=None):
+        self.name = name
+        self.creator = playlist_creator
+        assert isinstance(file_list_names, (tuple, list))
+        self.file_lists = file_list_names
+        self.insert = insert
+        self.from_imported = from_imported
+        self.destpath = destpath
+    
+    @property
+    def destpath(self):
+        if self._destpath: return self._destpath
+        dp = self.creator.destpath
+        if dp: return os.path.join(dp, "combinations")
+        return
+    
+    @destpath.setter
+    def destpath(self, val):
+        self._destpath = val
+    
+    def create(self, insert=None, from_imported=None):
+        insert = insert if insert else self.insert
+        from_imported = self.from_imported if from_imported is None else from_imported
+        creator = self.creator
+        lists = creator.imported_lists if from_imported else creator.file_paths
+        for name in self.file_lists:
+            if isinstance(name, creator.Filelist): name = name.name
             l = lists[name]
             yield random.choice(l)
-            if insert: yield insert
+            if insert:
+                yield self.creator.get_custom_file(insert, raise_error=False)
     
-    @functools.wraps(create_combination)
-    def write_combination(self, *args, **kwargs):
-        filelist = tuple(self.create_combination(*args,**kwargs))
-        comb_path=os.path.join(self.destpath, "combinations")
-        os.makedirs(comb_path, exist_ok=True)
-        self._write_filelist("test_combination", filelist, comb_path)
+    @functools.wraps(create)
+    def write(self, name=None, destpath=None, overwrite=True, **kwargs):
+        name = name if name else self.name
+        destpath = destpath if destpath else self.destpath
+        filelist = tuple(self.create(**kwargs))
+        os.makedirs(destpath, exist_ok=True)
+        self.creator._write_filelist(name, filelist, destpath, overwrite=overwrite)
