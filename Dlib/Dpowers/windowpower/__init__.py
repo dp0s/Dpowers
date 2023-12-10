@@ -86,7 +86,7 @@ class WindowAdaptor(Adaptor):
         return val
     
     def id_exists(self, ID):
-        return bool(self.property_from_ID(ID, "title"))
+        return bool(self.property_from_ID(ID, "title", query_cache=False))
     
     @adaptionmethod
     def activate(self, ID):
