@@ -44,33 +44,25 @@ class IconHandler(IconAdaptor.AdaptiveClass):
         self.child_process = None
         self.last_item = ("Quit", self.terminate_parent)
         self.parent_id = os.getpid()
+        self.queue = None
+    
+    def menuitem(self, name, func=lambda: warnings.warn("No action defined.")):
+        self._items.append((str(name), func))
+        
+    def additem(self,func):
+        """A decorator"""
+        self.menuitem(func.__name__.replace("_"," "), func)
+        return func
+    
+    def add_default_menuitems(self):
         self.menuitem("Display win info", Dfuncs.display_win_info)
         self.menuitem("Get single key name(s)", Dfuncs.display_key_names)
         self.menuitem("Monitor input events for 10s",
                 Dfuncs.monitor_input_events)
         self.menuitem("Toggle notifications", ntfy.toggle)
         self.menuitem("Save key stroke pattern", Dfuncs.save_key_replay)
-        self.menuitem("Replay last key stroke pattern", Dfuncs.replay_pressed_keys)
-        self.queue = None
-    
-        
-    
-    # def iconpath(self,path):
-    #     self.path = path
-    #
-    # def tooltip(self,text):
-    #     self.tooltip = text
-    # #
-    # def left_click(self,func):
-    #      self.left_click = func
-    
-    
-    def menuitem(self, name, func=lambda: warnings.warn("No action defined.")):
-        self._items.append((str(name), func))
-        
-    def additem(self,func):
-        self.menuitem(func.__name__.replace("_"," "), func)
-        return func
+        self.menuitem("Replay last key stroke pattern",
+                Dfuncs.replay_pressed_keys)
     
     @property
     def items(self):
