@@ -256,16 +256,19 @@ class FilelistCreator:
     def write_combinations(self, *args,**kwargs):
         for c in self.filelist_combinations: c.write(*args,**kwargs)
         
-    def get_custom_file(self, name_or_number, raise_error=True):
-        if self._custom_file_func is NotImplemented:
-            if raise_error: raise NotImplementedError
-            return name_or_number
-        return self._custom_file_func(self, name_or_number)
+    def get_custom_file(self, name_or_number):
+        print(name_or_number)
+        if self._custom_file_func is NotImplemented: raise NotImplementedError
+        file = self._custom_file_func(self, name_or_number)
+        print(file)
+        if not os.path.isfile(file): raise FileNotFoundError(file)
+        return file
     
     """A decorator"""
     def custom_file_finder(self, func):
         self._custom_file_func = func
         return func
+
 
 class FilelistCombination:
     
@@ -289,23 +292,44 @@ class FilelistCombination:
     @destpath.setter
     def destpath(self, val):
         self._destpath = val
+        
+    def _process_fileinfo(self, fileinfo, dic):
+        if isinstance(fileinfo, self.creator.Filelist):
+            fileinfo = fileinfo.name
+        if fileinfo in dic:
+            return random.choice(dic[fileinfo])
+            #first, check if a FileList has been defined with that name
+            # if not, then try to interpret the given name as an argument for
+            # custom_file_finder
+        else:
+            try:
+                return self.creator.get_custom_file(fileinfo)
+            except NotImplementedError:
+                return
+            except FileNotFoundError:
+                return
     
     def create(self, insert=None, from_imported=None):
         insert = insert if insert else self.insert
         from_imported = self.from_imported if from_imported is None else from_imported
         creator = self.creator
         lists = creator.imported_lists if from_imported else creator.file_paths
-        for name in self.file_lists:
-            if isinstance(name, creator.Filelist): name = name.name
-            l = lists[name]
-            yield random.choice(l)
+        for info in self.file_lists:
+            file = self._process_fileinfo(info, lists)
+            if file: yield file
             if insert:
-                yield self.creator.get_custom_file(insert, raise_error=False)
+                file = self._process_fileinfo(insert, lists)
+                if file:
+                    yield file
+                else:
+                    yield insert #just return the input, in case it is a
+                    # explicit path
     
     @functools.wraps(create)
     def write(self, name=None, destpath=None, overwrite=True, **kwargs):
         name = name if name else self.name
         destpath = destpath if destpath else self.destpath
         filelist = tuple(self.create(**kwargs))
+        #print(filelist)
         os.makedirs(destpath, exist_ok=True)
         self.creator._write_filelist(name, filelist, destpath, overwrite=overwrite)
