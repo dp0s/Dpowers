@@ -253,10 +253,10 @@ def save_key_replay():
     k.start()
     ntfy("Stop saving pressed keys")
 
-def replay_pressed_keys():
+def replay_pressed_keys(delay=100):
     k = saved_patterns[-1]
     ntfy("Press ShiftL to start")
     if KeyWaiter.wait_for_key("ShiftL"):
         ntfy("reinjecting")
-        k.reinject()
+        k.reinject(delay=delay)
         ntfy("reinjecting done")

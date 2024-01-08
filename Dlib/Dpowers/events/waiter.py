@@ -31,7 +31,7 @@ class Waiter(TimedObject):
     
     def __init__(self, callback_hook=None, maxlen = None, maxtime = 20, *,
             endevents=(), cond_func=None, eventmap=None,
-            wait=True, capture=False, notify=False):
+            wait=True, capture=False, notify=False, timestamps=False):
         super().__init__(timeout=maxtime, wait=wait)
         check_type(CallbackHook, callback_hook)
         if callback_hook: raise ValueError(f"Arguments of callback hook "
@@ -49,9 +49,10 @@ class Waiter(TimedObject):
         timeout = maxtime + 5 if maxtime else None
         self.callback_hook = callback_hook(self.called, timeout,
                 capture=self.capture)
-        
         self.num = 0
         self.events = []
+        self.timestamps = timestamps
+        self.event_timestamps=[]
         if self.eventmap: self.events_mapped = []
         self.notify = notify
     
@@ -66,6 +67,7 @@ class Waiter(TimedObject):
         self.callback_hook.stop()
 
     def called(self, event):
+        if self.timestamps: self.event_timestamps.append(time.time())
         self.events.append(event)
         self.num += 1
         event_mapped = None
@@ -103,6 +105,15 @@ class Waiter(TimedObject):
             except Exception as e:
                 self.stop(e)
                 raise
+            
+    def event_intervalls(self):
+        if not self.timestamps: raise ValueError
+        before = self.starttime
+        intervalls = []
+        for t in self.event_timestamps:
+            intervalls.append(t-before)
+            before = t
+        return intervalls
 
     
     @classmethod
