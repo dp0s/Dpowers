@@ -179,7 +179,7 @@ class KeyWaiter(Waiter, HookAdaptor.AdaptiveClass):
         return super().event_condition(event, ev_mapped)
     
     
-    def reinject(self, delay=10):
+    def reinject(self,delay=50):
         #_print(self.events, self.keyb.name_translation)
         reverse_press = False
         if self.press and self.release: autorelease = False

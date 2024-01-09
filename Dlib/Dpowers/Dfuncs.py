@@ -247,7 +247,7 @@ def monitor_input_events(timeout=10, implementation=None,**hookkwargs):
 saved_patterns = []
     
 def save_key_replay():
-    k = KeyWaiter(maxtime=600,endevents=("Esc",))
+    k = KeyWaiter(release=True, buttons = True, maxtime=600,endevents=("Esc",))
     ntfy("Saving pressed keys",10, "Abort by pressing Esc")
     saved_patterns.append(k)
     k.start()
