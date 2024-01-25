@@ -16,7 +16,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from ..sphinx import Ref_to_Examples, CustomTextDirective
+from ..sphinx_docs import Ref_to_Examples, CustomTextDirective
 from .adaptor_classes import AdaptorBase
 
 

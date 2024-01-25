@@ -34,7 +34,7 @@ from Dpowers.events.sending import event_sender
 # -- Project information -----------------------------------------------------
 
 project = 'Dpowers'
-copyright = '2021, dp0s'
+copyright = '2024, dp0s'
 author = 'dp0s'
 version = Dpowers.__version__
 
@@ -91,11 +91,10 @@ def my_skip_member(app, what, name, obj, skip, options):
         if name == "ContainerClass": return True
         if name == "SingleClass" and issubclass(obj,Dpowers.editing.Resource):
             return True
-            
 
 
-from Dhelpers.sphinx import ExecDirective, CustomTextDirective, ActiveCode,\
-    Example_with_Refs, Ref_to_Examples
+from Dhelpers.sphinx_docs import ExecDirective, CustomTextDirective, ActiveCode,\
+    Example_with_Refs, Ref_to_Examples, CreateMemberOrderedDocs
 from Dhelpers.adaptor.sphinx_directives import AdaptiveClassDirective, AdaptorDirective
 
 ExecDirective.get_globals(globals())
@@ -105,6 +104,7 @@ CustomTextDirective.get_globals(globals())
 
 def setup(app):
     app.connect('autodoc-skip-member', my_skip_member)
+    app.add_directive('autodoc_members', CreateMemberOrderedDocs)
     app.add_directive('exec', ExecDirective)
     app.add_directive('activecode', ActiveCode)
     app.add_directive("example", Example_with_Refs)

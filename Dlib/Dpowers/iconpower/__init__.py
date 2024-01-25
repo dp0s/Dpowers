@@ -46,12 +46,26 @@ class IconHandler(IconAdaptor.AdaptiveClass):
         self.parent_id = os.getpid()
         self.queue = None
     
-    def menuitem(self, name, func=lambda: warnings.warn("No action defined.")):
-        self._items.append((str(name), func))
+    def menuitem(self, text=None, func=None):
+        """Adds a new entry to the icon's context menu.
+
+        :param text: str: Text of the menu entry. If omitted ``func.__name__``
+            will be used as text (underscores are replaced by space).
+        :param func: Function to execute when clicking this menu entry.
+
+        """
         
-    def additem(self,func):
-        """A decorator"""
-        self.menuitem(func.__name__.replace("_"," "), func)
+        if not func:
+            def default_entry():
+                warnings.warn("No action defined.")
+            func = default_entry
+        if not text: text = func.__name__.replace("_", " ")
+        self._items.append((str(text), func))
+    
+    
+    def additem(self, func):
+        """A decorator to apply :func:`menuitem` directly onto a function."""
+        self.menuitem(func=func)
         return func
     
     def add_default_menuitems(self):

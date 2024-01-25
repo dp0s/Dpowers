@@ -160,3 +160,30 @@ class Ref_to_Examples(CustomTextDirective):
     def create_text(self):
         assert len(self.content) == 1
         return self.create_example_refs(self.content[0].strip())
+    
+    
+class CreateMemberOrderedDocs(CustomTextDirective):
+        
+    def create_text(self):
+        heading, body = self.content[0], self.content[1:]
+        assert not body
+        obj_path = heading.split(".")
+        obj = self.globals_[obj_path[0]]
+        for name in obj_path[1:]: obj = getattr(obj, name)
+        # print(obj)
+        text = ""
+        for name, obj in obj.__dict__.items():
+            if name.startswith("_"): continue
+            try:
+                doc = obj.__doc__
+            except AttributeError:
+                continue
+            if not doc: continue
+            if isinstance(obj, property):
+                directive = "autoproperty"
+            elif callable(obj) or isinstance(obj, classmethod):
+                directive = "automethod"
+            else:
+                raise TypeError(obj)
+            text += f".. {directive}:: {name}\n\n"
+        return text

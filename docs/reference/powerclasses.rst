@@ -1,9 +1,10 @@
 Adaptive Classes
 *****************
 
+
 .. autoclass:: Dpowers.AdaptiveClass
 
-    .. data:: adaptor
+    .. attribute:: adaptor
 
         *Class attribute.* This is an instance of a subclass of
         :class:`Dpowers.Adaptor`. It determines the backends available for
@@ -33,13 +34,16 @@ Win / Win.Search
 .. adaptiveclass:: Dpowers.Win
     :exclude-members: Search
 
+    .. automethod:: __init__
+
+    .. autodoc_members:: Dpowers.windowpower.WindowObject
+
 .. class:: Dpowers.Win.Search
 
    Subclass of :class:`Dpowers.windowpower.windowobjects.WindowSearch`, using
    the same adaptor instance (and thus the same backend) as :class:`Dpowers.Win`.
 
-.. autoclass:: Dpowers.windowpower.windowobjects.WindowSearch
-    :no-inherited-members:
+
 
 
 Icon
@@ -47,12 +51,17 @@ Icon
 
 .. adaptiveclass:: Dpowers.Icon
 
+    .. autodoc_members:: Dpowers.iconpower.IconHandler
+
+
+
 
 TriggerManager
 ------------------
 
 
 .. adaptiveclass:: Dpowers.TriggerManager
+    :exclude-members: max_thread_num
 
 
 
@@ -61,9 +70,3 @@ KeyWaiter
 -------------------
 
 .. adaptiveclass:: Dpowers.KeyWaiter
-
-
-
-Image
-----------------------------------------
-.. adaptiveclass:: Dpowers.Image
