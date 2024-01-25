@@ -49,8 +49,9 @@ class IconHandler(IconAdaptor.AdaptiveClass):
     def menuitem(self, text=None, func=None):
         """Adds a new entry to the icon's context menu.
 
-        :param text: str: Text of the menu entry. If omitted ``func.__name__``
-            will be used as text (underscores are replaced by space).
+        :param str text: Text of the menu entry. If omitted
+            ``func.__name__`` will be used as text
+            (underscores are replaced by space).
         :param func: Function to execute when clicking this menu entry.
 
         """

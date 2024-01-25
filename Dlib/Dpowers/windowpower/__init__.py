@@ -123,11 +123,7 @@ class WindowAdaptor(Adaptor):
 
     
 class WindowHandler(FoundWindows, WindowAdaptor.AdaptiveClass):
-    
-    
-    @classmethod
-    def screen_res(cls):
-        return cls.adaptor.screen_res()
+    pass
     
     
     
