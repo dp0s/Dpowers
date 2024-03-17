@@ -460,8 +460,9 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
         new_kwargs.update(kwargs)
         return self.__class__(*self.creation_args, **new_kwargs)
     
-    def process_args(self, title_or_ID=None,*, loc=None, limit=None,
-            visible=None, selection_func=None, **properties):
+    def process_args(self, title_or_ID=None, wcls = None, *, loc=None,
+            limit=None, visible=None, selection_func=None, **properties):
+        if wcls is not None: properties["wcls"] = wcls
         check_type(int, limit, allowed=(None,))
         self.visible = visible
         self.location = loc
@@ -643,9 +644,13 @@ class FoundWindows(WindowObject):
                 new_doc = this_doc + "\n\n" + base_doc
             new_doc = new_doc.replace("\n  ", "\n")
             cls.__doc__ = new_doc
-        
-
-    def __init__(self, *winargs, at_least_one=False, **winkwargs):
+            
+            
+    def _signature_def(self, title_or_ID =None, wcls = None, *, pid = None,
+            loc = None, at_least_one = False, limit = None, visible = None):
+        return
+    
+    def __init__(self, *winargs, at_least_one = False, **winkwargs):
         """
         When a new instance is created, include all those existing windows
         that match the given parameters. Several different parameters can be
@@ -673,18 +678,16 @@ class FoundWindows(WindowObject):
             the lowest IDs will be included.
         :param bool visible: If set to True, only visible windows will be
             considered.
-        :param callable selection_func:
         :raise WindowNotFoundError: If *at_least_one* is ``True`` and no
             matching window was found.
-        
-        
+
+
         In many cases it is recommended to make sure that only one
         matching window is found for each instance to avoid
         confusion. In other cases it might be useful to operate on a
         group of windows simultaneously.
-        
+
         """
-        
         if len(winargs) == 1 and not winkwargs and isinstance(winargs[0], WindowSearch):
             WinSearch_instance = winargs[0]
             if not isinstance(WinSearch_instance, WindowSearchContainer):
@@ -704,6 +707,9 @@ class FoundWindows(WindowObject):
             if at_least_one: raise WindowNotFoundError(
                 "\nCould not find windows of specified properties. Please "
                 "use WindowSearch class instead.")
+    
+    
+    __init__.__signature__ = inspect.signature(_signature_def)
     
     def IDs(self):
         # careful: these IDs might not be existing any more
