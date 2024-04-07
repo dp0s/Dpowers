@@ -141,13 +141,13 @@ class _CollectionWithPropsMeta(type):
         if not isinstance(instance, cls.allowed_collection_types): return False
         l = len(instance)
         if l < cls.minlen: return False
-        if cls.maxlen is not None:
-            if l > cls.maxlen: return False
-        for item in instance:
-            if cls.allowed_item_types is not None:
-                if isinstance(item, cls.allowed_item_types): continue
-            if item in cls.allowed_items: continue
-            return False
+        if cls.maxlen is not None and l > cls.maxlen: return False
+        if cls.allowed_item_types or cls.allowed_items:
+            for item in instance:
+                if cls.allowed_item_types is not None:
+                    if isinstance(item, cls.allowed_item_types): continue
+                if item in cls.allowed_items: continue
+                return False
         return True  # if all items passed the test
 
 #

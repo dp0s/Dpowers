@@ -481,11 +481,8 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
                 self.fixed_IDs = (title_or_ID,)
             elif isinstance(title_or_ID, CollectionWithProps(PositiveInt)):
                 self.fixed_IDs = tuple(title_or_ID)
-            elif isinstance(title_or_ID, str):
+            elif isinstance(title_or_ID, (str, CollectionWithProps(str))):
                 properties["title"] = title_or_ID
-            elif isinstance(title_or_ID, CollectionWithProps(str, len=2)):
-                # in this case, assume a (title, class) wininfo pair
-                properties["title"], properties["wcls"] = title_or_ID
             elif not title_or_ID:
                 if not properties:
                     self.location = "active"
@@ -520,8 +517,14 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
                 self.adaptor.id_exists(ID))
         
         for prop, prop_val in self._properties.items():
-            matching_ids = set(self.adaptor.IDs_from_property(prop, prop_val,
-                    visible=self.visible))
+            if isinstance(prop_val, CollectionWithProps()):
+                matching_ids = set()
+                for val in prop_val:
+                    matching_ids |=  set(self.adaptor.IDs_from_property(prop,
+                            val, visible=self.visible))
+            else:
+                matching_ids = set(self.adaptor.IDs_from_property(prop,
+                        prop_val, visible=self.visible))
             if winlist is None:
                 winlist = matching_ids
             else:
@@ -588,7 +591,7 @@ class WindowSearchContainer(AdditionContainer, WindowSearch,
         ids = set()
         for winsearch in self.members: ids |= set(winsearch.IDs())
         # create the union of all found window IDs
-        return tuple(ids)
+        return tuple(sorted(ids))
     
     @property
     def _FoundWinClass(self):
