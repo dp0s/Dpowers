@@ -34,7 +34,7 @@ Win / Win.Search
 .. adaptiveclass:: Dpowers.Win
     :exclude-members: Search
 
-    .. automethod:: __init__
+    .. autodoc_members:: Dpowers.windowpower.FoundWindows
 
     .. autodoc_members:: Dpowers.windowpower.WindowObject
 

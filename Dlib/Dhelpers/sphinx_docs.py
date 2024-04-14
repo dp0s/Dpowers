@@ -173,7 +173,7 @@ class CreateMemberOrderedDocs(CustomTextDirective):
         # print(obj)
         text = ""
         for name, obj in obj.__dict__.items():
-            if name.startswith("_"): continue
+            if name.startswith("_") and name != "__init__": continue
             try:
                 doc = obj.__doc__
             except AttributeError:

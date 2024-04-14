@@ -95,11 +95,6 @@ class WindowObject(ABC):
             zero if there was no match at all."""
         return len(self.IDs())
     
-    @classmethod
-    def screen_res(cls):
-        """Returns the screen resolution in pixels as a
-            tuple (*screen_width, screen_height*)."""
-        return cls.adaptor.screen_res()
     
     def __bool__(self):
         # This allows to use if win("test"): do_something
@@ -112,7 +107,6 @@ class WindowObject(ABC):
     @doc_single("identification number (*int*)")
     def ID(self):
         return self._make_single_val(self.IDs())
-    
     
     @abstractmethod
     @doc_multi("IDs", no_gen=True)
@@ -156,6 +150,11 @@ class WindowObject(ABC):
             check_type(PositiveInt, x, allowed=(None,))
             yield x
     
+    @classmethod
+    def screen_res(cls):
+        """Returns the screen resolution in pixels as a
+            tuple (*screen_width, screen_height*)."""
+        return cls.adaptor.screen_res()
     
     def widths_gen(self):
         for geom in self.geometries_gen(): yield geom[2] - geom[0]
@@ -612,18 +611,15 @@ class FoundWindows(WindowObject):
     """An object of this class represents one or more graphical windows of
     your operating system.
     
-    When creating a new instance of this class, a search is performed to
-    find all existing matching windows. Each window is identified by a
-    unique system-wide identification number (ID). The matching IDs are
-    saved in ascending order as a static list ( call :func:`IDs` to see
-    them). All methods below will operate on this list of initially found
-    windows. Two :func:`Win` objects are considered identical if their list
+    When a new instance of this class is created, a search is
+    performed to find all existing windows matching the given parameters.
+    Each window is identified by a unique system-wide identification number (
+    ID). The matching IDs are saved in ascending order as a static list. Use
+    the :func:`IDs` method to see them. All methods below will operate on
+    this list of initially found windows.
+     
+    Two :func:`Win` objects are considered identical if their list
     of :func:`IDs` are identical.
-    
-    .. note:: If a matching window is closed
-        after creation of the :func:`Win` object, its ID still remains in the list. This
-        can result in an Exception when calling methods on a non-existent
-        windows. ADD SOLUTION
     
     """
     
@@ -655,21 +651,16 @@ class FoundWindows(WindowObject):
     
     def __init__(self, *winargs, at_least_one = False, **winkwargs):
         """
-        When a new instance is created, include all those existing windows
-        that match the given parameters. Several different parameters can be
-        passed at once to narrow down the search. A window must
-        fullfill all specified parameters to be a match.
-
         :param title_or_ID:
-            - A string is interpreted as the title to search for.
-            - An integer is interpreted as window ID to create the window
-              object representing this specific window. This makes the
-              following parameters be ignored.
-            - A tuple/list of integers is interpreted as a group of window
-              IDs to be included in the new window object. This makes the
-              following parameters be ignored.
-        :type title_or_ID: str, int, tuple, list
-        :param str wcls: Window class to search for.
+            - A string is interpreted as the title to search for. The string
+              can be contained anywhere in the window's title to
+              be considered a match.
+            - An integer is interpreted as a window ID. Specifying this
+              directly will skip the search and all other parameters are hence
+              ignored.
+        :type title_or_ID: str, int
+        :param str wcls: Window class to search for. This must be an exact
+                match.
         :param int pid: Process ID of the window to search for.
         :param tuple loc: Specify screen coordinates (*x*,*y*) for this
             parameter to retrieve the top-most window at that location.
@@ -683,12 +674,47 @@ class FoundWindows(WindowObject):
             considered.
         :raise WindowNotFoundError: If *at_least_one* is ``True`` and no
             matching window was found.
+        
+        In order to find the currently active (i.e. topmost) window,
+        simply call this class without parameters::
+            
+            active_window = Win()
+            
+        Several different parameters can be
+        passed at once to narrow down the search. A window must
+        fullfill all specified parameters to be a match::
+            
+            dpowers_doc_win = Win('Dpowers documentation', 'Navigator.firefox')
+            # searches for windows with
+            # 'Dpowers documentation' contained in title
+            # AND
+            # window class is equal to 'Navigator.firefox' (Firefox browser)
+            
+        In place of passing a single value for the parameters *ID*, *title*,
+        *wcls* or *pid*, it is possible to pass a
+        list (or tuple or set) of allowed values instead, which will search
+        for a wider scope of windows::
+        
+            dpowers_browser_win = Win('Dpowers documentation',
+                ('Navigator.firefox','chromium-browser.Chromium-browser'))
+            # searches for windows with
+            # 'Dpowers documentation' contained in title
+            #   AND
+            # (window class is equal to 'Navigator.firefox'
+            #  OR window class is equal to 'chromium-browser.Chromium-browser')
 
-
-        In many cases it is recommended to make sure that only one
+        In many cases it is desirable to make sure that exactly one
         matching window is found for each instance to avoid
         confusion. In other cases it might be useful to operate on a
         group of windows simultaneously.
+        
+        
+        .. note:: If a window was initially found and closed in the meantime,
+            its ID will still be in the internal list of the :func:`Win` object.
+            This can result in an Exception when trying to interact with a
+            non-existent window ID. The :func:`update` or
+            :func:`remove_non_existing` methods can be used to avoid this
+            problem.
 
         """
         if len(winargs) == 1 and not winkwargs and isinstance(winargs[0], WindowSearch):
@@ -743,6 +769,10 @@ class FoundWindows(WindowObject):
         return search.check_single(id)
     
     def update(self):
+        """Re-perform the initial search for matching existing windows and
+        update this window object's internal ID list. This removes
+        non-existing windows and searches for new matches.
+        """
         self.found_IDs = self.winsearch_object.IDs()
         
     def update_parameter(self,**kwargs):
@@ -755,7 +785,9 @@ class FoundWindows(WindowObject):
     def existing_IDs(self):
         return tuple(ID for ID in self.IDs() if self.adaptor.id_exists(ID))
     
-    def remove_non_existing_IDs(self):
+    def remove_non_existing(self):
+        """Cleanse this window object's internal ID list by removing those
+        that do not exist anymore."""
         self.found_IDs = self.existing_IDs()
     
     
