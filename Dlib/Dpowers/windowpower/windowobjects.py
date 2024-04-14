@@ -62,10 +62,21 @@ def doc_multi(prop, no_gen=False):
 
 
 
-    
+
 class WindowObject(ABC):
     
-
+    @classmethod
+    def cached(cls):
+        return cls.adaptor.cached()
+    
+    @classmethod
+    def cached_properties(cls):
+        return cls.adaptor.cached_properties
+    
+    @classmethod
+    def use_cache(cls, state=True):
+        cls.adaptor.use_cache=state
+    
     
     #to be set by subclasses:
     adaptor = None
@@ -503,7 +514,11 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
             if getattr(self,attr) != getattr(new_instance, attr):
                 return False
         for key, val in self._properties.items():
-            if new_instance._properties.get(key) != val: return False
+            newval = new_instance._properties.get(key)
+            if isinstance(val, CollectionWithProps()):
+                val = set(val)
+                newval = set(newval)
+            if newval != val: return False
         return True
     
     def IDs(self):
@@ -558,7 +573,10 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
         # all possible matching IDs taking more time
         if self.fixed_IDs and id not in self.fixed_IDs: return False
         for prop, val in self._properties.items():
-            if self.adaptor.property_from_ID(id,prop, query_cache=True) != val:
+            winval = self.adaptor.property_from_ID(id, prop)
+            if isinstance(val,CollectionWithProps()):
+                if winval not in val: return False
+            elif winval != val:
                 return False
         return True
     
@@ -570,11 +588,11 @@ class WindowSearch(AdditionContainer.Addend, WindowObject):
     
     # the following redefinitions are necessary because this way,
     # the self.IDs() search will only be executed once.
-    def infos_(self):
-        return WindowObject.infos_(self.find())
+    def infos_gen(self):
+        return WindowObject.infos_gen(self.find())
     
-    def all_infos_(self):
-        return WindowObject.all_infos_(self.find())
+    def all_infos_gen(self):
+        return WindowObject.all_infos_gen(self.find())
     
     def wait_num_change(self, *args, **kwargs):
         return self.find().wait_num_change(*args,**kwargs)
@@ -744,16 +762,6 @@ class FoundWindows(WindowObject):
         # careful: these IDs might not be existing any more
         return self.found_IDs
     
-    @property
-    def cached_properties(self):
-        return self.adaptor.cached_properties
-    
-    def clear_cache(self):
-        for id in self.IDs():
-            try:
-                self.cached_properties.pop(id)
-            except KeyError:
-                pass
             
     
     def check(self, *winargs, **winkwargs):
@@ -884,7 +892,7 @@ class FoundWindows(WindowObject):
         if isinstance(item, WindowObject):
             return item.ID() in self.IDs()
         if isinstance(item, str):
-            for t in self.titles_():
+            for t in self.titles_gen():
                 if item in t: return True
             return False
         return NotImplemented
