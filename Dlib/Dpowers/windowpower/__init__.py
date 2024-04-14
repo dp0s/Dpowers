@@ -21,6 +21,7 @@ from .. import Adaptor, adaptionmethod
 from .windowobjects import FoundWindows, WindowSearch, WindowObject
 from collections import defaultdict
 import functools
+from contextlib import contextmanager
 
 class WindowAdaptor(Adaptor):
     
@@ -29,12 +30,23 @@ class WindowAdaptor(Adaptor):
     def __init__(self, *args,**kwargs):
         super().__init__(*args,**kwargs)
         self.cached_properties = defaultdict(dict)
+        self.use_cache = False
         
     @functools.wraps(Adaptor.adapt)
     def adapt(self, *args,**kwargs):
         self.cached_properties.clear()
         return super().adapt(*args,**kwargs)
 
+
+    @contextmanager
+    def cached(self):
+        self.cached_properties.clear()
+        self.use_cache  =True
+        try:
+            yield
+        finally:
+            self.use_cache = False
+            self.cached_properties.clear()
 
 
     @adaptionmethod
@@ -71,7 +83,8 @@ class WindowAdaptor(Adaptor):
         return i_list
     
     @adaptionmethod(require=True)
-    def property_from_ID(self, ID, prop_name, query_cache=True):
+    def property_from_ID(self, ID, prop_name, query_cache=None):
+        if query_cache is None and self.use_cache is True: query_cache = True
         if query_cache:
             try:
                 return self.cached_properties[ID][prop_name]
