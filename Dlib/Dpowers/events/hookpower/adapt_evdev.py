@@ -102,7 +102,7 @@ class ButtonHandler(EvdevHandler):
             press = bool(val != 0)
             self.queue_event(co, press=press)
         elif ty not in (EV_SYN, EV_MSC, EV_ABS, EV_REL):
-            _print("Wrong event type: ", ty, co ,val)
+            raise ValueError("Wrong event type: ", ty, co ,val)
 
 
 class CursorHandler(EvdevHandler):
@@ -142,12 +142,13 @@ class CursorHandler(EvdevHandler):
             self._intelligent_collect(co,REL_X, REL_Y, val, relative=True,
                     screen_coordinates=False)
         elif ty not in (EV_SYN, EV_MSC):
-            _print("Wrong event type: ", ty, co, val)
+            raise ValueError("Wrong event type: ", ty, co, val)
 
 
 class EvdevhookMixin:
     
     def process_custom_kwargs(self,  **selection_kwargs):
+        # selection_kwargs can be name, category, path, see evdev_prepared
         if not selection_kwargs: return
         # create a new collector or capturer instance with updated
         # selection_kwargs
