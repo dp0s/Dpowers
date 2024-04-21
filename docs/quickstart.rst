@@ -164,6 +164,7 @@ This function is pre-defined in the module `Dpowers.Dfuncs.py
 .. example:: Launch the browser and simultaneously redirect key presses
     Dpowers.launch
     Dpowers.Win
+    Dpowers.Win.wait_num_change
     Dpowers.KeyWaiter
 
 .. code::

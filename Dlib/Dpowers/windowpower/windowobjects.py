@@ -439,6 +439,25 @@ class WindowObject(ABC):
         check_type(bool, ret)
         return ret
     
+
+    def wait_num_change(self, num_change, timeout=5, pause_when_found=0.05,
+            timestep=0.2):
+        """Wrapper for :func:`wait_exist`. Waits until the number of
+        currently matching windows has changed by *num_change* (relative to
+        the initial found number :data:`num`).
+
+        :param int num_change: A positive or negative integer.
+        :return: - The :func:`Win` object of the newly found window(s) if *num_change* is positive.
+            - The :func:`Win` object of the closed window(s) if *num_change* is negative. (These do not exist anymore.)
+            - ``False`` in case of a timeout.
+        
+        Useful when opening a new window if other windows of the same class
+        are already existing, see for example:
+        :ref:`Launch the browser and simultaneously redirect
+        key presses`.
+        """
+        raise NotImplementedError
+    
     def wait_exist_activate(self, timeout=5, timestep=0.2):
         """Wait until at least one matching window exists and activate it immediately.
 
