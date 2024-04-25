@@ -19,7 +19,6 @@
 
 
 
-### TODO: activate_autoadapt and exception handling.
 import inspect, functools, types, os, pkgutil, warnings
 from ..baseclasses import KeepInstanceRefs, iter_all_vars
 from ..arghandling import (check_type, remove_first_arg, ArgSaver)
@@ -472,6 +471,7 @@ class AdaptorBase(KeepInstanceRefs):
     
     @classmethod
     def activate_autoadapt(cls):
+        ### TODO: activate_autoadapt and exception handling.
         cls.autoadapt_active = True
     
     
