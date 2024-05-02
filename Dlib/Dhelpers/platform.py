@@ -22,6 +22,62 @@ from .launcher import launch
 import platform
 
 
+class PlatformChecker:
+    
+    def __init__(self, evaluate=True):
+        self.val_dir = None
+        if evaluate: self.__evaluate__()
+    
+    def __evaluate__(self):
+        self._system = self.system
+        self._version = self.version
+        val_dir = dict()
+        for name in self.__class__.__dict__:
+            if name.startswith("__") or name.endswith("__"): continue
+            func = getattr(self, name)
+            if not callable(func): continue
+            val = func()
+            assert val in (True, False)
+            val_dir[name] = val
+        self.val_dir = val_dir
+        del self._system
+        del self._version
+        
+    @property
+    def system(self):
+        try:
+            return self._system
+        except AttributeError:
+            return platform.system().lower()
+    
+    @property
+    def version(self):
+        try:
+            return self._version
+        except AttributeError:
+            return platform.version().lower()
+    
+    def linux(self):
+        return self.system == "linux"
+    
+    def windows(self):
+        return self.system == "windows"
+    
+    def mac(self):
+        return self.system == "darwin"
+    
+    def termux(self):
+        return self.linux() and bool(
+                launch.get("command -v termux-setup-storage", check=False))
+    
+    def ubuntu(self):
+        return self.linux() and "ubuntu" in self._version
+
+
+
+
+
+
 class PlatformInfo:
     
     def __init__(self, **platform_kwargs):
@@ -55,82 +111,3 @@ class PlatformInfo:
         if new_inst.platform_property_checks != self.platform_property_checks:
             new_inst.platform_property_checks = self.platform_property_checks
         return new_inst
-    
-    
-    def new_variable(self, *args, **kwargs):
-        var = PlatformVariable(self, *args, **kwargs)
-        self.variables.append(var)
-        return var
-
-
-
-    class platform_property_checks:
-    
-        def __init__(self, evaluate=True):
-            self.val_dir = None
-            if evaluate: self.__evaluate__()
-            
-        def __evaluate__(self):
-            self._system = platform.system().lower()
-            self._version = platform.version().lower()
-            val_dir = dict()
-            for name in self.__class__.__dict__:
-                if name.startswith("__") or name.endswith("__"): continue
-                func = getattr(self,name)
-                if not callable(func): continue
-                val = func()
-                assert val in (True,False)
-                val_dir[name] = val
-            self.val_dir = val_dir
-    
-        def linux(self):
-            return self._system == "linux"
-    
-        def windows(self):
-            return self._system == "windows"
-        
-        def mac(self):
-            return self._system == "darwin"
-        
-        def termux(self):
-            return self.linux() and bool(
-                    launch.get("command -v termux-setup-storage", check=False))
-        
-        def ubuntu(self):
-            return self.linux() and "ubuntu" in self._version
-
-
-class PlatformVariable:
-
-    def __init__(self, PlatformInfo_inst=None, **platform_kwargs):
-        self.platform_inst = PlatformInfo_inst
-        self.platform_kwargs = platform_kwargs
-
-    def evaluate(self, platform_info= None, allow_multiple=False,
-            reverse_priority=True):
-        if platform_info is None: platform_info = self.platform_inst
-        if isinstance(platform_info, str):
-            platform_info = PlatformInfo(platform_info)
-        assert isinstance(platform_info, PlatformInfo)
-        if allow_multiple: result = []
-        l = list(self.platform_kwargs)
-        if reverse_priority: l.reverse()
-        for key in l:
-            if platform_info.effective_vals.get(key) is True:
-                val = self.platform_kwargs[key]
-                if allow_multiple:
-                    result.append(val)
-                else:
-                    return val
-        if allow_multiple: return result
-        return NotImplemented
-
-    def __getattr__(self, item):
-        return self.platform_kwargs[item]
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        if name not in ["platform_inst",
-            "platform_kwargs"] and not name.startswith("__"):
-            self.platform_kwargs[name] = value
-            return
-        super().__setattr__(name, value)
