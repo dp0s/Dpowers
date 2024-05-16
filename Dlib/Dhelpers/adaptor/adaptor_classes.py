@@ -22,7 +22,7 @@
 import inspect, functools, types, os, pkgutil, warnings
 from ..baseclasses import KeepInstanceRefs, iter_all_vars
 from ..arghandling import (check_type, remove_first_arg, ArgSaver)
-from ..platform import PlatformInfo
+from ..platform import PlatformChecker
 from types import FunctionType
 from collections import defaultdict
 from .dependency_testing import DependencyManagerBase, InstallInstruction
@@ -284,8 +284,11 @@ class AdaptorBase(KeepInstanceRefs):
     baseclass = True
     AdaptiveClass = None
     _primary_instances = dict()
-    platform_info = None
     DependencyManager = None
+    
+    
+    class PlatformChecker(PlatformChecker):
+        pass
     
     
     def __init_subclass__(cls):
@@ -312,11 +315,8 @@ class AdaptorBase(KeepInstanceRefs):
                 cls.__doc__ = doc + "\n\n    " + add
         elif cls._subclass_level == 1:
             cls._first_level_subclass = cls
-            cls.platform_info = PlatformInfo()
-            cls.platform_info.update()
             cls.DependencyManager = type("DependencyManager",
                     (DependencyManagerBase,),{})
-            cls.DependencyManager.platform_info = cls.platform_info
             
                 
             
@@ -506,17 +506,17 @@ class AdaptorBase(KeepInstanceRefs):
     
     @classmethod
     def set_default_backends(cls, module_or_class, evaluate_platform = False):
-        if not evaluate_platform:
-            cls.backend_defaults = module_or_class
-        if isinstance(evaluate_platform, PlatformInfo):
+        if not evaluate_platform: cls.backend_defaults = module_or_class
+        if isinstance(evaluate_platform, dict):
             platform_info = evaluate_platform
         else:
-            platform_info = cls.platform_info
-        platform_backends = platform_info.new_variable()
-        for var, val in vars(module_or_class).items():
-            if isinstance(val, type):
-                platform_backends.platform_kwargs[var] = val
-        cls.backend_defaults = platform_backends.evaluate()
+            platform_info = cls.PlatformChecker().val_dir
+        value = None
+        for condition_name, obj in vars(module_or_class).items():
+            if isinstance(obj, type):
+                state = platform_info.get(condition_name, False)
+                if state: value = obj
+        cls.backend_defaults = value
         
     
     

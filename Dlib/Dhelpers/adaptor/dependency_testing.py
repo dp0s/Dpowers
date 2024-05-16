@@ -56,7 +56,7 @@ class DependencyManagerBase:
     check_dependency = True
     instances = {}
     saved_dependency_infos = dict()
-    platform_info = None
+    #platform_info = None
     
     def __init__(self, module_name) -> None:
         if self.instances.get(module_name) is not None:
@@ -198,10 +198,10 @@ class Dependency:
             self.add_instruction(pkg, instruction, platform=platform)
         if pkg:
             self.add_pkg(pkg, install_tool=install_tool, platform=platform)
-        if platform and self.perform_check:
-            state = self.manager.platform_info.effective_vals.get(platform)
-            if state is not True: warnings.warn(f"Dependency {self} requires "
-                    f"platform {platform}.")
+        #if platform and self.perform_check:
+        #    state = self.manager.platform_info.effective_vals.get(platform)
+        #    if state is not True: warnings.warn(f"Dependency {self} requires "
+        #            f"platform {platform}.")
         
     
     

@@ -22,40 +22,7 @@ from .launcher import launch
 import platform
 
 
-class PlatformChecker:
-    
-    def __init__(self, evaluate=True):
-        self.val_dir = None
-        if evaluate: self.__evaluate__()
-    
-    def __evaluate__(self):
-        self._system = self.system
-        self._version = self.version
-        val_dir = dict()
-        for name in self.__class__.__dict__:
-            if name.startswith("__") or name.endswith("__"): continue
-            func = getattr(self, name)
-            if not callable(func): continue
-            val = func()
-            assert val in (True, False)
-            val_dir[name] = val
-        self.val_dir = val_dir
-        del self._system
-        del self._version
-        
-    @property
-    def system(self):
-        try:
-            return self._system
-        except AttributeError:
-            return platform.system().lower()
-    
-    @property
-    def version(self):
-        try:
-            return self._version
-        except AttributeError:
-            return platform.version().lower()
+class PlatformLogic:
     
     def linux(self):
         return self.system == "linux"
@@ -71,43 +38,73 @@ class PlatformChecker:
                 launch.get("command -v termux-setup-storage", check=False))
     
     def ubuntu(self):
-        return self.linux() and "ubuntu" in self._version
-
-
-
-
-
-
-class PlatformInfo:
+        return self.linux() and "ubuntu" in self.version
     
-    def __init__(self, **platform_kwargs):
-        self.effective_vals = platform_kwargs
-        self.preset_vals = platform_kwargs.copy()
-        self.variables = list()
+    
+    def platform_checker_methods_(self):
+        for name in self.__class__.__dict__:
+            if name.startswith("_") or name.endswith("_"): continue
+            func = getattr(self, name)
+            if not callable(func): continue
+            yield name, func
+    
+    def set_states_(self, system=None, version=None):
+        self.system = system
+        self.version = version
+    
+    def evaluate_(self):
+        val_dir = {
+            "__based_on__": {
+                "system": self.system, "version": self.version
+                }
+            }
+        for name, func in self.platform_checker_methods_():
+            val = func()
+            assert val in (True, False)
+            val_dir[name] = val
+        return val_dir
+
+
+class PlatformChecker:
+    
+    PlatformLogic = PlatformLogic
+    
+    def __init__(self, evaluate=True):
+        self.platform_logic = self.PlatformLogic()
+        self.val_dir = None
+        if evaluate: self.evaluate()
+    
+    @staticmethod
+    def system():
+        return platform.system().lower()
+    
+    @staticmethod
+    def version():
+        return platform.version().lower()
+    
+    def set_states(self, system=None, version = None):
+        if system is None: system = self.system()
+        if version is None: version = self.version()
+        self.platform_logic.set_states_(system, version)
         
-    def __repr__(self):
-        sup = super().__repr__()[:-1]
-        sup += " with values:"
-        for key,val in self.effective_vals.items():
-            if val is True: sup += f" {key},"
-        sup = sup[:-1] + ">"
-        return sup
-        
-    def update(self, use_platform_checks=True, **platform_kwargs):
-        self.preset_vals.update(platform_kwargs)
-        effective_vals = self.preset_vals.copy()
-        if use_platform_checks:
-            for platform_property, val in self.platform_property_checks(
-                    ).val_dir.items():
-                preset = self.preset_vals.get(platform_property)
-                if preset is None: effective_vals[platform_property] = val
-        self.effective_vals = effective_vals
-        
-        
-    def copy(self):
-        new_inst = self.__class__()
-        new_inst.effective_vals = self.effective_vals.copy()
-        new_inst.preset_vals = self.preset_vals.copy()
-        if new_inst.platform_property_checks != self.platform_property_checks:
-            new_inst.platform_property_checks = self.platform_property_checks
-        return new_inst
+    def evaluate(self, system=None, version = None):
+        self.set_states(system, version)
+        self.val_dir = self.platform_logic.evaluate_()
+        return self.val_dir
+    
+    
+    def check(self, platform_name, system=None, version=None):
+        self.set_states(system, version)
+        for name,func in self.platform_logic.platform_checker_methods_():
+            if platform_name == name: return func()
+        raise NotImplementedError(platform_name)
+    
+    def compare(self, dic):
+        # this is just a sketch.. Needs to become cleverer in future
+        # in particular account for sub platforms like Linux > Ubuntu
+        for platform_info in self.val_dir:
+            try:
+                return dic[platform_info]
+            except KeyError:
+                pass
+        raise NotImplementedError
