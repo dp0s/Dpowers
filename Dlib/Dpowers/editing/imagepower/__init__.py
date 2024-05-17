@@ -17,7 +17,7 @@
 #
 #
 from ..ressource_classes import EditorAdaptor, adaptionmethod, \
-    SingleResource, MultiResource, resource_property#, resource_func
+    SingleResource, resource_property, resource_func
 from types import GeneratorType
 iter_types = (list,tuple,GeneratorType)
 
@@ -25,11 +25,11 @@ iter_types = (list,tuple,GeneratorType)
 
 class ImageAdaptor(EditorAdaptor):
     
-    multipageextensions = [".pdf",".tif", ".tiff"]
+    pass
     
 
 
-class ImageBase(SingleResource, ImageAdaptor.AdaptiveClass):
+class ImageBase(ImageAdaptor.AdaptiveClass, SingleResource):
     
     
     
@@ -58,15 +58,16 @@ class ImageBase(SingleResource, ImageAdaptor.AdaptiveClass):
     
     colorspace = resource_property("colorspace", **colortypenames)
     cspace = color = colorspace
-
+    
+    @resource_func
     def resample(self,value_x, value_y=None, *args,**kwargs):
         if value_y is None: value_y = value_x
         return (value_x, value_y, *args), kwargs
 
 
 
-@ImageBase.make_multi_base
-class MultiImage(MultiResource):
-    # created as a subclass of ImageBase.Sequence (see above)
-    
-    pass
+# @ImageBase.make_multi_base
+# class MultiImage(MultiResource):
+#     # created as a subclass of ImageBase.Sequence (see above)
+#
+#     pass

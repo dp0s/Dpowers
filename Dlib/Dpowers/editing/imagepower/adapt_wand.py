@@ -41,6 +41,8 @@ def load_multi(file, **kwargs):
         if len(s) == 0: raise ValueError
         return tuple(Image(i) for i in s)
     
+multi_page_extensions = [".pdf", ".tif", ".tiff"]
+    
 
 def construct_multi(sequence_of_objs):
     im  = Image()
