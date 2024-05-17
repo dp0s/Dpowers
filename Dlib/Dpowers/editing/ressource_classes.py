@@ -128,6 +128,11 @@ class EditorAdaptor(Adaptor):
     def close(self, backend_obj):
         self._check(backend_obj)
         self.close.target_with_args()
+        
+    @adaptionmethod
+    def copy(self, backend_obj):
+        self._check(backend_obj)
+        return self._check(self.copy.target_with_args())
     
     def _check_method(self, name):
         method = None
@@ -219,7 +224,7 @@ class EditorAdaptor(Adaptor):
 
 def resource_property(name, **value_dict):
     def func(self):
-        return self.adaptor.forward_property(name,self.backend_obj)
+        return self.forward_property(name)
     func.__name__ = name
     func.__qualname__ = name
     func._resource = True
@@ -227,7 +232,7 @@ def resource_property(name, **value_dict):
     func = property(func)
     @func.setter
     def func(self, val):
-        return self.adaptor.forward_property(name,self.backend_obj, val)
+        self.forward_property(name,val)
     return func
 
 # def multi_resource_property(name):
@@ -253,8 +258,7 @@ def resource_func(name_or_func, *names):
         name = inp_func.__name__
         def func(self, *args, **kwargs):
             args, kwargs = inp_func(self,*args,**kwargs)
-            return self.adaptor.forward_func_call(name, self.backend_obj, *args,
-                    **kwargs)
+            return self.forward_func_call(name, *args, **kwargs)
         func.__name__ = name
         func.__qualname__ = name
         func._resource = True
@@ -317,6 +321,7 @@ class Resource:
     #     return cls.attr_redirections
 
     def filepath_split(self):
+        if self.file is None: return
         folder, filename = path.split(self.file)
         name, ext = path.splitext(filename)
         self.folder = folder
@@ -426,6 +431,7 @@ class SingleResource(Resource):
             raise ValueError
         self.file = file
         self.backend_obj = backend_obj
+        self.pages = None
         if file:
             assert backend_obj is None
             self.filepath_split()
@@ -434,14 +440,13 @@ class SingleResource(Resource):
             self.adaptor._check(backend_obj)
             
     def load(self, **kwargs):
-        print(self.ext, self.adaptor.multi_page_extensions)
+        #print(self.ext, self.adaptor.multi_page_extensions)
         if self.ext in self.adaptor.multi_page_extensions:
             backend_objs = self.adaptor.load_multi(self.file, **kwargs)
             self.pages = tuple(
                     self.__class__(backend_obj=bo) for bo in backend_objs)
         else:
             self.backend_obj = self.adaptor.load(self.file, **kwargs)
-            self.pages = None
         
         
     @classmethod
@@ -480,34 +485,62 @@ class SingleResource(Resource):
             for resource in self.pages: resource.close()
         self.backend_obj = ClosedResource
         self.pages = ClosedResource
+        
+    def copy(self):
+        if self.pages:
+            new_inst = self.__class__()
+            new_inst.pages = [im.copy() for im in self.pages]
+        else:
+            new_backend_obj = self.adaptor.copy(self.backend_obj)
+            new_inst = self.__class__(backend_obj=new_backend_obj)
+        new_inst.file = self.file
+        new_inst.filepath_split()
+        return new_inst
     
     
-    # def __add__(self, other):
-    #     seq = self.sequence
-    #     assert all(type(s) is self.SingleClass for s in seq)
-    #     try:
-    #         if all(type(s) is self.SingleClass for s in other.sequence):
-    #             return self.SingleClass.Sequence(
-    #                     images=self.sequence + other.sequence)
-    #     except AttributeError:
-    #         pass
-    #     return NotImplemented
-
-    # def __getattr__(self, key):
-    #     try:
-    #         redirected = self.attr_redirections[key]
-    #     except KeyError:
-    #         try:
-    #             obj = self.adaptor.get_unknown(key,self.backend_obj)
-    #         except AttributeError:
-    #             pass
-    #         else:
-    #             _print(f"WARNING: Attribute '{key}' used from backend "
-    #                  f"'{self.adaptor.backend}'. Undefined in " f"Dpowers")
-    #             return obj
-    #     else:
-    #         return self.__getattribute__(redirected)
-    #     raise AttributeError(key)
+    def forward_property(self, name, val=None):
+        if self.pages:
+            rets = [p.forward_property(name,val) for p in self.pages]
+            if val is None:
+                ret = rets[0]
+                if all(i == ret for i in rets): return ret
+                return rets
+        else:
+            return self.adaptor.forward_property(name,self.backend_obj, val)
+        
+    def forward_func_call(self, name, *args, **kwargs):
+        if self.pages:
+            rets = [p.forward_func_call(name, *args, **kwargs) for p in
+                self.pages]
+            ret = rets[0]
+            if all(i == ret for i in rets): return ret
+            return rets
+        else:
+            return self.adaptor.forward_func_call(name, self.backend_obj,
+                    *args,**kwargs)
+    
+    
+    def __add__(self, other):
+        if not isinstance(other,self.__class__):
+            raise NotImplementedError
+        assert self.adaptor == other.adaptor
+        assert self.pages and other.pages
+        new_inst = self.__class__()
+        new_inst.pages = self.pages + other.pages
+        return new_inst
+    
+    def __getitem__(self, item):
+        if not self.pages: raise ValueError
+        return self.pages[item]
+    
+    def __setitem__(self, key, value):
+        if not self.pages: raise ValueError
+        assert isinstance(value, self.__class__)
+        assert value.adaptor == self.adaptor
+        assert not value.pages
+        self.pages[key] = value
+        
+    
     #
     # def __setattr__(self, key, value):
     #     if key not in self._inst_attributes:

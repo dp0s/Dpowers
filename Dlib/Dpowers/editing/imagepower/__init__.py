@@ -45,7 +45,7 @@ class ImageBase(ImageAdaptor.AdaptiveClass, SingleResource):
     compr = compression
     
     compr_quality = resource_property("compr_quality")
-    compression_quality = cquality = cqu = cqual = compression
+    compression_quality = cquality = cqu = cqual = compr_quality
     
     resolution = resource_property("resolution")
     res = resolution

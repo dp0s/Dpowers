@@ -42,6 +42,10 @@ def load_multi(file, **kwargs):
         return tuple(Image(i) for i in s)
     
 multi_page_extensions = [".pdf", ".tif", ".tiff"]
+
+
+def copy(obj):
+    return obj.clone()
     
 
 def construct_multi(sequence_of_objs):
