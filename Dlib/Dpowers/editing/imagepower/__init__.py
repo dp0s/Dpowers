@@ -17,7 +17,7 @@
 #
 #
 from ..ressource_classes import EditorAdaptor, adaptionmethod, \
-    SingleResource, MultiResource, resource_property, resource_func
+    SingleResource, MultiResource, resource_property#, resource_func
 from types import GeneratorType
 iter_types = (list,tuple,GeneratorType)
 
@@ -26,20 +26,39 @@ iter_types = (list,tuple,GeneratorType)
 class ImageAdaptor(EditorAdaptor):
     
     multipageextensions = [".pdf",".tif", ".tiff"]
-
+    
 
 
 class ImageBase(SingleResource, ImageAdaptor.AdaptiveClass):
     
-    compression = resource_property("compression", "compr")
-    compr_quality = resource_property("compr_quality", "compression_quality",
-            "cquality", "cqu", "cqual")
-    resolution = resource_property("resolution", "res")
-    colortype = resource_property("colortype", "ctype", "type")
+    
+    
+    def load(self, **kwargs):
+        if self.ext in self.adaptor.multi_page_extensions:
+            if "resolution" not in kwargs: kwargs["resolution"] = 300
+        super().load(**kwargs)
+        
+        
+    compression = resource_property("compression",
+            jpg = ("jpeg", "j"),
+            zip = "z")
+    compr = compression
+    
+    compr_quality = resource_property("compr_quality")
+    compression_quality = cquality = cqu = cqual = compression
+    
+    resolution = resource_property("resolution")
+    res = resolution
+    
     size = resource_property("size")
-    colorspace = resource_property("colorspace", "cspace", "color")
+    
+    colortypenames = {"gray": ("grayscale", "g")}
+    colortype = resource_property("colortype", **colortypenames)
+    ctype = type = colortype
+    
+    colorspace = resource_property("colorspace", **colortypenames)
+    cspace = color = colorspace
 
-    @resource_func("res")
     def resample(self,value_x, value_y=None, *args,**kwargs):
         if value_y is None: value_y = value_x
         return (value_x, value_y, *args), kwargs
@@ -50,29 +69,4 @@ class ImageBase(SingleResource, ImageAdaptor.AdaptiveClass):
 class MultiImage(MultiResource):
     # created as a subclass of ImageBase.Sequence (see above)
     
-    def __init__(self, file=None, resolution=300, **load_kwargs):
-        super().__init__(file,resolution=resolution,**load_kwargs)
-        
-        
-        
-        
-        
-Values_for_Property = ImageAdaptor.Values_for_Property
-
-
-class CommonColorTypeNames:
-    gray = "gray", "grayscale", "g"
-    
-@Values_for_Property("colortype")
-class ColortypeNames(CommonColorTypeNames):
     pass
-
-@Values_for_Property("colorspace")
-class ColorspaceNames(CommonColorTypeNames):
-    pass
-
-
-@Values_for_Property("compression")
-class CompressionNames:
-    jpg = "jpg", "jpeg", "j"
-    zip = "zip", "z"

@@ -24,8 +24,8 @@ with DependencyManager(__name__) as manager:
 Image = im_mod.Image
 
 obj_class = Image
-names = {"compr_quality": "compression_quality", "colortype":"type"}
-value_names = {"colortype": im_mod.IMAGE_TYPES, "colorspace":
+name_map = {"compr_quality": "compression_quality", "colortype":"type"}
+allowed_values = {"colortype": im_mod.IMAGE_TYPES, "colorspace":
     im_mod.COLORSPACE_TYPES, "compression": im_mod.COMPRESSION_TYPES}
 
 def load(file, **kwargs):

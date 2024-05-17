@@ -39,32 +39,16 @@ edit_tag = "__edit"
 
 class NamedValue(NamedObj):
      pass
-    
-
 
 
 class EditorAdaptor(Adaptor):
     
-    property_value_dict = None
-    named_classes = dict()
+    property_value_dicts = dict()
+    resource_class = None
     
     multi_page_extensions = []
     
-    @classmethod
-    def Values_for_Property(cls, property_name):
-        NamedClass = type(f"NamedValue_for_property_{property_name}",
-                (NamedValue,), {})
-        cls.named_classes[property_name] = NamedClass
-        def decorator(container_class):
-            NamedClass.update_names(container_class)
-        return decorator
-    
     baseclass = True  #for Adaptor mechanism
-    
-    # def __init_subclass__(cls):
-    #     super().__init_subclass__()
-    #     cls.NamedValue = type(f"{cls.__name__}.NamedValue", (NamedValueBase,),{})
-    
     save_in_place = False  #if False, automatically rename before saving
     
     
@@ -82,20 +66,33 @@ class EditorAdaptor(Adaptor):
         return backend_object
     
     obj_class = load.adaptive_property("obj_class", NotImplementedError)
-    names = load.adaptive_property("names", default={}, ty=dict)
-    value_names = load.adaptive_property("value_names", {}, dict)
+    name_map = load.adaptive_property("name_map", {}, dict)
+    allowed_values = load.adaptive_property("allowed_values", {}, dict)
 
     @load.target_modifier
     def _load_tm(self, target):
-        self.create_effective_dict()
+        self.create_effective_dicts()
         return target
 
-    def create_effective_dict(self):
-        self.property_value_dict = dict()
-        for prop_name, NamedCls in self.named_classes.items():
-            stand_dict = NamedCls.StandardizingDict()
+    def create_effective_dicts(self, resource_class=None):
+        if resource_class is None:
+            resource_class = self.resource_class
+            if not resource_class: return False
+        assert resource_class.adaptor is self
+        self.resource_class = resource_class
+        property_value_dicts = dict()
+        for propname in resource_class.list_resource_properties():
+            prop = getattr(resource_class, propname)
+            named_class = type(f"NamedValue_for_property_{propname}",
+                  (NamedValue,), {})
+            value_dict = prop.fget._value_dict
+            for stand_name, names in value_dict:
+                if isinstance(names,str): names = (names,)
+                named_val = named_class(stand_name, *names)
+                    #this registered the defined names as a new NamedObj inst
+            stand_dict = named_class.StandardizingDict()
             try:
-                value_list = self.value_names[prop_name]
+                value_list = self.allowed_values[propname]
             except KeyError:
                 pass
             else:
@@ -103,7 +100,8 @@ class EditorAdaptor(Adaptor):
                 stand_dict.update(value_list)
                 stand_dict.other_dict.clear() #this only contains mappings on
                 # itself anyway
-            self.property_value_dict[prop_name] = stand_dict
+            property_value_dicts[propname] = stand_dict
+        self.property_value_dicts = property_value_dicts
 
     @adaptionmethod
     def load_multi(self, file, **load_kwargs):
@@ -130,62 +128,53 @@ class EditorAdaptor(Adaptor):
         self._check(backend_obj)
         self.close.target_with_args()
     
-    def _check_method(self, name):
-        method = None
-        try:
-            amethod = getattr(self,name)
-        except AttributeError:
-            pass
-        else:
-            if isinstance(amethod,AdaptionMethod): method = amethod
-        if method is None:
-            target_space = self.load.target_space
-            try:
-                method = getattr(target_space, name)
-            except AttributeError:
-                return False, False
-        if not callable(method): return False, False
-        argnum = len(inspect.signature(method).parameters)
-        if argnum < 2: raise TypeError
-        return method, argnum
+    # def _check_method(self, name):
+    #     method = None
+    #     try:
+    #         amethod = getattr(self,name)
+    #     except AttributeError:
+    #         pass
+    #     else:
+    #         if isinstance(amethod,AdaptionMethod): method = amethod
+    #     if method is None:
+    #         target_space = self.load.target_space
+    #         try:
+    #             method = getattr(target_space, name)
+    #         except AttributeError:
+    #             return False, False
+    #     if not callable(method): return False, False
+    #     argnum = len(inspect.signature(method).parameters)
+    #     if argnum < 2: raise TypeError
+    #     return method, argnum
     
     def forward_property(self, name, backend_obj, value = None):
-        if self.property_value_dict and value is not None:
-            try:
-                stand_dict = self.property_value_dict[name]
-            except KeyError:
-                pass
-            else:
-                value = stand_dict.apply(value)
-        method, argnum = self._check_method(name)
-        if method:
-            assert argnum == 2
-            return method(backend_obj, value)
-        backend_name = self.names.get(name, name)
-        if value is None:
-            ret = getattr(backend_obj, backend_name)
-            try:
-                NamedCls = self.named_classes[name]
-            except KeyError:
-                pass
-            else:
-                try:
-                    ret = NamedCls.get_stnd_name(ret)
-                except KeyError:
-                    pass
-            return ret
+        #method, argnum = self._check_method(name)
+        # if method:
+        #     assert argnum == 2
+        #     return method(backend_obj, value)
+        backend_name = self.name_map.get(name, name)
+        if value is None: return getattr(backend_obj, backend_name)
+        
+        
+        
+        try:
+            value_map2 = self.value_map[name]
+        except KeyError:
+            pass
+        else:
+            value = value_map2.get(value,value)
         setattr(backend_obj, backend_name, value)
     
     
-    def forward_func_call(self, name, backend_obj, *args, **kwargs):
-        method, argnum = self._check_method(name)
-        if method: return method(backend_obj, *args,**kwargs)
-        backend_name = self.names.get(name, name)
-        return getattr(backend_obj, backend_name)(*args,**kwargs)
+    # def forward_func_call(self, name, backend_obj, *args, **kwargs):
+    #     method, argnum = self._check_method(name)
+    #     if method: return method(backend_obj, *args,**kwargs)
+    #     backend_name = self.name_map.get(name, name)
+    #     return getattr(backend_obj, backend_name)(*args,**kwargs)
     
     
     def _inspect_unkown(self, name):
-        backend_name = self.names.get(name, name)
+        backend_name = self.name_map.get(name, name)
         obj = getattr(self.obj_class, backend_name)
             # this might raise AttributeError!
         if callable(obj):
@@ -221,66 +210,70 @@ class EditorAdaptor(Adaptor):
         return True
         
         
+# def standardize(val, value_dict):
+#     if value_dict:
+#         for stan_name, used_names in value_dict.items():
+#             if val == used_names or val in used_names: val = stan_name
+#     return val
 
-
-def resource_property(name, *name_alias):
+def resource_property(name, **value_dict):
     def func(self):
         return self.adaptor.forward_property(name,self.backend_obj)
     func.__name__ = name
     func.__qualname__ = name
     func._resource = True
-    func._names = name_alias
-    func = property(func)
-    @func.setter
+    func._value_dict = value_dict
+    prop = property(func)
+    @prop.setter
     def func(self, val):
         return self.adaptor.forward_property(name,self.backend_obj, val)
-    return func
+    return prop
 
-def multi_resource_property(name):
-    func = lambda self: self.get_from_single(name)
-    func.__name__ = name
-    func.__qualname__ = name
-    func._resource = True
-    func = property(func)
-    @func.setter
-    def func(self, val):
-        for single in self.sequence: setattr(single,name,val)
-    return func
+# def multi_resource_property(name):
+#     func = lambda self: self.get_from_single(name)
+#     func.__name__ = name
+#     func.__qualname__ = name
+#     func._resource = True
+#     func = property(func)
+#     @func.setter
+#     def func(self, val):
+#         for single in self.sequence: setattr(single,name,val)
+#     return func
 
 def is_resource_property(obj):
     return isinstance(obj, property) and hasattr(obj.fget,"_resource")
 
 
 
-def resource_func(name_or_func, *names):
-    """A decorator to create resource_funcs"""
-    if isinstance(name_or_func, FunctionType):
-        inp_func = name_or_func
-        name = inp_func.__name__
-        def func(self, *args, **kwargs):
-            args, kwargs = inp_func(self,*args,**kwargs)
-            return self.adaptor.forward_func_call(name, self.backend_obj, *args,
-                    **kwargs)
-        func.__name__ = name
-        func.__qualname__ = name
-        func._resource = True
-        func._names = names
-        func._inp_func = inp_func
-        return func
-    if isinstance(name_or_func, str):
-        def decorator(inp_func):
-            return resource_func(inp_func, name_or_func,*names)
-        return decorator
-    raise TypeError
-    
-
-def multi_resource_func(name):
-    def func(self,*args,**kwargs):
-        return self.get_from_single(name,True,*args,**kwargs)
-    func.__name__ = name
-    func.__qualname__ = name
-    func._resource = True
-    return func
+# def resource_func(name_or_func, *names):
+#     """A decorator to create resource_funcs"""
+#     if isinstance(name_or_func, FunctionType):
+#         inp_func = name_or_func
+#         name = inp_func.__name__
+#         def func(self, *args, **kwargs):
+#             args, kwargs = inp_func(self,*args,**kwargs)
+#             return self.adaptor.forward_func_call(name, self.backend_obj, *args,
+#                     **kwargs)
+#         func.__name__ = name
+#         func.__qualname__ = name
+#         func._resource = True
+#         func._names = names
+#         func._inp_func = inp_func
+#         return func
+#     if isinstance(name_or_func, str):
+#         def decorator(inp_func):
+#             return resource_func(inp_func, name_or_func,*names)
+#         return decorator
+#     raise TypeError
+#
+#
+# def multi_resource_func(name):
+#     def func(self,*args,**kwargs):
+#         return self.get_from_single(name,True,*args,**kwargs)
+#     func.__name__ = name
+#     func.__qualname__ = name
+#     func._resource = True
+#     return func
 
 def is_resource_func(obj):
     return callable(obj) and hasattr(obj,"_resource") and obj._resource is True
@@ -305,18 +298,18 @@ class Resource:
     def list_resource_funcs(cls):
         return set(iter_all_vars(cls, is_resource_func))
 
-    @classmethod
-    def _update_redirections(cls):
-        cls.attr_redirections = {}
-        for name in cls.list_resource_properties():
-            cls.attr_redirections[name] = name
-            names = getattr(cls,name).fget._names
-            for n in names: cls.attr_redirections[n] = name
-        for name in cls.list_resource_funcs():
-            cls.attr_redirections[name] = name
-            names = getattr(cls,name)._names
-            for n in names: cls.attr_redirections[n] = name
-        return cls.attr_redirections
+    # @classmethod
+    # def _update_redirections(cls):
+    #     cls.attr_redirections = {}
+    #     for name in cls.list_resource_properties():
+    #         cls.attr_redirections[name] = name
+    #         names = getattr(cls,name).fget._names
+    #         for n in names: cls.attr_redirections[n] = name
+    #     for name in cls.list_resource_funcs():
+    #         cls.attr_redirections[name] = name
+    #         names = getattr(cls,name)._names
+    #         for n in names: cls.attr_redirections[n] = name
+    #     return cls.attr_redirections
 
     def filepath_split(self):
         folder, filename = path.split(self.file)
@@ -425,15 +418,18 @@ class SingleResource(Resource):
         if file:
             assert backend_obj is None
             self.filepath_split()
-            if self.ext in self.adaptor.multi_page_extensions:
-                backend_objs = self.adaptor.load_multi(file, **load_kwargs)
-                self.pages = tuple(
-                        self.__class__(backend_obj=bo) for bo in backend_objs)
-            else:
-                self.backend_obj = self.adaptor.load(file, **load_kwargs)
-                self.pages = None
+            self.load(**load_kwargs)
         elif backend_obj:
             self.adaptor._check(backend_obj)
+            
+    def load(self, **kwargs):
+        if self.ext in self.adaptor.multi_page_extensions:
+            backend_objs = self.adaptor.load_multi(self.file, **kwargs)
+            self.pages = tuple(
+                    self.__class__(backend_obj=bo) for bo in backend_objs)
+        else:
+            self.backend_obj = self.adaptor.load(self.file, **kwargs)
+            self.pages = None
         
         
     @classmethod
