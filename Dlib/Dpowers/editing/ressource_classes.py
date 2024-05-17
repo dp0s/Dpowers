@@ -48,6 +48,7 @@ class EditorAdaptor(Adaptor):
     property_value_dict = None
     named_classes = dict()
     
+    multi_page_extensions = []
     
     @classmethod
     def Values_for_Property(cls, property_name):
@@ -322,7 +323,7 @@ class Resource:
         name, ext = path.splitext(filename)
         self.folder = folder
         self.filename = name
-        self.ext = ext
+        self.ext = ext.lower()
 
     def get_destination(self, input_dest=None, num=None, insert_folder=False):
         ext = None
@@ -353,6 +354,13 @@ class Resource:
                 os.makedirs(folder_name, exist_ok=True)
                 inp_name = path.join(folder_name, inp_name)
         append = f"_{num}" if num else ""
+        try:
+            pages = self.pages
+        except AttributeError:
+            pass
+        else:
+            if pages and ext not in self.adaptor.multi_page_extensions:
+                raise ValueError
         return inp_name + append + ext
 
     def _save(self, dest=None):
@@ -417,10 +425,16 @@ class SingleResource(Resource):
         if file:
             assert backend_obj is None
             self.filepath_split()
-            self.backend_obj = self.adaptor.load(file, **load_kwargs)
+            if self.ext in self.adaptor.multi_page_extensions:
+                backend_objs = self.adaptor.load_multi(file, **load_kwargs)
+                self.pages = tuple(
+                        self.__class__(backend_obj=bo) for bo in backend_objs)
+            else:
+                self.backend_obj = self.adaptor.load(file, **load_kwargs)
+                self.pages = None
         elif backend_obj:
             self.adaptor._check(backend_obj)
-        self.sequence = (self,)
+        
         
     @classmethod
     def iterator(cls, *args,**kwargs):
@@ -435,16 +449,29 @@ class SingleResource(Resource):
     @backend_obj.setter
     def backend_obj(self, value):
         self._backend_obj = value
+    
+    
+    def backend_objs(self):
+        return tuple(im.backend_obj for im in self.pages)
+    
+    def construct_backend_obj(self):
+        return self.adaptor.construct_multi(self.backend_objs())
         
     def _save(self, dest=None):
-        self.adaptor.save(self.backend_obj, dest)
+        if self.pages:
+            self.adaptor.save(self.construct_backend_obj(), dest)
+        else:
+            self.adaptor.save(self.backend_obj, dest)
         return dest
     
     
     def close(self):
         """Close the resource"""
         if self.backend_obj: self.adaptor.close(self.backend_obj)
+        if self.pages:
+            for resource in self.pages: resource.close()
         self.backend_obj = ClosedResource
+        self.pages = ClosedResource
     
     
     # def __add__(self, other):
@@ -458,32 +485,32 @@ class SingleResource(Resource):
     #         pass
     #     return NotImplemented
 
-    def __getattr__(self, key):
-        try:
-            redirected = self.attr_redirections[key]
-        except KeyError:
-            try:
-                obj = self.adaptor.get_unknown(key,self.backend_obj)
-            except AttributeError:
-                pass
-            else:
-                _print(f"WARNING: Attribute '{key}' used from backend "
-                     f"'{self.adaptor.backend}'. Undefined in " f"Dpowers")
-                return obj
-        else:
-            return self.__getattribute__(redirected)
-        raise AttributeError(key)
-
-    def __setattr__(self, key, value):
-        if key not in self._inst_attributes:
-            try:
-                key = self.attr_redirections[key]
-            except KeyError:
-                if self.adaptor.set_unknown(key,self.backend_obj,value):
-                    _print(f"WARNING: Attribute '{key}' used from backend "
-                     f"'{self.adaptor.backend}'. Undefined in " f"Dpowers.")
-                    return
-        super().__setattr__(key, value)
+    # def __getattr__(self, key):
+    #     try:
+    #         redirected = self.attr_redirections[key]
+    #     except KeyError:
+    #         try:
+    #             obj = self.adaptor.get_unknown(key,self.backend_obj)
+    #         except AttributeError:
+    #             pass
+    #         else:
+    #             _print(f"WARNING: Attribute '{key}' used from backend "
+    #                  f"'{self.adaptor.backend}'. Undefined in " f"Dpowers")
+    #             return obj
+    #     else:
+    #         return self.__getattribute__(redirected)
+    #     raise AttributeError(key)
+    #
+    # def __setattr__(self, key, value):
+    #     if key not in self._inst_attributes:
+    #         try:
+    #             key = self.attr_redirections[key]
+    #         except KeyError:
+    #             if self.adaptor.set_unknown(key,self.backend_obj,value):
+    #                 _print(f"WARNING: Attribute '{key}' used from backend "
+    #                  f"'{self.adaptor.backend}'. Undefined in " f"Dpowers.")
+    #                 return
+    #     super().__setattr__(key, value)
 
 
 
@@ -491,24 +518,7 @@ class SingleResource(Resource):
 class MultiResource(Resource):
     
     SingleClass = None  # set by init subclass form Image class
-    allowed_file_extensions = None #might differ from SingleClass
     _inst_attributes = "file", "sequence", "backend_obj"
-        
-    
-    def __init__(self, file=None, **load_kwargs):
-        self.file = file
-        self.filepath_split()
-        self.sequence = []
-        if isinstance(self.file, iter_types): raise ValueError(self.file)
-        #self.filepath_split()
-        if file:
-            backend_objs = self.adaptor.load_multi(file, **load_kwargs)
-            images = tuple(self.SingleClass(backend_obj=bo) for bo in backend_objs)
-            self.sequence += images
-    
-    def _save(self, dest=None):
-        self.adaptor.save(self.construct_backend_obj(), dest)
-        return dest
     
     def save(self, destination=None, split=False):
         if destination and not destination.endswith(tuple(self.allowed_file_extensions)):
@@ -544,20 +554,6 @@ class MultiResource(Resource):
             destinations.append(single._save(dest))
         return destinations
     
-    
-    @property
-    def adaptor(self):
-        return self.SingleClass.adaptor
-    
-    def backend_objs(self):
-        return tuple(im.backend_obj for im in self.sequence)
-    
-    def construct_backend_obj(self):
-        return self.adaptor.construct_multi(self.backend_objs())
-    
-    
-    def close(self):
-        for im in self.sequence: im.close()
         
     def get_from_single(self, name, func = False, *args, **kwargs):
         ret = []

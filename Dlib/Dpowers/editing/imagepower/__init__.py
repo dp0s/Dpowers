@@ -25,7 +25,7 @@ iter_types = (list,tuple,GeneratorType)
 
 class ImageAdaptor(EditorAdaptor):
     
-    pass
+    multipageextensions = [".pdf",".tif", ".tiff"]
 
 
 
@@ -49,7 +49,6 @@ class ImageBase(SingleResource, ImageAdaptor.AdaptiveClass):
 @ImageBase.make_multi_base
 class MultiImage(MultiResource):
     # created as a subclass of ImageBase.Sequence (see above)
-    allowed_file_extensions = [".pdf",".tif", ".tiff"]
     
     def __init__(self, file=None, resolution=300, **load_kwargs):
         super().__init__(file,resolution=resolution,**load_kwargs)
