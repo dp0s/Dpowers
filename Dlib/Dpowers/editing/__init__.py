@@ -37,4 +37,4 @@ from Dhelpers.file_iteration import FilelistCreator
 class PlaylistCreator(FilelistCreator):
     editor_class = mp3tag
     filelist_extension = ".m3u"
-    file_start = "#EXTM3U"
+    #file_start = "#EXTM3U"

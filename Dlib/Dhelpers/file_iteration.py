@@ -120,8 +120,7 @@ class Filelist(BooleanFunction):
         if name is None: add = False
         if not func:
             if not kwargs: raise ValueError
-            func = lambda obj: self.creator.default_selection_func(obj,
-                    **kwargs)
+            func = lambda obj: self.creator.default_selection_func(obj, **kwargs)
         BooleanFunction.__init__(self, name, func)
         if add: self.creator.add_inst(self)
 
@@ -133,7 +132,7 @@ class FilelistCreator:
     allowed_file_extensions = "inherit"
     Filelist = None
     
-    def __init__(self, basepath=None, destpath=None):
+    def __init__(self, basepath=None, destpath=None,insert_initial=None):
         filelist_cls = type(f"Filelist", (Filelist,), {})
         filelist_cls.creator = self
         self.Filelist = filelist_cls
@@ -144,6 +143,7 @@ class FilelistCreator:
         self.imported_lists = None
         self.filelist_combinations = list()
         self._custom_file_func = NotImplemented
+        self.insert_initial = insert_initial
         
     @property
     def destpath(self):
@@ -214,15 +214,19 @@ class FilelistCreator:
             self.file_paths[name].append(file)
     
     
-    def write_paths(self, *names, assemble=True, **kwargs):
+    def write_paths(self, *names, assemble=True, insert_initial=None,
+            overwrite = True, **kwargs):
         if assemble: self.assemble_lists(*names, **kwargs)
         print("Creating playlists:")
         os.makedirs(self.destpath, exist_ok=True)
         for name, file_path_list in self.file_paths.items():
-            self._write_filelist(name,file_path_list, self.destpath)
+            self._write_filelist(name,file_path_list, self.destpath,
+                    insert_initial=insert_initial, overwrite=overwrite)
             
             
-    def _write_filelist(self, name, file_path_list, path, overwrite=True):
+    def _write_filelist(self, name, file_path_list, path, overwrite=True,
+            insert_initial = None):
+        if insert_initial is None: insert_initial = self.insert_initial
         fpath_base = os.path.join(path, name)
         fpath = fpath_base + self.filelist_extension
         if overwrite is False:
@@ -232,19 +236,33 @@ class FilelistCreator:
                 fpath = fpath_base + "__" + str(num) + self.filelist_extension
         with open(fpath, "w") as new:
             new.write(self.file_start + "\n")
-            for file in file_path_list: new.write(file + "\n")
+            if insert_initial:
+                new.write(self.get_custom_file(insert_initial)+"\n")
+            for file in file_path_list:
+                new.write(file + "\n")
         print(f"{name}: {len(file_path_list)} songs in {fpath}")
 
 
 
     def import_lists(self, destpath=None, add_ext=()):
         if destpath is None: destpath = self.destpath
-        allowed_ext = (self.filelist_extension,) + (add_ext,)
+        allowed_ext = (self.filelist_extension,) + add_ext
         self.imported_lists = defaultdict(list)
         for file in os.listdir(destpath):
             name, ext = os.path.splitext(file)
             if ext not in allowed_ext: continue
             with open(os.path.join(destpath,file), "r") as opened:
+                last_line = ""
+                while last_line == "": last_line = opened.readline().strip()
+                if self.insert_initial:
+                    initial_lines = self.get_custom_file(
+                            self.insert_initial).split("\n")
+                    for in_line in initial_lines:
+                        if in_line.strip() != last_line:
+                            raise ValueError(in_line, last_line)
+                        last_line = opened.readline().strip()
+                        #this will pop out the initial lines before importing
+                self.imported_lists[name].append(last_line)
                 for line in opened.readlines():
                     self.imported_lists[name].append(line.strip())
         return self.imported_lists
@@ -272,12 +290,16 @@ class FilelistCreator:
 class FilelistCombination:
     
     def __init__(self, playlist_creator, name, file_list_names,*, insert=None,
-            from_imported=False, destpath=None):
+            insert_initial=None, from_imported=False, destpath=None):
+        # insert can be a file path or name of a previously defined
+        # FileList. It will be inserted in between every entry. (Useful for
+        # silence between music tracks e.g.)
         self.name = name
         self.creator = playlist_creator
         assert isinstance(file_list_names, (tuple, list))
         self.file_lists = file_list_names
         self.insert = insert
+        self.insert_initial = insert_initial
         self.from_imported = from_imported
         self.destpath = destpath
     
@@ -305,11 +327,13 @@ class FilelistCombination:
         else:
             return self.creator.get_custom_file(fileinfo)
     
-    def create(self, insert=None, from_imported=None):
-        insert = insert if insert else self.insert
-        from_imported = self.from_imported if from_imported is None else from_imported
+    def create(self, insert=None, insert_initial=None, from_imported=None):
+        if insert is None: insert = self.insert
+        if insert_initial is None: insert_initial = self.insert_initial
+        if from_imported is None: from_imported = self.from_imported
         creator = self.creator
         lists = creator.imported_lists if from_imported else creator.file_paths
+        if insert_initial: yield self._process_fileinfo(insert_initial, lists)
         for name in self.file_lists:
             file = self._process_fileinfo(name, lists)
             if file: yield file
@@ -326,4 +350,5 @@ class FilelistCombination:
         filelist = tuple(self.create(**kwargs))
         #print(filelist)
         os.makedirs(destpath, exist_ok=True)
-        self.creator._write_filelist(name, filelist, destpath, overwrite=overwrite)
+        self.creator._write_filelist(name, filelist, destpath,
+                overwrite=overwrite, insert_initial = False)
