@@ -240,6 +240,7 @@ class RegisteredHook(PatternListener):
             pass
         self.analyze_func = None
 
+
 class TriggerManager(PatternListener,TimedObject, HookAdaptor.AdaptiveClass,
         KeepInstanceRefs):
     

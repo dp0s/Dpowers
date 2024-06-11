@@ -27,7 +27,7 @@ class TextToSpeechAdaptor(Adaptor):
     
     @adaptionmethod
     def call(self, text):
-        return self.call.target_with_args()#
+        return self.call.target_with_args()
     
     @property
     def volume(self):

@@ -17,6 +17,6 @@
 #
 #
 from .ttspower import *
-
+from VoiceAssistant import *
 
 tts = TextToSpeechAdaptor(_primary_name="tts")
