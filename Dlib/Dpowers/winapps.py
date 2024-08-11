@@ -63,7 +63,7 @@ class WindowApplication(Application):
     def __getattr__(self, item):
         winobj = self.last_found.winsearch_object if self.last_found else \
             self.winsearch
-        if winobj is not 0:
+        if winobj != 0:
             obj = getattr(winobj, item)
             if isinstance(obj,(types.FunctionType, types.MethodType)):
                 return obj

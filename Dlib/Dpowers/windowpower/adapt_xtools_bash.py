@@ -121,12 +121,12 @@ def ID_from_location(param):
         x, y = param
         command = ["xdotool", "mousemove", x, y, "getmouselocation",
             "mousemove", "restore"]
-        return int(re.split('[\s:]', launch.get(command))[7])
+        return int(re.split('[\\s:]', launch.get(command))[7])
     elif isinstance(param, str):
         param = param.lower()
         if param in ("m", "mouse"):
             command = ["xdotool", "getmouselocation"]
-            return int(re.split('[\s:]', launch.get(command))[7])
+            return int(re.split('[\\s:]', launch.get(command))[7])
         elif param in ("a", "act", "active"):
             return _xdo_get_ids(title=":ACTIVE:")[0]
         elif param in ("s", "sel", "select"):
