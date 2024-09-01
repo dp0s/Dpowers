@@ -74,7 +74,7 @@ class IconHandler(IconAdaptor.AdaptiveClass):
         self.menuitem("Get single key name(s)", Dfuncs.display_key_names)
         self.menuitem("Monitor input events for 10s",
                 Dfuncs.monitor_input_events)
-        self.menuitem("Toggle notifications", ntfy.toggle)
+        self.menuitem("Toggle notifications", ntfy.toggle_all)
         self.menuitem("Save key stroke pattern", Dfuncs.save_key_replay)
         self.menuitem("Replay last key stroke pattern",
                 Dfuncs.replay_pressed_keys)

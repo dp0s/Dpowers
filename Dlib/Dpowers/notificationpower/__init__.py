@@ -43,6 +43,10 @@ class NotificationAdaptor(Adaptor):
         self.active = False
     
     def toggle(self):
-        self.__call__("Notifications turned off.")
+        self.__call__(f"Notifications turned off.")
         self.active = not self.active
-        self.__call__("Notifications turned on.")
+        self.__call__(f"Notifications turned on.")
+        
+    def toggle_all(self):
+        for i in self.get_instances(): i.toggle()
+    
