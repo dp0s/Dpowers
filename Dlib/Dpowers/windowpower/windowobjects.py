@@ -650,8 +650,8 @@ class FoundWindows(WindowObject):
     
     When a new instance of this class is created, a search is
     performed to find all existing windows matching the given parameters.
-    Each window is identified by a unique system-wide identification number (
-    ID). The matching IDs are saved in ascending order as a static list. Use
+    Each window is identified by a unique system-wide identification number (ID).
+    The matching IDs are saved in ascending order as a static list. Use
     the :func:`IDs` method to see them. All methods below will operate on
     this list of initially found windows.
      
@@ -699,7 +699,7 @@ class FoundWindows(WindowObject):
         :param str wcls: Window class to search for. This must be an exact
                 match.
         :param int pid: Process ID of the window to search for.
-        :param tuple loc: Specify screen coordinates (*x*,*y*) for this
+        :param tuple loc: Specify screen coordinates (x,y) for this
             parameter to retrieve the top-most window at that location.
             Specifying this will ignore all other parameters.
         :param bool at_least_one: If set to ``True``, check that at least one
