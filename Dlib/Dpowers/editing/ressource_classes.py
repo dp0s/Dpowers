@@ -23,7 +23,6 @@ from Dhelpers.adaptor import AdaptionMethod
 from types import GeneratorType
 import os, functools, warnings
 from types import FunctionType
-from Dhelpers.file_iteration import FileIterator
 from Dhelpers.baseclasses import iter_all_vars
 from Dhelpers.named import NamedObj
 
@@ -34,8 +33,35 @@ class ClosedResource: pass
 class ClosedResourceError(Exception): pass
 
 
-edit_tag = "__edit"
 
+class FileIterator:
+
+    def __init__(self, *filepaths):
+        self.given_paths = filepaths
+
+    def generate_paths(self):
+        for p in self.given_paths:
+            p = p.strip()
+            if path.isdir(p): raise ValueError
+            if "\n" in p:
+                for p2 in p.split("\n"): yield p2.strip()
+            else:
+                yield p
+
+    def __call__(self):
+        for p in self.generate_paths():
+            yield p, self.filepath_split(p)
+
+    @staticmethod
+    def filepath_split(file):
+        folder, filename = path.split(file)
+        name, ext = path.splitext(filename)
+        if folder == "": folder = os.getcwd()
+        return folder, name, ext
+    
+
+
+edit_tag = "__edit"
 
 class NamedValue(NamedObj):
      pass

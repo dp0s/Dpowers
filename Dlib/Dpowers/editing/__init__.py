@@ -31,7 +31,7 @@ class mp3tag(mp3tagBase):
 
 
 
-from Dhelpers.file_iteration import FilelistCreator
+from .FilelistCreator import FilelistCreator
 
 
 class PlaylistCreator(FilelistCreator):
