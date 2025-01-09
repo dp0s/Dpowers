@@ -19,7 +19,7 @@
 from .ressource_classes import *
 from .imagepower import *
 from .mp3power import *
-
+from datetime import datetime
 
 
 class Image(ImageBase):
@@ -38,3 +38,27 @@ class PlaylistCreator(FilelistCreator):
     editor_class = mp3tag
     filelist_extension = ".m3u"
     #file_start = "#EXTM3U"
+    
+    @classmethod
+    def adapt(cls, *args, **kwargs):
+        return cls.editor_class.adapt(*args,**kwargs)
+    
+    def print_mp3_tags(self, name, header=True, dest_folder=None):
+        #os.makedirs(dest_folder)
+        if isinstance(name, self.Filelist): name = name.name
+        l = self.imported_lists[name]
+        self._create_print(l, name, header=header)
+        
+    def _create_print(self, l, name="", header=True):
+        if header:
+            print("-------------------------------------------------")
+            print(f"Playlist '{name}' containing {len(l)} entries")
+            print("-------------------------------------------------")
+            print("Date: ", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            print()
+            print("Title / Artist / Album / 'filename'")
+            print()
+        for file in l:
+            with self.editor_class(file) as obj:
+                print(obj.title," / ",obj.artist, " / ",obj.album, " / '",
+                        os.path.basename(file),"'", sep="")
