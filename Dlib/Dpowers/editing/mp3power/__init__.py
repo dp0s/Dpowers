@@ -21,7 +21,7 @@ from ..ressource_classes import EditorAdaptor, adaptionmethod, \
 
 
 class mp3tagAdaptor(EditorAdaptor):
-    pass
+    save_in_place = True
     
     
 class mp3tagBase(SingleResource, mp3tagAdaptor.AdaptiveClass):
@@ -32,3 +32,15 @@ class mp3tagBase(SingleResource, mp3tagAdaptor.AdaptiveClass):
     genre = resource_property("genre")
     artist = resource_property("artist")
     album = resource_property("album")
+    
+    
+    
+    def remove_tag_from_genre(self, tag):
+        ng = []
+        for i in self.genre.split(" "):
+            if tag not in i: ng.append(i)
+        self.genre = " ".join(ng).strip()
+        self.save()
+            
+    
+    
