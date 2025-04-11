@@ -62,7 +62,7 @@ def my_setup(name, **kwargs):
 
 def setup_process(name, **kwargs):
     setup(**kwargs,
-        name=name,
+        name=name.lower(),
         packages=find_packages("Dlib", include=[f"{name}*"]),
         package_dir={"": "Dlib"},
         include_package_data=False,
