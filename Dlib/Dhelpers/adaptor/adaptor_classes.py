@@ -629,6 +629,7 @@ class AdaptorBase(KeepInstanceRefs):
         global_instructions = InstallInstruction()
         for subcls, managerlist in cls.backend_dict(check=False).items():
             for m in managerlist:
+                if m is None: continue
                 for d in m.dependencies:
                     global_instructions.update(d.install_instructions[''])
         if as_str: return str(global_instructions)
