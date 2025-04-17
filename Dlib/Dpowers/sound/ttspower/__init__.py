@@ -29,7 +29,7 @@ class TextToSpeechAdaptor(Adaptor):
     
     @adaptionmethod
     def call(self, text, notify=True):
-        if notify: self.ntfy("TTS got following text:", 10, text)
+        if notify: self.ntfy(f"'{text}'", 10, "Read aloud by TTS")
         return self.call.target(text)
     
     @property

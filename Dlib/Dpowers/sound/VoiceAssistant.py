@@ -3,6 +3,29 @@ from ..notificationpower import NotificationAdaptor
 from ..clipboardpower import ClipboardAdaptor
 import types
 
+import sounddevice
+import speech_recognition as sr
+
+from contextlib import contextmanager
+from ctypes import CFUNCTYPE, c_char_p, c_int, cdll
+#import pyaudio
+
+ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
+
+def py_error_handler(filename, line, function, err, fmt):
+    pass
+
+c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
+
+@contextmanager
+def noalsaerr():
+    asound = cdll.LoadLibrary('libasound.so')
+    asound.snd_lib_error_set_handler(c_error_handler)
+    yield
+    asound.snd_lib_error_set_handler(None)
+
+
+
 class Question:
     
     def __init__(self, to_speak):
@@ -14,11 +37,12 @@ class VoiceAssistantBase:
     
     def __init__(self):
         self.tts = TextToSpeechAdaptor(group="voice_assistant")
-        self.ntfy = NotificationAdaptor(group="voice_assistant")
+        self.ntfy = NotificationAdaptor(group="tts")
         self.clip = ClipboardAdaptor(group="voice_assistant")
         self.silent = False
         self.last_heard = None
         self.before_last_heard = None
+        self.recognizer = sr.Recognizer()
         
     def speak(self, text):
         if self.silent:
@@ -46,6 +70,20 @@ class VoiceAssistantBase:
     def beep(self, *args):
         return
     
+    def recognize(self):
+        with noalsaerr() as n, sr.Microphone() as source:
+            audio = self.recognizer.listen(source)
+        # recognize speech using whisper
+        try:
+            return self.recognizer.recognize_faster_whisper(audio,
+                    language="de")
+        except sr.UnknownValueError:
+            print("Whisper could not understand audio")
+            raise
+        except sr.RequestError as e:
+            print(f"Could not request results from Whisper; {e}")
+            raise
+    
 class SimpleVoiceAssistant(VoiceAssistantBase):
     
     question = None
@@ -65,6 +103,7 @@ class SimpleVoiceAssistant(VoiceAssistantBase):
             heard = self.get_voice()
             if not heard or heard in self.stopp_phrases:
                 self.beep(1200,500)
+                self.tts("Stop phrase heard")
                 return
             if heard in self.edit_phrases:
                 self.speak(self.new_word_phrase)

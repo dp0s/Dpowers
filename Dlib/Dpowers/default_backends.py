@@ -48,6 +48,7 @@ class linux:
         
     class ClipboardAdaptor:
         default = "xclip_bash"
+        voice_assistant = default
     
     class NotificationAdaptor:
         default = "notify_send_bash"
@@ -65,6 +66,7 @@ class linux:
         
     class TextToSpeechAdaptor:
         default = "ttsx3"
+        voice_assistant = default
         
 
 class termux:
