@@ -52,6 +52,7 @@ class linux:
     class NotificationAdaptor:
         default = "notify_send_bash"
         waiter =  default
+        tts = default
         
     class DialogAdaptor:
         default = dict(_="zenity_bash",popup="tkinter")

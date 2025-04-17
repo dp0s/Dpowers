@@ -43,7 +43,8 @@ class VoiceAssistantBase:
     def run(self):
         raise NotImplementedError
     
-    
+    def beep(self, *args):
+        return
     
 class SimpleVoiceAssistant(VoiceAssistantBase):
     

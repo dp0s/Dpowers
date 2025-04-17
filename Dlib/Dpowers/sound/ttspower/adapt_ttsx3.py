@@ -17,14 +17,15 @@
 #
 #
 from ... import DependencyManager, launch
+from time import sleep
 
 with DependencyManager(__name__) as manager:
     pyttsx3 = manager.import_module("pyttsx3")
 
 engine = pyttsx3.init()
 
-
 def call(text):
+    #print("trying to speak ", text)
     engine.say(text)
     engine.runAndWait()
     

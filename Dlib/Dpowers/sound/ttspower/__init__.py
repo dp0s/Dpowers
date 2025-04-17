@@ -16,18 +16,21 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from ... import Adaptor, adaptionmethod
+from ... import Adaptor, adaptionmethod, NotificationAdaptor
 import time
 
 
 class TextToSpeechAdaptor(Adaptor):
     
+    ntfy = NotificationAdaptor(group="tts")
+    
     def __call__(self, text):
         return self.call(text)
     
     @adaptionmethod
-    def call(self, text):
-        return self.call.target_with_args()
+    def call(self, text, notify=True):
+        if notify: self.ntfy("TTS got following text:", 10, text)
+        return self.call.target(text)
     
     @property
     def volume(self):
