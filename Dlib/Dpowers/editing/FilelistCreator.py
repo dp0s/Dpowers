@@ -1,6 +1,6 @@
 #
 #
-# Copyright (c) 2020-2024 DPS, dps@my.mail.de
+# Copyright (c) 2020-2025 DPS, dps@my.mail.de
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,101 +16,12 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-import os, warnings, sys, random, functools
+import os, warnings, sys, random, functools, shutil
 from collections import defaultdict
-from contextlib import contextmanager
+from contextlib import contextmanager, redirect_stdout
+path=os.path
 
-p = os.path
-
-
-
-class FileIterator:
-    
-    def __init__(self, *filepaths):
-        self.given_paths = filepaths
-    
-    def generate_paths(self):
-        for path in self.given_paths:
-            path = path.strip()
-            if p.isdir(path): raise ValueError
-            if "\n" in path:
-                for path2 in path.split("\n"):
-                    yield path2.strip()
-            else:
-                yield path
-    
-    def __call__(self):
-        for path in self.generate_paths():
-            yield path, self.filepath_split(path)
-    
-    @staticmethod
-    def filepath_split(file):
-        folder, filename = p.split(file)
-        name, ext = p.splitext(filename)
-        if folder == "": folder = os.getcwd()
-        return folder, name, ext
-
-
-
-
-class BooleanFunction:
-    
-    _cache_lvl = False
-    _last_cache_lvl = 0
-    
-    @classmethod
-    def getfunc(cls, func):
-        if isinstance(func, cls): func = func._func
-        assert callable(func)
-        return func
-
-    def __init__(self,name=None, func=None):
-        self.name = name
-        self._func = self.getfunc(func)
-        self.cached_val=None
-        
-    def func(self, *args, **kwargs):
-        cls_cache_lvl = self.__class__._cache_lvl
-        if cls_cache_lvl is False: return bool(self._func(*args,**kwargs))
-        if self.cached_val is None or self._cache_lvl <= cls_cache_lvl:
-            self.cached_val = bool(self._func(*args,**kwargs))
-            self._cache_lvl = cls_cache_lvl + 1
-        return self.cached_val
-    __call__ = func
-    
-    
-    @classmethod
-    @contextmanager
-    def use_cache(cls):
-        # Usage: see FilelistCreator.find_files method below
-        cls._cache_lvl = cls._last_cache_lvl + 1
-        try:
-            yield cls._forget_cached_vals
-        finally:
-            cls._last_cache_lvl = cls._cache_lvl
-            cls._cache_lvl = False
-    
-    @classmethod
-    def _forget_cached_vals(cls):
-        cls._cache_lvl += 1
-        
-    
-    
-    def negate(self):
-        return self.__class__(
-                func=lambda *args, **kwargs: not self.func(*args, **kwargs))
-    def __and__(self, other):
-        assert callable(other)
-        return self.__class__(func=lambda *args, **kwargs:
-                self.func(*args, **kwargs) & bool(other(*args, **kwargs)))
-    def __or__(self, other):
-        assert callable(other)
-        return self.__class__(func=lambda *args, **kwargs:  self.func(*args,
-                **kwargs) | bool(other(*args, **kwargs)))
-    
-    
-    
-
+from Dhelpers.boolean_function import BooleanFunction
 
 
 class Filelist(BooleanFunction):
@@ -131,6 +42,16 @@ class FilelistCreator:
     file_start = ""
     allowed_file_extensions = "inherit"
     Filelist = None
+    
+
+    def _file_allowed(self, file):
+        if self.allowed_file_extensions == "inherit":
+            allowed_ext =  self.editor_class.allowed_file_extensions
+        else:
+            allowed_ext = self.allowed_file_extensions
+        ext = os.path.splitext(file)[-1]
+        if ext in allowed_ext: return True
+        return False
     
     def __init__(self, basepath=None, destpath=None,insert_initial=None):
         filelist_cls = type(f"Filelist", (Filelist,), {})
@@ -184,13 +105,9 @@ class FilelistCreator:
     
     def find_files(self, *names, suppress_error=True, warn=True):
         for dirpath, _, files in os.walk(self.basepath):
-            allowed_ext = self.allowed_file_extensions
-            if allowed_ext == "inherit":
-                allowed_ext=self.editor_class.allowed_file_extensions
             with self.Filelist.use_cache() as reset_cache:
                 for file in files:
-                    ext = os.path.splitext(file)[-1]
-                    if ext not in allowed_ext: continue
+                    if not self._file_allowed(file): continue
                     file = os.path.realpath(os.path.join(dirpath, file))
                     try:
                         with self.editor_class(file) as obj:
@@ -287,10 +204,31 @@ class FilelistCreator:
         self._custom_file_func = func
         return func
 
+        
+    def copy_files(self, filelist, dest_folder, numerate=False):
+        os.makedirs(dest_folder)
+        if isinstance(filelist, self.Filelist): filelist=filelist.name
+        if isinstance(filelist, str):
+            filelist = self.imported_lists[filelist]
+        print(f"Copying {len(filelist)} files to {os.path.realpath(dest_folder)} ...")
+        num = 0
+        new_names = []
+        for file in filelist:
+            new_name = path.split(file)[1]
+            if numerate:
+                num += 1
+                new_name = f"{num}__{new_name}"
+            new_full_name = path.join(dest_folder, new_name)
+            shutil.copy(file, new_full_name)
+            new_names.append(new_full_name)
+        print("Done.")
+        return new_names
+
 class FilelistCombination:
     
     def __init__(self, playlist_creator, name, file_list_names,*, insert=None,
-            insert_initial=None, from_imported=False, destpath=None):
+            insert_initial=None, from_imported=True, destpath=None,
+            avoid_double=True):
         # insert can be a file path or name of a previously defined
         # FileList. It will be inserted in between every entry. (Useful for
         # silence between music tracks e.g.)
@@ -302,30 +240,19 @@ class FilelistCombination:
         self.insert_initial = insert_initial
         self.from_imported = from_imported
         self.destpath = destpath
-    
-    @property
-    def destpath(self):
-        """This defines the default location for self.destpath if not
-        manually set"""
-        if self._destpath: return self._destpath
-        dp = self.creator.destpath
-        if dp: return os.path.join(dp, "combinations")
-        return
-    
-    @destpath.setter
-    def destpath(self, val):
-        self._destpath = val
+        self.avoid_double = avoid_double
         
-    def _process_fileinfo(self, fileinfo, defined_lists):
-        if isinstance(fileinfo, self.creator.Filelist):
-            fileinfo = fileinfo.name
-        if fileinfo in defined_lists:
-            return random.choice(defined_lists[fileinfo])
+    def _process_fileinfo(self, list_info, defined_lists):
+        if isinstance(list_info, self.creator.Filelist):
+            list_info = list_info.name
+            if not list_info: raise ValueError
+        if list_info in defined_lists:
+            return random.choice(defined_lists[list_info])
             #first, check if a FileList has been defined with that name
             # if not, then try to interpret the given name as an argument for
             # custom_file_finder
         else:
-            return self.creator.get_custom_file(fileinfo)
+            return self.creator.get_custom_file(list_info)
     
     def create(self, insert=None, insert_initial=None, from_imported=None):
         if insert is None: insert = self.insert
@@ -333,22 +260,53 @@ class FilelistCombination:
         if from_imported is None: from_imported = self.from_imported
         creator = self.creator
         lists = creator.imported_lists if from_imported else creator.file_paths
-        if insert_initial: yield self._process_fileinfo(insert_initial, lists)
+        seq = list()
+        clean_seq = list()
+        if insert_initial:
+            seq.append(self._process_fileinfo(insert_initial, lists))
         for name in self.file_lists:
             file = self._process_fileinfo(name, lists)
-            if file: yield file
+            if file:
+                while self.avoid_double and file in clean_seq:
+                    # by default, avoid picking the same file twice
+                    file = self._process_fileinfo(name, lists)
+                seq.append(file)
+                clean_seq.append(file)
             if insert:
                 if os.path.isfile(insert):
-                    yield insert #just return the input, in case it is a
+                    seq.append(insert) #just return the input, in case it is a
                     # explicit path
                 else:
-                    yield self._process_fileinfo(insert, lists)
+                    seq.append(self._process_fileinfo(insert, lists))
+        return seq, clean_seq
     
-    def write(self, name=None, destpath=None, overwrite=True, **kwargs):
+    def write(self, name=None, destpath=None, overwrite=True,
+            copy=False,**kwargs):
         name = name if name else self.name
-        destpath = destpath if destpath else self.destpath
-        filelist = tuple(self.create(**kwargs))
+        if not destpath:
+            destpath = self.destpath if self.destpath else "combinations"
+        if not path.isabs(destpath):
+            destpath = path.join(self.creator.destpath, destpath)
+        destpath = path.join(destpath, name)
+        copy_folder = name+"_files"
+        filelist, clean_filelist = self.create(**kwargs)
         #print(filelist)
         os.makedirs(destpath, exist_ok=True)
-        self.creator._write_filelist(name, filelist, destpath,
+        writelist = filelist
+        if copy is True:
+            writelist = [path.join(copy_folder,path.split(file)[1]) for file in
+                filelist]
+        self.creator._write_filelist(name, writelist, destpath,
                 overwrite=overwrite, insert_initial = False)
+        
+        try:
+            print_command = self.creator.print_tags_to_file
+        except AttributeError:
+            pass
+        else:
+            print_command(clean_filelist, destpath, name, header=True)
+                    
+        if copy is True:
+            copypath = path.join(destpath, copy_folder)
+            if os.path.isdir(copypath): shutil.rmtree(copypath)
+            self.creator.copy_files(filelist, copypath, numerate=False)

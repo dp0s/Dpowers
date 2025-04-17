@@ -1,6 +1,6 @@
 #
 #
-# Copyright (c) 2020-2024 DPS, dps@my.mail.de
+# Copyright (c) 2020-2025 DPS, dps@my.mail.de
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,6 +43,10 @@ class NotificationAdaptor(Adaptor):
         self.active = False
     
     def toggle(self):
-        self.__call__("Notifications turned off.")
+        self.__call__(f"Notifications turned off.")
         self.active = not self.active
-        self.__call__("Notifications turned on.")
+        self.__call__(f"Notifications turned on.")
+        
+    def toggle_all(self):
+        for i in self.get_instances(): i.toggle()
+    

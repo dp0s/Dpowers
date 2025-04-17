@@ -1,6 +1,6 @@
 #
 #
-# Copyright (c) 2020-2024 DPS, dps@my.mail.de
+# Copyright (c) 2020-2025 DPS, dps@my.mail.de
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ from ..ressource_classes import EditorAdaptor, adaptionmethod, \
 
 
 class mp3tagAdaptor(EditorAdaptor):
-    pass
+    save_in_place = True
     
     
 class mp3tagBase(SingleResource, mp3tagAdaptor.AdaptiveClass):
@@ -32,3 +32,15 @@ class mp3tagBase(SingleResource, mp3tagAdaptor.AdaptiveClass):
     genre = resource_property("genre")
     artist = resource_property("artist")
     album = resource_property("album")
+    
+    
+    
+    def remove_tag_from_genre(self, tag):
+        ng = []
+        for i in self.genre.split(" "):
+            if tag not in i: ng.append(i)
+        self.genre = " ".join(ng).strip()
+        self.save()
+            
+    
+    

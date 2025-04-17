@@ -1,6 +1,6 @@
 #
 #
-# Copyright (c) 2020-2024 DPS, dps@my.mail.de
+# Copyright (c) 2020-2025 DPS, dps@my.mail.de
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,4 +20,4 @@
 #we don't want to import anything automatically
 
 
-__version__ = "0.1.5"
+__version__ = "0.1.6"

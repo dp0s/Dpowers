@@ -1,6 +1,6 @@
 #
 #
-# Copyright (c) 2020-2024 DPS, dps@my.mail.de
+# Copyright (c) 2020-2025 DPS, dps@my.mail.de
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -74,7 +74,7 @@ class IconHandler(IconAdaptor.AdaptiveClass):
         self.menuitem("Get single key name(s)", Dfuncs.display_key_names)
         self.menuitem("Monitor input events for 10s",
                 Dfuncs.monitor_input_events)
-        self.menuitem("Toggle notifications", ntfy.toggle)
+        self.menuitem("Toggle notifications", ntfy.toggle_all)
         self.menuitem("Save key stroke pattern", Dfuncs.save_key_replay)
         self.menuitem("Replay last key stroke pattern",
                 Dfuncs.replay_pressed_keys)

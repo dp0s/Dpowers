@@ -1,6 +1,6 @@
 #
 #
-# Copyright (c) 2020-2024 DPS, dps@my.mail.de
+# Copyright (c) 2020-2025 DPS, dps@my.mail.de
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -62,7 +62,7 @@ def my_setup(name, **kwargs):
 
 def setup_process(name, **kwargs):
     setup(**kwargs,
-        name=name,
+        name=name.lower(),
         packages=find_packages("Dlib", include=[f"{name}*"]),
         package_dir={"": "Dlib"},
         include_package_data=False,

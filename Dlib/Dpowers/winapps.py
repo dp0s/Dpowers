@@ -1,6 +1,6 @@
 #
 #
-# Copyright (c) 2020-2024 DPS, dps@my.mail.de
+# Copyright (c) 2020-2025 DPS, dps@my.mail.de
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -63,7 +63,7 @@ class WindowApplication(Application):
     def __getattr__(self, item):
         winobj = self.last_found.winsearch_object if self.last_found else \
             self.winsearch
-        if winobj is not 0:
+        if winobj != 0:
             obj = getattr(winobj, item)
             if isinstance(obj,(types.FunctionType, types.MethodType)):
                 return obj
