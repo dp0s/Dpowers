@@ -71,7 +71,7 @@ class KeyHandler(EvdevHandler):
     
     name_dict = {}
     for a, b in KEY.items():
-        if isinstance(b, list): b = b[0]
+        if isinstance(b, (list, tuple)): b = b[0]
         b = b[4:].lower()
         name_dict[a] = b
             
@@ -92,7 +92,7 @@ class ButtonHandler(EvdevHandler):
     
     name_dict = {}
     for a, b in BTN.items():
-        if isinstance(b, list): b = b[0]
+        if isinstance(b, (list, tuple)): b = b[0]
         b = b[4:].lower()
         name_dict[a] = b
 
