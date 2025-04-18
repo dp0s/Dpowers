@@ -1,31 +1,9 @@
 from .ttspower import TextToSpeechAdaptor
 from ..notificationpower import NotificationAdaptor
 from ..clipboardpower import ClipboardAdaptor
+from .recognizepower import RecognizerAdaptor
 import types
 from Dhelpers.named import NamedObj
-
-
-import sounddevice #this is important because it suppresses error messages
-# from pyaudio when listening from microphone
-import speech_recognition as sr
-
-# from contextlib import contextmanager
-# from ctypes import CFUNCTYPE, c_char_p, c_int, cdll
-# #import pyaudio
-#
-# ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
-#
-# def py_error_handler(filename, line, function, err, fmt):
-#     pass
-#
-# c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
-#
-# @contextmanager
-# def noalsaerr():
-#     asound = cdll.LoadLibrary('libasound.so')
-#     asound.snd_lib_error_set_handler(c_error_handler)
-#     yield
-#     asound.snd_lib_error_set_handler(None)
 
 
 
@@ -34,8 +12,8 @@ class VoiceAssistantResource:
     ntfy = NotificationAdaptor(group="tts")
     tts.ntfy = ntfy
     clip = ClipboardAdaptor(group="voice_assistant")
+    recognizer = RecognizerAdaptor(group="voice_assistant")
     silent = False
-    recognizer = sr.Recognizer()
     last_heard = None
     before_last_heard = None
         
@@ -66,18 +44,7 @@ class VoiceAssistantResource:
         return
     
     def recognize(self):
-        with sr.Microphone() as source:
-            audio = self.recognizer.listen(source)
-        # recognize speech using whisper
-        try:
-            return self.recognizer.recognize_faster_whisper(audio,
-                    language="de")
-        except sr.UnknownValueError:
-            print("Whisper could not understand audio")
-            raise
-        except sr.RequestError as e:
-            print(f"Could not request results from Whisper; {e}")
-            raise
+        return self.recognizer.recognize()
 
 
     

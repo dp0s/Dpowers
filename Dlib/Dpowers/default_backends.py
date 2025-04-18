@@ -68,6 +68,10 @@ class linux:
         default = "ttsx3"
         voice_assistant = default
         
+    class RecognizerAdaptor:
+        default = "SpeechRecognition"
+        voice_assistant = default
+        
 
 class termux:
     class ImageAdaptor(linux.ImageAdaptor):
@@ -75,6 +79,14 @@ class termux:
     
     class mp3tagAdaptor(linux.mp3tagAdaptor):
         pass
+    
+    class TextToSpeechAdaptor:
+        default = "termux"
+        voice_assistant = default
+        
+    class RecognizerAdaptor:
+        default = "termux"
+        voice_assistant = default
     
     
 class windows:

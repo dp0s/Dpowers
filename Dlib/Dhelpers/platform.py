@@ -35,7 +35,7 @@ class PlatformLogic:
     
     def termux(self):
         return self.linux() and bool(
-                launch.get("command -v termux-setup-storage", check=False))
+            launch.get("command -v termux-setup-storage", check=False))
     
     def ubuntu(self):
         return self.linux() and "ubuntu" in self.version
