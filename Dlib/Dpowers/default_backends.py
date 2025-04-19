@@ -21,6 +21,8 @@
 pynput = "pynput"
 evdev = "evdev"
 pystray = "pystray"
+wand="wand"
+eyed3 = "eyed3"
 
 class linux:
     
@@ -31,8 +33,6 @@ class linux:
         
     class MouseAdaptor:
         default = pynput
-        Dfuncs = default
-        keywait = default
         
     class WindowAdaptor:
         default = "xtools_bash"
@@ -51,16 +51,15 @@ class linux:
     
     class NotificationAdaptor:
         default = "notify_send_bash"
-        waiter =  default
         
     class DialogAdaptor:
         default = dict(_="zenity_bash",popup="tkinter")
         
     class ImageAdaptor:
-        default = "wand"
+        default = wand
         
     class mp3tagAdaptor:
-        default ="eyed3"
+        default = eyed3
         
     class TextToSpeechAdaptor:
         default = "ttsx3"
@@ -77,20 +76,15 @@ class termux:
 class windows:
     class KeyboardAdaptor:
         default = pynput
-        Dfuncs = pynput
-        keywait = pynput
-        hotstring = pynput
         
     class IconAdaptor:
         default = pystray
         
     class MouseAdaptor:
         default = pynput
-        Dfuncs = default
-        keywait = default
 
     class ImageAdaptor:
-        default = "wand"
+        default = wand
 
     class mp3tagAdaptor:
-        default = "eyed3"
+        default = eyed3
