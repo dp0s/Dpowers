@@ -34,7 +34,7 @@ class NotificationAdaptor(Adaptor):
         
     @adaptionmethod
     def post_notification(self, title, timeout, text):
-        return self.post_notification.target_with_args()
+        return self.post_notification.target(title,timeout,text)
     
     def activate(self):
         self.active = True
@@ -49,4 +49,3 @@ class NotificationAdaptor(Adaptor):
         
     def toggle_all(self):
         for i in self.get_instances(): i.toggle()
-    
