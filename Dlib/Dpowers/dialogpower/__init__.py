@@ -32,7 +32,7 @@ class DialogAdaptor(Adaptor):
     
     @adaptionmethod
     def savepath(self, selected=None, overwrite=False, **kwargs):
-        return self.savepath.target_with_args()
+        return self.savepath.target(selected, overwrite, **kwargs)
     
     @adaptionmethod
     def msg(self, text, title="Message dialog", error=False, warning=False,
@@ -48,12 +48,12 @@ class DialogAdaptor(Adaptor):
     
     @adaptionmethod
     def quest(self, text, title="Question dialog", **kwargs):
-        return self.quest.target_with_args()
+        return self.quest.target(text,title,**kwargs)
     
     
     @adaptionmethod
     def inp(self, text="Enter a new text:", title="Text input dialog"):
-        return self.inp.target_with_args()
+        return self.inp.target(text,title)
     
     
     @adaptionmethod

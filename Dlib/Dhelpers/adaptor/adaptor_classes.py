@@ -570,7 +570,12 @@ class AdaptorBase(KeepInstanceRefs):
         try:
             main_info = getattr(subclass_info_class, group)
         except AttributeError:
-            return  # it's ok to return main_info as None
+            try:
+                main_info = subclass_info_class.default
+                #if no backend for this instance group specified, use the
+                #default one
+            except AttributeError:
+                return  # it's ok to return main_info as None
         check_type((str, tuple, list, Backend, ArgSaver, dict), main_info)
         return main_info
     

@@ -21,6 +21,9 @@
 pynput = "pynput"
 evdev = "evdev"
 pystray = "pystray"
+wand="wand"
+eyed3 = "eyed3"
+termux = "termux"
 
 class linux:
     
@@ -31,8 +34,6 @@ class linux:
         
     class MouseAdaptor:
         default = pynput
-        Dfuncs = default
-        keywait = default
         
     class WindowAdaptor:
         default = "xtools_bash"
@@ -48,32 +49,37 @@ class linux:
         
     class ClipboardAdaptor:
         default = "xclip_bash"
-        voice_assistant = default
     
     class NotificationAdaptor:
         default = "notify_send_bash"
-        waiter =  default
-        tts = default
         
     class DialogAdaptor:
         default = dict(_="zenity_bash",popup="tkinter")
         
     class ImageAdaptor:
-        default = "wand"
+        default = wand
         
     class mp3tagAdaptor:
-        default ="eyed3"
+        default = eyed3
         
     class TextToSpeechAdaptor:
         default = "ttsx3"
-        voice_assistant = default
         
     class RecognizerAdaptor:
         default = "SpeechRecognition"
-        voice_assistant = default
         
 
 class termux:
+    
+    class NotificationAdaptor:
+        default = termux
+        
+    class ClipboardAdaptor:
+        default = termux
+    
+    class DialogAdaptor:
+        default = termux
+    
     class ImageAdaptor(linux.ImageAdaptor):
         pass
     
@@ -81,31 +87,24 @@ class termux:
         pass
     
     class TextToSpeechAdaptor:
-        default = "termux"
-        voice_assistant = default
+        default = termux
         
     class RecognizerAdaptor:
-        default = "termux"
-        voice_assistant = default
+        default = termux
     
     
 class windows:
     class KeyboardAdaptor:
         default = pynput
-        Dfuncs = pynput
-        keywait = pynput
-        hotstring = pynput
         
     class IconAdaptor:
         default = pystray
         
     class MouseAdaptor:
         default = pynput
-        Dfuncs = default
-        keywait = default
 
     class ImageAdaptor:
-        default = "wand"
+        default = wand
 
     class mp3tagAdaptor:
-        default = "eyed3"
+        default = eyed3
