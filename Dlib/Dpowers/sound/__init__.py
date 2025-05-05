@@ -18,5 +18,7 @@
 #
 from .ttspower import *
 from .VoiceAssistant import *
+from .soundplaypower import *
 
 tts = TextToSpeechAdaptor(_primary_name="tts")
+play = SoundPlayAdaptor(_primary_name="play")
