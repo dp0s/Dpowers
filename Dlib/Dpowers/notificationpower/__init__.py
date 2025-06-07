@@ -16,15 +16,16 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from .. import Adaptor, adaptionmethod
+from .. import Adaptor, adaptionmethod, AdaptionError
 
 
 class NotificationAdaptor(Adaptor):
     
     active = True
+    all_active = True
         
     def __call__(self, title: str, timeout=3, text: str = ""):
-        if self.active:
+        if self.active and self.all_active:
             title = str(title)
             text=str(text)
             if title == "": title = " "
@@ -36,6 +37,7 @@ class NotificationAdaptor(Adaptor):
     def post_notification(self, title, timeout, text):
         return self.post_notification.target(title,timeout,text)
     
+    
     def activate(self):
         self.active = True
     
@@ -46,6 +48,19 @@ class NotificationAdaptor(Adaptor):
         self.__call__(f"Notifications turned off.")
         self.active = not self.active
         self.__call__(f"Notifications turned on.")
+    
+    @classmethod
+    def activate_all(cls):
+        cls.all_active = True
+    
+    @classmethod
+    def deactivate_all(cls):
+        cls.all_active = False
         
-    def toggle_all(self):
-        for i in self.get_instances(): i.toggle()
+    @classmethod
+    def toggle_all(cls):
+        ntfy= cls._get_primary_instance()
+        if not ntfy.backend: ntfy=print
+        ntfy("All notifications turned off.")
+        cls.all_active = not cls.all_active
+        ntfy("All notifications turned on.")
