@@ -30,5 +30,11 @@ def get(selection=0) -> str:
         return ""
 
 def fill(content: str, selection=0):
-    launch.wait("xclip", "-i", "-selection", xclip_names[selection],
+    return launch.wait("xclip", "-i", "-selection", xclip_names[selection],
             input=content)
+    
+def set_file(filepath, filetype, selection):
+    command = ["xclip", "-selection", xclip_names[selection]]
+    if filetype: command += ["-t", filetype]
+    command += [filepath]
+    return launch.wait(*command)

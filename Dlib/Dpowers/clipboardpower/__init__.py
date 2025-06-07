@@ -33,7 +33,7 @@ class ClipboardAdaptor(Adaptor):
             i.e. the standard clipboard.
         :returns str: retrieved content
         """
-        return self.get.target_with_args()
+        return self.get.target(selection)
     
     @adaptionmethod
     def fill(self, content:str, selection=0, notify=False):
@@ -53,6 +53,10 @@ class ClipboardAdaptor(Adaptor):
                     locals()))
         if notify:
             ntfy("Saved to " + self.selection_names[selection], 3,after)
+            
+    @adaptionmethod
+    def set_file(self, filepath, filetype=None, selection=0):
+        self.set_file.target(filepath, filetype, selection)
     
     
     def remove(self, selection=0):
