@@ -17,7 +17,7 @@
 #
 #
 from .. import Adaptor, adaptionmethod, ntfy, keyb
-import time
+import time, warnings
 
 
 class ClipboardAdaptor(Adaptor):
@@ -33,7 +33,12 @@ class ClipboardAdaptor(Adaptor):
             i.e. the standard clipboard.
         :returns str: retrieved content
         """
-        return self.get.target(selection)
+        try:
+            return self.get.target(selection)
+        except UnicodeError:
+            warnings.warn("Error trying to retrieve clipboard content. "
+                            "Maybe clipboard does not contain string type?")
+            return False
     
     @adaptionmethod
     def fill(self, content:str, selection=0, notify=False):
