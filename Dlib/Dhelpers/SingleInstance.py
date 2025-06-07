@@ -22,10 +22,11 @@ path = os.path
 
 class SingleInstance:
     
-    def __init__(self):
+    def __init__(self, script_name=None):
         script_file = __main__.__file__
+        if script_name is None: script_name = path.basename(script_file)
         script_folder = path.dirname(script_file)
-        self.file = path.join(script_folder,".active_processes")
+        self.file = path.join(script_folder,f".process_ids_{script_name}")
         with open(self.file,"a") as f:
             f.write(str(os.getpid())+"\n")
             
@@ -37,6 +38,7 @@ class SingleInstance:
                 if pid == os.getpid(): continue
                 pids.append(pid)
         for pid in pids:
+            print("Killing other processes")
             try:
                 os.kill(pid,signal.SIGKILL)
             except ProcessLookupError:
