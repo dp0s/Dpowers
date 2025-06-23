@@ -25,15 +25,14 @@ from Dhelpers.arghandling import PositiveInt
 from .winapps import pythoneditor
 
 from .events import KeyboardAdaptor, MouseAdaptor, KeyWaiter, HookAdaptor, CombinedSender
-from . import dlg, ntfy, clip, Win, launch
+from . import dlg, ntfy, clip, Win, launch, keyb, mouse
 from .windowpower import WindowObject
 
 # =======================================================================
 # SENDWAIT function
 # =======================================================================
 
-keyb = KeyboardAdaptor(group="Dfuncs",_primary_name="keyb")
-mouse = MouseAdaptor(group="Dfuncs", _primary_name="mouse")
+
 event_sender = CombinedSender(keyb,mouse)
 
 class SendwaitError(Exception):

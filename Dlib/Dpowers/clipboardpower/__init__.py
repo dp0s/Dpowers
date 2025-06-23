@@ -17,7 +17,7 @@
 #
 #
 from .. import Adaptor, adaptionmethod, ntfy, keyb
-import time
+import time, warnings
 
 
 class ClipboardAdaptor(Adaptor):
@@ -33,7 +33,12 @@ class ClipboardAdaptor(Adaptor):
             i.e. the standard clipboard.
         :returns str: retrieved content
         """
-        return self.get.target_with_args()
+        try:
+            return self.get.target(selection)
+        except UnicodeError:
+            warnings.warn("Error trying to retrieve clipboard content. "
+                            "Maybe clipboard does not contain string type?")
+            return False
     
     @adaptionmethod
     def fill(self, content:str, selection=0, notify=False):
@@ -53,6 +58,10 @@ class ClipboardAdaptor(Adaptor):
                     locals()))
         if notify:
             ntfy("Saved to " + self.selection_names[selection], 3,after)
+            
+    @adaptionmethod
+    def set_file(self, filepath, filetype=None, selection=0):
+        self.set_file.target(filepath, filetype, selection)
     
     
     def remove(self, selection=0):
