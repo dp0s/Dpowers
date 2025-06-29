@@ -1,20 +1,17 @@
 import functools
-#from .adaptor_classes import AdaptorBase
+from .adaptor_base import AdaptorBase
 from ..arghandling import check_type
 
 
+
+wraps = functools.wraps(AdaptorBase, assigned=())
 
 class AdaptiveClass:
     adaptor_class = None
     adaptor = None
     
     @classmethod
-    def __init_subclass__(cls, **kwargs):
-        wrap = functools.wraps(cls.adaptor_class.adapt, assigned=())
-        cls.adapt = classmethod(wrap(cls.adapt.__func__))
-        cls.adapt_instance = wrap(cls.adapt_instance)
-    
-    @classmethod
+    @wraps
     def adapt(cls, *args, **kwargs):
         if "adaptor" in cls.__dict__:
             # in this case, an adaptor instance was explicitly set for this
@@ -27,6 +24,7 @@ class AdaptiveClass:
             cls.adaptor = cls.adaptor_class(group=group)
         return cls.adaptor.adapt(*args, **kwargs)
     
+    @wraps
     def adapt_instance(self, *args, **kwargs):
         self.adaptor = self.adaptor_class()
         return self.adaptor.adapt(*args, **kwargs)

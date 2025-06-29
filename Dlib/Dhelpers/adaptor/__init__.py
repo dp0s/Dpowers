@@ -21,3 +21,4 @@ from .adaptor_base import *
 from .dependency_testing import *
 from .backend_class import *
 from .adaptive_class import *
+from .adaption_method import *
