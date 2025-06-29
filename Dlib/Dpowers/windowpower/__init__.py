@@ -28,9 +28,10 @@ class WindowAdaptor(Adaptor):
     
     @functools.wraps(Adaptor.__init__)
     def __init__(self, *args,**kwargs):
-        super().__init__(*args,**kwargs)
         self.cached_properties = defaultdict(dict)
         self.use_cache = False
+        super().__init__(*args,**kwargs)
+        
         
     @functools.wraps(Adaptor.adapt)
     def adapt(self, *args,**kwargs):

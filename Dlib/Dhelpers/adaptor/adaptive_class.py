@@ -20,7 +20,12 @@ class AdaptiveClass:
         else:
             # in this case, the adaptor attribute is only inherited -- we
             # need to redefine it to avoid adapting the base class too
-            group = None if not args and not kwargs else "default"
+            try:
+                old_adaptor = cls.adaptor
+            except KeyError:
+                group = "default" if not args and not kwargs else None
+            else:
+                group = old_adaptor.instance_group
             cls.adaptor = cls.adaptor_class(group=group)
         return cls.adaptor.adapt(*args, **kwargs)
     
