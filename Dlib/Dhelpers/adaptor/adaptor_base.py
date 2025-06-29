@@ -20,7 +20,7 @@
 
 
 import inspect, functools, types, os, pkgutil, warnings
-from ..baseclasses import KeepInstanceRefs, iter_all_vars
+from ..baseclasses import KeepInstanceRefs, iter_all_vars, ParentClass, ChildBaseClass
 from ..arghandling import (check_type, remove_first_arg, ArgSaver)
 from ..platform import PlatformChecker
 from types import FunctionType
@@ -30,13 +30,30 @@ from abc import ABC
 
 # also see the IMPORTS AT THE END OF THIS FILE. (avoiding circular import)
 
+
 class AdaptionError(Exception):
     pass
 
 def _get_AdaptionFuncPlaceholders(cls):
     return set(iter_all_vars(cls, lambda obj: hasattr(obj, "_placeholder")))
 
-class AdaptorBase(KeepInstanceRefs):
+
+class AdaptorChild(ChildBaseClass):
+    
+    def __init_subclass__(cls, **kwargs):
+        cls.adapt = functools.wraps(cls.real_cls.adapt)(cls.adapt)
+        
+    def adapt(self, *args, **kwargs):
+        new_inst = self.real_cls(group=self.copied_from.instance_group)
+        ret = new_inst.adapt(*args, **kwargs)
+        self.copied_from = new_inst
+        self.adapt = new_inst.adapt
+        return ret
+    
+    
+
+class AdaptorBase(KeepInstanceRefs, ParentClass):
+    ChildBaseClass = AdaptorChild
     backend_defaults = None  # set in first level subclass
     # adapt_on_first_use = False
     autoadapt_active = False
@@ -72,7 +89,6 @@ class AdaptorBase(KeepInstanceRefs):
                 cls.baseclass = False
                 cls.AdaptiveClass = type("AdaptiveClass",
                         (AdaptiveClass,), dict(adaptor_class=cls))
-                #cls.CopyClass = type("CopyClass", (AdaptorCopy,cls),{})
                 c = cls._first_level_subclass
                 add = f"Subclass of :class:`{c.__module__}.{c.__name__}`."
                 doc = cls.__doc__ if cls.__doc__ else ""
@@ -143,6 +159,7 @@ class AdaptorBase(KeepInstanceRefs):
             amethod = AdaptionMethod(placeholder, self)
             setattr(self, name, amethod)
         
+        
         if main_info or method_infos:
             if group not in ("default", None): raise ValueError
             self.instance_group = None
@@ -154,8 +171,6 @@ class AdaptorBase(KeepInstanceRefs):
     
     def adaptionmethods(self):
         return tuple(getattr(self, name) for name in self.adaptionmethod_names)
-    
-    
     
     def adapt(self, main_info=None, *, raise_error=True,
             require_backend=True, **method_infos):
@@ -224,6 +239,10 @@ class AdaptorBase(KeepInstanceRefs):
         return r
     
     
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__): return NotImplemented
+        return self.backend == other.backend
+        
     @property
     def is_adapted(self):
         return bool(self.backend)
@@ -474,30 +493,6 @@ class AdaptorBase(KeepInstanceRefs):
                 pass
             finally:
                 if create_docs: subcls.AdaptiveClass._create_subclass_docs()
-    
-    
-#     def copy(self):
-#         return self.CopyClass(self)
-#
-#
-#
-# class AdaptorCopy:
-#
-#     @classmethod
-#     def __init_subclass__(cls, **kwargs):
-#         cls.adaptor_cls = cls.__bases__[1]
-#
-#     def __init__(self, copied_from):
-#         super().__init__(group = copied_from.instance_group)
-#         self.copied_from = copied_from
-#
-#     @property
-#     def backend(self):
-#         return self.copied_from.backend
-#
-#     @functools.wraps()
-#     def adapt(self, *args,**kwargs):
-#
 
 
 

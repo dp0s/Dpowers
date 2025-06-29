@@ -395,3 +395,39 @@ class AdditionContainer:
                         f"method {name} of AdditionObject {self}.")
             return combined_method
         return decorator
+
+
+
+
+class ParentClass(ABC):
+    
+    ChildBaseClass = None #set within subclass
+    ChildClass = None #set by method below
+    
+    def create_child_instance(self):
+        cls = self.__class__
+        if not cls.ChildClass:
+            cls.ChildClass = type(f"{cls.__name__}_ChildClass",
+                    (cls.ChildBaseClass,), {"real_cls": cls})
+            cls.register(cls.ChildClass)
+        return cls.ChildClass(self)
+
+
+class ChildBaseClass:
+    real_cls = None  # set by type() command, see above
+    
+    def __init__(self, copied_from):
+        assert copied_from.__class__ in (self.real_cls, self.__class__)
+        self.copied_from = copied_from
+    
+    def __getattr__(self, item):
+        return getattr(self.copied_from, item)
+    
+    def __repr__(self):
+        return repr(self.copied_from)
+    
+    def __add__(self, other):
+        return self.copied_from + other
+    
+    def create_child_instance(self):
+        return self.__class__(self)
