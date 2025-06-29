@@ -364,7 +364,7 @@ class AdaptorBase(KeepInstanceRefs):
             prim_inst = self.get_primary_instance()
             if prim_inst:
                 raise ValueError(f"Primary instance for this instance group "
-                                 "already set:\n{prim_inst}")
+                                 f"already set:\n{prim_inst}")
             # the following is a way of conditionally subclassing:
             self.creation_name = _primary_name
             self.primary = True
