@@ -16,7 +16,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #
-from .adaptor_classes import AdaptorBase, AdaptionError
+from .adaptor_base import AdaptorBase, AdaptionError
 from ..arghandling import check_type, ArgSaver
 from .dependency_testing import BackendDependencyError
 import warnings
