@@ -429,5 +429,8 @@ class ChildBaseClass:
     def __add__(self, other):
         return self.copied_from + other
     
+    def __call__(self, *args, **kwargs):
+        return self.copied_from(*args, **kwargs)
+    
     def create_child_instance(self):
         return self.__class__(self)
