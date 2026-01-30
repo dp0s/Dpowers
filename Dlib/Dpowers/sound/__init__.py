@@ -28,27 +28,23 @@ from ..clipboardpower import ClipboardAdaptor
 
 
 
-class SoundTools:
+class SoundToolsMixin:
     silent = False
     last_heard = None
     before_last_heard = None
     frequency_before_recognize = 1600
     frequency_abort = 300
     group = "soundtools"
-    tts = TextToSpeechAdaptor(group=group)
-    ntfy = NotificationAdaptor(group=group)
-    tts.ntfy = ntfy
-    clip = ClipboardAdaptor(group=group)
-    recognizer = RecognizerAdaptor(group=group)
-    play = SoundPlayAdaptor(group=group)
     
     @classmethod
-    def __init_subclass__(cls, **kwargs):
-        cls.tts = cls.tts.create_child_instance()
-        cls.ntfy = cls.ntfy.create_child_instance()
-        cls.clip = cls.clip.create_child_instance()
-        cls.recognizer = cls.recognizer.create_child_instance()
-        cls.play = cls.play.create_child_instance()
+    def create_adaptor_instances(cls, group=None):
+        if not group: group = cls.group
+        cls.tts = TextToSpeechAdaptor(group=group)
+        cls.ntfy = NotificationAdaptor(group=group)
+        cls.tts.ntfy = cls.ntfy
+        cls.clip = ClipboardAdaptor(group=group)
+        cls.recognizer = RecognizerAdaptor(group=group)
+        cls.play = SoundPlayAdaptor(group=group)
     
     @classmethod
     def auto_adapt_all(cls):
@@ -91,3 +87,8 @@ class SoundTools:
     
     def recognize(self):
         return self.recognizer.recognize()
+    
+    
+SoundToolsMixin.create_adaptor_instances()
+
+from .VoiceAssistant import *
