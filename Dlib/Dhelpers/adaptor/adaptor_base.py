@@ -20,7 +20,7 @@
 
 
 import inspect, functools, types, os, pkgutil, warnings
-from ..baseclasses import KeepInstanceRefs, iter_all_vars, ParentClass, ChildBaseClass
+from ..baseclasses import KeepInstanceRefs, iter_all_vars
 from ..arghandling import (check_type, remove_first_arg, ArgSaver)
 from ..platform import PlatformChecker
 from types import FunctionType
@@ -36,24 +36,10 @@ class AdaptionError(Exception):
 
 def _get_AdaptionFuncPlaceholders(cls):
     return set(iter_all_vars(cls, lambda obj: hasattr(obj, "_placeholder")))
-
-
-class AdaptorChild(ChildBaseClass):
-    
-    def __init_subclass__(cls, **kwargs):
-        cls.adapt = functools.wraps(cls.real_cls.adapt)(cls.adapt)
-        
-    def adapt(self, *args, **kwargs):
-        new_inst = self.real_cls(group=self.copied_from.instance_group)
-        ret = new_inst.adapt(*args, **kwargs)
-        self.copied_from = new_inst
-        self.adapt = new_inst.adapt
-        return ret
     
     
 
-class AdaptorBase(KeepInstanceRefs, ParentClass):
-    ChildBaseClass = AdaptorChild
+class AdaptorBase(KeepInstanceRefs):
     backend_defaults = None  # set in first level subclass
     # adapt_on_first_use = False
     autoadapt_active = False
