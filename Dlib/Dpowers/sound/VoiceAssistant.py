@@ -5,7 +5,7 @@ import types
 class VoiceChoice(SoundToolsMixin):
     question = None
     choices = None
-    stopp_phrases = []
+    stop_phrases = []
     edit_phrases = []
     new_word_phrase = []
     unknown_phrase = []
@@ -24,7 +24,7 @@ class VoiceChoice(SoundToolsMixin):
         return self.OptionClass.update_names(new_info)
     
     def process_heard(self, heard):
-        if not heard or heard in self.stopp_phrases:
+        if not heard or heard in self.stop_phrases:
             self.beep(self.frequency_abort)
             # self.ntfy("Stop phrase heard")
             return False
@@ -75,12 +75,17 @@ class CleverAssistant(SoundToolsMixin):
     def stop_phrases(self):
         for cls in self.choices.values():
             if cls.stop_phrases: return cls.stop_phrases
+            
+    @property
+    def recognizer_language(self):
+        for cls in self.choices.values():
+            if cls.recognizer_language: return cls.recognizer_language
     
     def run(self, repeat=10):
         obj = None
         for _ in range(repeat):
             heard = self.get_voice(self.question)
-            if not heard or heard in self.stopp_phrases:
+            if not heard or heard in self.stop_phrases:
                 self.beep(self.frequency_abort)
                 # self.ntfy("Stop phrase heard")
                 return

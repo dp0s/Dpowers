@@ -27,7 +27,14 @@ engine = pyttsx3.init()
 def call(text):
     #print("trying to speak ", text)
     engine.say(text)
+    print("started")
     engine.runAndWait()
+    sleep(0.5)
+    for _ in range(1000):
+        #print(_, engine.isBusy())
+        sleep(0.1)
+        if not engine.isBusy(): break
+    #engine.stop()
     
 def set_volume(val):
     if val is None:

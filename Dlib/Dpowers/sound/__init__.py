@@ -35,6 +35,7 @@ class SoundToolsMixin:
     frequency_before_recognize = 1600
     frequency_abort = 300
     group = "soundtools"
+    recognizer_language = None
     
     @classmethod
     def create_adaptor_instances(cls, group=None):
@@ -60,14 +61,15 @@ class SoundToolsMixin:
         else:
             self.tts(text)
     
-    def get_voice(self, question=None, beep=True):
+    def get_voice(self, question=None, language=None, beep=True):
         if question: self.speak(question)
         if beep:
             if self.frequency_before_recognize:
                 self.beep(self.frequency_before_recognize)
             else:
                 self.beep(beep)
-        heard = self.recognize()
+        if not language: language = self.recognizer_language
+        heard = self.recognize(language)
         if heard:
             self.ntfy("Heard: " + heard)
             heard = heard.lower().strip()
@@ -85,8 +87,8 @@ class SoundToolsMixin:
     def beep(self, *args, **kwargs):
         self.play.beep(*args, **kwargs)
     
-    def recognize(self):
-        return self.recognizer.recognize()
+    def recognize(self, language=None):
+        return self.recognizer.recognize(language)
     
     
 SoundToolsMixin.create_adaptor_instances()
