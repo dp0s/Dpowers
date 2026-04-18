@@ -38,7 +38,7 @@ class PsutilPlaceholder:
     self.error = error
   
   def __getattr__(self, item):
-    raise self.error
+    raise ModuleNotFoundError from self.error
 
 
 
