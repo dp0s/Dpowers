@@ -19,6 +19,8 @@ class VoiceChoice(SoundToolsMixin):
         if choices: self.choices = choices
         if not self.choices: raise ValueError
         self.update_names(self.choices)
+        self.last_heard = None
+        self.before_last_heard = None
     
     def update_names(self, new_info):
         return self.OptionClass.update_names(new_info)
@@ -30,7 +32,7 @@ class VoiceChoice(SoundToolsMixin):
             return False
         if heard in self.edit_phrases:
             self.speak(self.new_word_phrase)
-            self.clip.fill(heard)
+            self.clip.fill(self.before_last_heard)
             self.open_for_edit()
             return False
         if heard is True: return

@@ -61,7 +61,7 @@ class SoundToolsMixin:
         else:
             self.tts(text)
     
-    def get_voice(self, question=None, language=None, beep=True):
+    def get_voice(self, question=None, language=None, beep=True, notify=False):
         if question: self.speak(question)
         if beep:
             if self.frequency_before_recognize:
@@ -71,7 +71,7 @@ class SoundToolsMixin:
         if not language: language = self.recognizer_language
         heard = self.recognize(language)
         if heard:
-            self.ntfy("Heard: " + heard)
+            if notify: self.ntfy("Heard: " + heard)
             heard = heard.lower().strip()
             self.before_last_heard = self.last_heard
             self.last_heard = heard

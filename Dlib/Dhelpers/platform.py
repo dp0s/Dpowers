@@ -33,11 +33,8 @@ class PlatformLogic:
     def mac(self):
         return self.system == "darwin"
     
-    def android(self):
-        return self.system == "android"
-    
     def termux(self):
-        return (self.android() or self.linux()) and bool(
+        return bool(
             launch.get("command -v termux-setup-storage", check=False))
     
     def ubuntu(self):
