@@ -71,6 +71,9 @@ class linux:
     class SoundPlayAdaptor:
         default = "sox"
         
+    class VolumeAdaptor:
+        default = "pulsectl"
+        
 
 class termux:
     
