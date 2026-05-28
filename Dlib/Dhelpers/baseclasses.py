@@ -172,7 +172,7 @@ class MultipleInstanceError(Exception):
 
 
 
-class TimedObject(ABC):
+class TimedObject:
     
     def __init__(self, *args, timeout, duration=True, wait = False, **kwargs):
         self.timeout = timeout
@@ -204,13 +204,11 @@ class TimedObject(ABC):
         pass
     
     
-    @abstractmethod
-    def _start_action(self,*args,**kwargs):
-        raise NotImplementedError
+    def _start_action(self):
+        pass
     
-    @abstractmethod
-    def _stop_action(self, *args, **kwargs):
-        raise NotImplementedError
+    def _stop_action(self):
+        pass
     
     def start(self, *args, wait=None, **kwargs):
         if self.active:
@@ -231,6 +229,7 @@ class TimedObject(ABC):
     def _timeout_stop(self):
         if self.active:
             if self._timeout_action() is True:
+                #skip the timeout in this case
                 self._timeout_thread = None
             else:
                 self.stop("timeout")
@@ -282,6 +281,43 @@ class TimedObject(ABC):
         self.stop_flag.wait(timeout)
         return True
         
+class TimedCheckerObject(TimedObject):
+    
+    
+    def __init__(self, *args, timeout, interval, duration=True, wait=False,
+            **kwargs):
+        self.interval = interval
+        self._checker_thread = None
+        self.found_val = None
+        super().__init__(*args, timeout=timeout, duration=duration, wait=wait,
+                **kwargs)
+        
+    def _checker_func(self):
+        for _ in range(int(self.timeout/self.interval)):
+            time.sleep(self.interval)
+            if not self.active: return
+            ret = self.check_condition()
+            if ret:
+                self.found_val = ret
+                self.stop()
+                break
+    
+    def check_condition(self):
+        raise NotImplementedError
+    
+    def start(self, *args, wait=None, **kwargs):
+        ret = super().start(*args, wait=False, **kwargs)
+        self._checker_thread = launch.thread(self._checker_func)
+        if wait is None and self.wait or wait is True: self.join()
+        return ret
+    
+    def stop(self, exitcode=None, *args, raise_errors=True, **kwargs):
+        try:
+            self._checker_thread.cancel()
+        except:
+            pass
+        return super().stop(exitcode, *args, raise_errors=raise_errors,
+                **kwargs)
 
 
 

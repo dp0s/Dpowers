@@ -162,7 +162,7 @@ class InputEventHandler(ABC):
 class Missing: pass
     
     
-class CallbackHook(AdditionContainer.Addend, TimedObject):
+class CallbackHook(AdditionContainer.Addend, TimedObject, ABC):
     
     # usually set by __init_subclass__ or subclass attribute. In these cases,
     # there is at most one handler instance for each subclass.

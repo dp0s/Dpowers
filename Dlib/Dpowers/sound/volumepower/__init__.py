@@ -1,6 +1,6 @@
 from ... import Adaptor, adaptionmethod
 from time import sleep
-from Dhelpers.baseclasses import TimedObject
+from Dhelpers.baseclasses import TimedCheckerObject
 from Dhelpers.launcher import launch
 
 class VolumeAdaptor(Adaptor):
@@ -35,34 +35,22 @@ class VolumeAdaptor(Adaptor):
 
 
 
-class VolumeMonitor(VolumeAdaptor.AdaptiveClass, TimedObject):
+class VolumeMonitor(VolumeAdaptor.AdaptiveClass, TimedCheckerObject):
     
     adaptor = VolumeAdaptor(group="VolumeMonitor", _primary_name=
         "VolumeMonitor.adaptor")
 
     def __init__(self,stream=None, timeout=60, interval=0.5):
         self.stream = stream
-        self.interval = interval
         self.initial = self.adaptor.get(stream)
-        super().__init__(timeout=timeout)
+        super().__init__(timeout=timeout, interval=interval)
 
-    def checker_thread(self):
-        for _ in range(int(self.timeout/self.interval)):
-            current, max, name = self.adaptor.get(self.stream)
-            #print(current)
-            if current != self.initial[0]:
-                print(current, "  stopped")
-                self.stop()
-                return
-            sleep(self.interval)
+    def check_condition(self):
+        current, max, name = self.adaptor.get(self.stream)
+        #print(current)
+        if current != self.initial[0]:
+            print(current, "  stopped")
+            return current
     
-    def _start_action(self):
-        self._checker_thread = launch.thread(self.checker_thread)
-    
-    def _stop_action(self):
-        try:
-            self._checker_thread.cancel()
-        except:
-            pass
     
     
