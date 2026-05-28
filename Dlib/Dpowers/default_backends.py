@@ -23,6 +23,7 @@ evdev = "evdev"
 pystray = "pystray"
 wand="wand"
 eyed3 = "eyed3"
+termux = "termux"
 
 class linux:
     
@@ -74,13 +75,13 @@ class linux:
 class termux:
     
     class NotificationAdaptor:
-        default = "termux"
+        default = termux
         
     class ClipboardAdaptor:
-        default = "termux"
+        default = termux
     
     class DialogAdaptor:
-        default = "termux"
+        default = termux
     
     class ImageAdaptor(linux.ImageAdaptor):
         pass
@@ -89,13 +90,16 @@ class termux:
         pass
     
     class TextToSpeechAdaptor:
-        default = "termux"
+        default = termux
         
     class RecognizerAdaptor:
-        default = "termux"
+        default = termux
     
     class SoundPlayAdaptor:
         default = "sox"
+
+    class VolumeAdaptor:
+        default = termux
     
     
 class windows:

@@ -260,14 +260,18 @@ class AdaptorBase(KeepInstanceRefs):
     
     
     @classmethod
-    def check_adapted(cls, raise_error=True, warn=True):
-        text = "The following instance is not adapted: "
+    def check_adapted(cls, raise_error=False, warn=True):
         missing_inst = []
         for subcls in [cls] + cls.__subclasses__():
             for inst in subcls.get_instances():
                 if not inst.is_adapted:
-                    if raise_error: raise ValueError(text + str(inst))
-                    if warn: warnings.warn(text + str(inst))
+                    msg = "The following instance is not adapted: " + str(inst)
+                    if raise_error:
+                        raise ValueError(msg)
+                    elif warn:
+                        warnings.warn(msg)
+                    else:
+                        print(msg)
                     missing_inst.append(inst)
         return missing_inst
     

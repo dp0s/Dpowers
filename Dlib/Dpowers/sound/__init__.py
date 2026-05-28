@@ -19,9 +19,11 @@
 from .ttspower import *
 from .soundplaypower import *
 from .recognizepower import *
+from .volumepower import *
 
 tts = TextToSpeechAdaptor(_primary_name="tts")
 play = SoundPlayAdaptor(_primary_name="play")
+vol = VolumeAdaptor(_primary_name="vol")
 
 from ..notificationpower import NotificationAdaptor
 from ..clipboardpower import ClipboardAdaptor
@@ -46,6 +48,7 @@ class SoundToolsMixin:
         cls.clip = ClipboardAdaptor(group=group)
         cls.recognizer = RecognizerAdaptor(group=group)
         cls.play = SoundPlayAdaptor(group=group)
+        cls.vol = VolumeAdaptor(group=group)
     
     @classmethod
     def auto_adapt_all(cls):
@@ -54,6 +57,7 @@ class SoundToolsMixin:
         cls.clip.adapt()
         cls.recognizer.adapt()
         cls.play.adapt()
+        cls.vol.adapt()
     
     def speak(self, text):
         if self.silent:
@@ -92,5 +96,6 @@ class SoundToolsMixin:
     
     
 SoundToolsMixin.create_adaptor_instances()
+        
 
 from .VoiceAssistant import *
