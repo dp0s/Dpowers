@@ -28,6 +28,7 @@ vol = VolumeAdaptor(_primary_name="vol")
 from ..notificationpower import NotificationAdaptor
 from ..clipboardpower import ClipboardAdaptor
 
+from Dhelpers.baseclasses import TimedCheckerObject
 
 
 class SoundToolsMixin:
@@ -36,6 +37,11 @@ class SoundToolsMixin:
     before_last_heard = None
     frequency_before_recognize = 1600
     frequency_abort = 300
+    frequency_vol_up= 800
+    frequency_vol_down = 600
+    vol_up_options = []
+    vol_down_options = []
+    vol_stream = None
     group = "soundtools"
     recognizer_language = None
     
@@ -65,7 +71,7 @@ class SoundToolsMixin:
         else:
             self.tts(text)
     
-    def get_voice(self, question=None, language=None, beep=True, notify=False):
+    def get_voice(self, question=None, language=None, beep=True, notify=False,vol_up=[],vol_down=[]):
         if question: self.speak(question)
         if beep:
             if self.frequency_before_recognize:
@@ -73,7 +79,14 @@ class SoundToolsMixin:
             else:
                 self.beep(beep)
         if not language: language = self.recognizer_language
-        heard = self.recognize(language)
+        vol_up=vol_up if vol_up else self.vol_up_options
+        vol_down=vol_down if vol_down else self.vol_down_options
+        if vol_up or vol_down: 
+            with self.VolumeInput(self,vol_up,vol_down,20) as volinp:
+                heard = self.recognize(language)
+            if volinp.option: heard = volinp.option
+        else:
+            heard = self.recognize(language)
         if heard:
             if notify: self.ntfy("Heard: " + heard)
             heard = heard.lower().strip()
@@ -93,7 +106,50 @@ class SoundToolsMixin:
     
     def recognize(self, language=None):
         return self.recognizer.recognize(language)
+
     
+    
+    
+    class VolumeInput(TimedCheckerObject):
+
+    
+        def __init__(self,soundtools, vol_up=[], vol_down=[], timeout=60, interval=0.1):
+            self.st=soundtools
+            self.initial = self.get_vol()
+            self.val = 0
+            self.option=None
+            self.vol_up_options = vol_up
+            self.vol_down_options = vol_down
+            super().__init__(timeout=timeout, interval=interval)
+
+        def get_vol(self):
+            return self.st.vol.get(self.st.vol_stream)[0]
+
+        def reset_vol(self):
+            self.st.vol.set(self.initial,self.st.vol_stream)
+    
+        def check_condition(self):
+            st=self.st
+            current = self.get_vol()
+            #print(current)
+            if current < self.initial:
+                self.reset_vol()
+                if self.val > 0: return True
+                self.val -= 1
+                st.beep(st.frequency_vol_down)
+            elif current> self.initial:
+                self.reset_vol()
+                if self.val < 0: return True
+                self.val += 1
+                st.beep(st.frequency_vol_up)
+
+        def _stop_action(self):
+            ret = self.val
+            if ret > 0:
+                self.option = self.vol_up_options[ret-1]
+            elif ret < 0:
+                self.option = self.vol_down_options[-ret-1]
+
     
 SoundToolsMixin.create_adaptor_instances()
         

@@ -2,6 +2,8 @@ from . import SoundToolsMixin
 from Dhelpers.named import NamedObj
 import types
 
+
+
 class VoiceChoice(SoundToolsMixin):
     question = None
     choices = None
@@ -24,11 +26,14 @@ class VoiceChoice(SoundToolsMixin):
     
     def update_names(self, new_info):
         return self.OptionClass.update_names(new_info)
+
+    def abort(self):
+        self.beep(self.frequency_abort)
+        #self.ntfy("Stop phrase heard")
     
     def process_heard(self, heard):
         if not heard or heard in self.stop_phrases:
-            self.beep(self.frequency_abort)
-            # self.ntfy("Stop phrase heard")
+            self.abort()
             return False
         if heard in self.edit_phrases:
             self.speak(self.new_word_phrase)
@@ -63,7 +68,7 @@ class VoiceChoice(SoundToolsMixin):
     
     def open_for_edit(self):
         raise NotImplementedError
-
+        
 
 class VoiceChoice_with_dict(VoiceChoice):
     _choice_dict = None #to be manually set in subclass
