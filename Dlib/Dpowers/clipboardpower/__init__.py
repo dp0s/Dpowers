@@ -41,9 +41,11 @@ class ClipboardAdaptor(Adaptor):
             return False
     
     @adaptionmethod
-    def fill(self, content:str, selection=0, notify=False):
+    def fill(self, content:str, selection=0, check=True, notify=False):
         content=str(content)
         self.fill.target(content,selection)
+        time.sleep(0.5)
+        if not check: return
         # now we check that the content was successfully pasted into the
         # selection:
         after = self.get(selection)

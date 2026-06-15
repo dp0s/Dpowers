@@ -53,11 +53,18 @@ class VoiceChoice(SoundToolsMixin):
             heard = self.get_voice(self.question)
             obj = self.process_heard(heard)
             if obj or obj is False: break
-        self.process_obj(obj)
+        if not obj: return
+        obj = self.process_obj(obj)
+        if not obj: return
+        return self.process_result(obj)
     
     def process_obj(self, obj):
-        if not obj: return
-        self.process_result(obj)
+        name = obj.name
+        if name.startswith("func:"):
+            func = getattr(self,name[5:])
+            func(name)
+            return
+        return obj
     
     def process_result(self, obj):
         raise NotImplementedError
@@ -67,26 +74,6 @@ class VoiceChoice(SoundToolsMixin):
         setattr(self, func.__name__, method)
     
     def open_for_edit(self):
-        raise NotImplementedError
-        
-
-class VoiceChoice_with_dict(VoiceChoice):
-    _choice_dict = None #to be manually set in subclass
-    
-    def __init__(self, question=None, choices=None):
-        super().__init__(question, choices)
-        self.choice_dict = self.OptionClass.StandardizingDict(self._choice_dict)
-    
-    def process_obj(self, obj):
-        if not obj: return
-        name = obj.name
-        value = self.choice_dict[obj]
-        if value.startswith("func:"):
-            func = getattr(self,value[5:])
-            return func(name)
-        self.process_result(name, value)
-    
-    def process_result(self, name, value):
         raise NotImplementedError
 
 
