@@ -122,6 +122,9 @@ class InputEventHandler(ABC):
         
     
     def queue_event(self, *args, **kwargs):
+        if len(args) == 0 or len(args) == 1 and args[0] is None:
+            #traceback.print_stack()
+            return
         try:
             cls = self.hook_cls
             event_obj = cls._create_event_obj(*args, **kwargs)
@@ -134,7 +137,9 @@ class InputEventHandler(ABC):
             cls.queue_reader.event_queue.put((self,event_obj))
             return ret
         except Exception as e:
-            warn(f"\nEmergency stop {self.hook_cls}.\n{repr(e)}")
+            warn(f"\nException for {self.hook_cls} because of:\n{repr(e)}")
+            print("queue_event args:",args, kwargs)
+            traceback.print_exc()
             try:
                 self.hook_cls.capturer.stop()
             except Exception:
@@ -147,7 +152,7 @@ class InputEventHandler(ABC):
                 self.stop_capturing()
             except Exception:
                 pass
-            traceback.print_exc()
+            #traceback.print_exc()
     
     def run_callbacks(self, event_obj):
         if event_obj is None: return
