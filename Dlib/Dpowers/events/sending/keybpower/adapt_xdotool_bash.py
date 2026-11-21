@@ -50,7 +50,7 @@ names = (
     'KP_Page_Down', 'KP_Multiply', 'KP_Up', 'KP_Down', 'KP_Next', 'KP_Begin',
     'KP_Left', 'KP_Home', 'dead_grave', 'dead_acute', 'dead_circumflex',
     'dead_tilde', 'dead_diaeresis', 'dead_cedilla', 'Down', 'Left', 'Right',
-    'Up', 'Shift', 'Control', 'Alt')
+    'Up', 'Shift_L', 'Control_L', 'Alt_L', 'Shift_R', 'Control_R', 'Alt_R')
 
 
 # def convert_kwargs(windowID=None, delay=5, clearmodifiers=False):
