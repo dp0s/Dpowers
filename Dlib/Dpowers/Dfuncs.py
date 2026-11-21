@@ -18,13 +18,14 @@
 #
 import time, os, sys, threading, traceback, warnings, functools
 from Dhelpers.container import container
-from Dhelpers.builtin_manipulation import execute_after_print,\
-    execute_after_warnings, execute_after_error, always_print_traceback
-#the last two print functions should be imported via the Dfuncs module
+from Dhelpers.builtin_manipulation import (execute_after_print,
+    execute_after_warnings, execute_after_error, always_print_traceback)
+# the last two print functions should be imported via the Dfuncs module
 from Dhelpers.arghandling import PositiveInt
 from .winapps import pythoneditor
 
-from .events import KeyboardAdaptor, MouseAdaptor, KeyWaiter, HookAdaptor, CombinedSender
+from .events import (KeyboardAdaptor, MouseAdaptor, KeyWaiter, HookAdaptor,
+    CombinedSender)
 from . import dlg, ntfy, clip, Win, launch, keyb, mouse
 from .windowpower import WindowObject
 
@@ -33,11 +34,11 @@ from .windowpower import WindowObject
 # =======================================================================
 
 
-event_sender = CombinedSender(keyb,mouse)
+event_sender = CombinedSender(keyb, mouse)
 
 class SendwaitError(Exception):
     pass
-        
+
 
 def nfsendwait(*args, **kwargs):
     """function shortcut to enable notifications"""
@@ -96,7 +97,7 @@ def sendwait(mandatory, *optional, winwaittime=10, notifytime=5,
                     found_win = Win(pid=pid).wait_exist(timeout=winwaittime)
                     if found_win:
                         report(f"Found active window: pid"
-                            f"={pid}\nProcessObject='{ai}'")
+                               f"={pid}\nProcessObject='{ai}'")
                     else:
                         error = "Window did not exist after winwaittime"
                 else:
@@ -110,7 +111,7 @@ def sendwait(mandatory, *optional, winwaittime=10, notifytime=5,
                 return error
             else:
                 raise SendwaitError(f"Argument {i} gave the following error: "
-                    f"{error}")
+                                    f"{error}")
         if delay: time.sleep(delay)
     # after looping over all arguments:
     return True
@@ -136,19 +137,20 @@ def notify_about_error(hotkey=None, timeout=10):
                 i = options.index(result)
                 fs = traceback.extract_tb(error_traceback, i + 1)[i]
                 pythoneditor.jump_to_line(fs[0], fs[1])
-        container.set_temp_store_key("exec_func",analyze_error, timeout)
+        container.set_temp_store_key("exec_func", analyze_error, timeout)
 
 
 
-def notify_about_warnings(hotkey=None,timeout=10):
+def notify_about_warnings(hotkey=None, timeout=10):
     @execute_after_warnings
-    def post_notifcation(msg,file,line):
+    def post_notifcation(msg, file, line):
         source_msg = f"Printed on line {line} in: {file}."
-        if hotkey: source_msg+= f" Press {hotkey} to see."
+        if hotkey: source_msg += f" Press {hotkey} to see."
         ntfy(f"Warning: {msg}", timeout, source_msg)
-        container.set_temp_store_key("exec_func", functools.partial(
-                pythoneditor.jump_to_line,file, line), timeout)
-        
+        container.set_temp_store_key("exec_func",
+                functools.partial(pythoneditor.jump_to_line, file, line),
+                timeout)
+
 
 def notify_about_print(hotkey=None, timeout=5):
     @execute_after_print
@@ -163,8 +165,9 @@ def notify_about_print(hotkey=None, timeout=5):
         source_msg = f"Printed on line {line} in: {file}."
         if hotkey: source_msg += f" Press {hotkey} to see."
         ntfy(print_message, timeout, source_msg)
-        container.set_temp_store_key("exec_func", functools.partial(
-                pythoneditor.jump_to_line, file, line), timeout*2)
+        container.set_temp_store_key("exec_func",
+                functools.partial(pythoneditor.jump_to_line, file, line),
+                timeout*2)
 
 
 
@@ -175,8 +178,7 @@ def display_sorted_dict(dic, name=""):
     for i in sorted(dic):
         #    notify(i)
         f += i + "\t"*(3 + (i[0].upper() == "L") - len(i)//4) + "-> " + dic[
-            i] + "\n"
-        # notify(i)
+            i] + "\n"  # notify(i)
     launch.get("echo", f, "|", "zenity", "--text-info")
 
 extdict = {"jpeg": "jpg", "tiff": "tif"}
@@ -229,25 +231,26 @@ def display_key_names():
     x = tuple(y.named_instance.names)
     time.sleep(0.1)
     if dlg.quest("Dpowers key name(s):\n{x}\n\nSave first(=standard) name to "
-                 "clipboard?".format_map(locals()),title="Get key names"):
+                 "clipboard?".format_map(locals()), title="Get key names"):
         clip.fill(x[0], notify=True)
-        
-def monitor_input_events(timeout=10, implementation=None,**hookkwargs):
+
+def monitor_input_events(timeout=10, implementation=None, **hookkwargs):
     if implementation:
-        this_hook=HookAdaptor(implementation)
+        this_hook = HookAdaptor(implementation)
     else:
-        this_hook=HookAdaptor(group="keywait")
-    ntfy("Showing all input events for %s seconds." % timeout)
-    with this_hook.keyboard_mouse(functools.partial(ntfy,timeout=1), **hookkwargs):
+        this_hook = HookAdaptor(group="keywait")
+    ntfy("Showing all input events for %s seconds."%timeout)
+    with this_hook.keyboard_mouse(functools.partial(ntfy, timeout=1),
+            **hookkwargs):
         time.sleep(timeout)
     ntfy("Done showing input events.")
 
 
 saved_patterns = []
-    
+
 def save_key_replay():
-    k = KeyWaiter(release=True, buttons = True, maxtime=600,endevents=("Esc",))
-    ntfy("Saving pressed keys",10, "Abort by pressing Esc")
+    k = KeyWaiter(release=True, buttons=True, maxtime=600, endevents=("Esc",))
+    ntfy("Saving pressed keys", 10, "Abort by pressing Esc")
     saved_patterns.append(k)
     k.start()
     ntfy("Stop saving pressed keys")
@@ -259,3 +262,83 @@ def replay_pressed_keys(delay=100):
         ntfy("reinjecting")
         k.reinject(delay=delay)
         ntfy("reinjecting done")
+
+
+
+from time import sleep
+from fabric import Config, Connection
+from Dhelpers.launcher import launch
+from . import KeyboardAdaptor, HookAdaptor
+import shutil
+
+class SshSender:
+    
+    hook = HookAdaptor(group="ssh")  #needs to be adapted!
+    
+    def __init__(self, use_ssh=True, host=None):
+        self.use_ssh = use_ssh
+        self.host = host
+        if use_ssh:
+            if not host: raise ValueError
+            self.ssh = Connection(host, config=self.config)
+    
+    
+    config = Config(overrides={
+        "run": {
+            "env": {
+                "DISPLAY": ":0"
+                }
+            }
+        })
+    
+    def run(self, command):
+        if self.use_ssh:
+            return self.ssh.run(command)
+        else:
+            return launch.wait(command)
+    
+    def notify(self, text):
+        self.run(f'notify-send "{text}"')
+    
+    def send(self, command, notify=True):
+        if notify: self.notify(command)
+        return self.run(command)
+    
+    keyb = KeyboardAdaptor("xdotool_bash")
+    # we need this to read out the keynames for xdotool
+    effective_dict = keyb._effective_dict
+    
+    def key(self, name, notify=True):
+        xdotool_name = self.effective_dict.get(name, name)
+        return self.send(f"xdotool key '{xdotool_name}'", notify=notify)
+    
+    def keypress(self, name, release=False, notify=False):
+        if name.endswith("_rls"):
+            name = name[:-4]
+            release = True
+        command = "xdotool keydown"
+        if release: command = "xdotool keyup"
+        xdotool_name = self.effective_dict.get(name, name)
+        return self.send(command + f" '{xdotool_name}'", notify=notify)
+    
+    def redirect(self, time=5):
+        if not self.use_ssh: raise ValueError
+        with self.hook.keys(self.keypress, release=True, capture=True):
+            sleep(time)
+    
+    def send_multiple(self, string):
+        for line in string.split("\n"):
+            line = line.strip()
+            if line:
+                # print("sending a line")
+                self.send(line, notify=False)
+    
+    dest = '$HOME/received_file'
+    
+    def copy(self, file, dest=None):
+        if dest is None: dest = self.dest
+        if self.use_ssh:
+            self.ssh.put(file, dest)
+        else:
+            shutil.copy(file, dest)
+        self.notify("file received")
