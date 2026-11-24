@@ -32,10 +32,14 @@ class StandardButtonNames:
         scroll_left = 'scroll_left', 's_left', 'wheel_left', 'mouse_6', 'm6', 6
         scroll_right = 'scroll_right', 's_right', 'wheel_right', 'mouse_7', \
             'm7', 7
+    class special:
+        side = "mouse_side", "side", "mouse_8", 'm8', 8
+        extra = "mouse_extra", "extra", "mouse_9", "m9", 9
+        
+    # fill the unnamed class with following buttons names:
     class unnamed:
         mouse_0 = "mouse_0", "m0", 0
-    # fill the unnamed class with following buttons names:
-    for i in range(8, 40):
+    for i in range(10, 40):
         name = f"mouse_{i}"
         setattr(unnamed, name, (name, f"m{i}", i))
     del i, name

@@ -35,7 +35,7 @@ with DependencyManager(__name__) as manager:
 # be raised when trying to import evdev_prepared already.
 from evdev.ecodes import (EV_KEY, EV_ABS, EV_SYN, EV_MSC, KEY, BTN,
     EV_LED, EV_REL, ABS_MT_POSITION_X, ABS_MT_POSITION_Y, ABS_X, ABS_Y,
-    REL_X, REL_Y, bytype)
+    REL_X, REL_Y, bytype, REL_WHEEL)
 
 class EvdevHandler(device_control.DeviceHandler, InputEventHandler):
     
@@ -97,16 +97,27 @@ class ButtonHandler(EvdevHandler):
         name_dict[a] = b
 
     def process_event(self, ty, co, val, dev):
-        #print(ty,co,val)
         if ty == EV_KEY:
             press = bool(val != 0)
-            #print("found:", co)
             self.queue_event(co, press=press)
+        elif ty == EV_REL:
+            if co == REL_WHEEL:
+                if val == 1:
+                    self.queue_event("scroll_up", press=True)
+                elif val == -1:
+                    self.queue_event("scroll_down", press=True)
+                else:
+                    raise ValueError
+            #else:
+            #    print(ty, co ,val)
+            # we simply ignore the cursor movements here
         elif ty not in (EV_SYN, EV_MSC, EV_ABS, EV_REL):
             raise ValueError("Wrong event type: ", ty, co ,val)
 
 
 class CursorHandler(EvdevHandler):
+    
+    ### this is not really tested and needs to be worked on
     
     capture_allowed = False
 
