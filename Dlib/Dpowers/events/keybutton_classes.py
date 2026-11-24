@@ -115,5 +115,5 @@ class NamedButton(NamedKeyButton, event_baseclass=Buttonevent):
         event = super().get_event(press, write_rls)
         event.x=x
         event.y=y
-        
+        return event
         

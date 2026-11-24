@@ -29,7 +29,8 @@ class linux:
     
     class HookAdaptor:
         default  = pynput
-        triggerman = dict(buttons = pynput, keys = evdev, custom=evdev)
+        triggerman = dict(cursor = pynput, buttons = pynput, keys = evdev,
+                custom=evdev)
         keywait = triggerman
         
     class MouseAdaptor:

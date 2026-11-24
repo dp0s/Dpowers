@@ -240,7 +240,7 @@ def monitor_input_events(timeout=10, implementation=None, **hookkwargs):
     else:
         this_hook = HookAdaptor(group="keywait")
     ntfy("Showing all input events for %s seconds."%timeout)
-    with this_hook.keyboard_mouse(functools.partial(ntfy, timeout=1),
+    with this_hook.keysbuttons(functools.partial(ntfy, timeout=1),
             **hookkwargs):
         time.sleep(timeout)
     ntfy("Done showing input events.")
@@ -300,7 +300,7 @@ class SshSender:
     def notify(self, text):
         self.run(f'notify-send "{text}"')
     
-    def send(self, command, notify=True):
+    def send(self, command, notify=False):
         if notify: self.notify(command)
         return self.run(command)
     
@@ -308,7 +308,7 @@ class SshSender:
     # we need this to read out the keynames for xdotool
     effective_dict = keyb._effective_dict
     
-    def key(self, name, notify=True):
+    def key(self, name, notify=False):
         xdotool_name = self.effective_dict.get(name, name)
         return self.send(f"xdotool key '{xdotool_name}'", notify=notify)
     

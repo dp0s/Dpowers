@@ -293,7 +293,7 @@ launch = LaunchFuncs()
 
 class Application:
     
-    def __init__(self, command=NotImplemented, check_installed=False):
+    def __init__(self, command=None, check_installed=False):
         self.used_inst = None
         self.command = command
         if command and check_installed: pass  # tba
@@ -301,7 +301,7 @@ class Application:
     @property
     def command(self):
         command = self.used_inst.command if self.used_inst else self._command
-        if command is NotImplemented:
+        if command is None:
             raise NotImplementedError(f"No command command defined for {self}.")
         return command
     

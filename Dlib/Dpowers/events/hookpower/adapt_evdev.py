@@ -100,6 +100,7 @@ class ButtonHandler(EvdevHandler):
         #print(ty,co,val)
         if ty == EV_KEY:
             press = bool(val != 0)
+            #print("found:", co)
             self.queue_event(co, press=press)
         elif ty not in (EV_SYN, EV_MSC, EV_ABS, EV_REL):
             raise ValueError("Wrong event type: ", ty, co ,val)
